@@ -475,7 +475,9 @@ namespace EssenceSharp.Runtime.Binding {
 		public static readonly ConstantExpression				falseConstant				= Expression.Constant(false);
 		public static readonly ConstantExpression				trueConstant				= Expression.Constant(true);
 		public static readonly ConstantExpression				zeroConstant				= Expression.Constant(0L);
+		public static readonly ConstantExpression				int32ZeroConstant			= Expression.Constant(0);
 		public static readonly ConstantExpression				oneConstant				= Expression.Constant(1L);
+		public static readonly ConstantExpression				int32OneConstant			= Expression.Constant(1);
 		public static readonly ConstantExpression				oneHalfConstant				= Expression.Constant(0.5);
 		public static readonly ConstantExpression				eulersConstant				= Expression.Constant(Math.E);
 

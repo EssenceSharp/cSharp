@@ -44,6 +44,9 @@ namespace EssenceSharp.Runtime.Binding {
 
 	public  class SetVariableValueBinder : NamedVariableBinder {
 
+		protected static readonly ConstantExpression mutabilityFlagBitConstant	= Expression.Constant(ESInitiallyMutableObject.mutabilityFlagBit);
+		protected static readonly ConstantExpression zeroConstant		= Expression.Constant((byte)0);
+
 		protected SetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, ESSymbol selector) : base(dynamicBindingGuru, name, selector) {
 		}
 
@@ -58,16 +61,28 @@ namespace EssenceSharp.Runtime.Binding {
 				args, 
 				(ESObject model, long index, Object[] namedSlots, long classVersionId) => {
 					ParameterExpression self = parameters[0];
-					testRuleValidityExpression = 
-						Expression.And(
-							Expression.ReferenceEqual(self, Expression.Constant(model)),
-					                ExpressionTreeGuru.expressionToTestThatESObjectHasSameClassVersion(self, Expression.Constant(classVersionId)));
-					setVariableValueExpression = 
-						Expression.Assign(
-							Expression.ArrayAccess(
-								Expression.Constant(namedSlots),
-								Expression.Constant((int)index)),
-								value);
+					var modelConstant = Expression.Constant(model);
+					if (model.IsImmutable) {
+						setVariableValueExpression = Expression.Block(
+								TypeGuru.objectType,
+								Expression.Throw(Expression.Constant(new ImmutableObjectException())),
+								self);
+					} else {
+						var statusFlags = Expression.Field(self, "statusFlags");
+						var isMutable = Expression.Equal(Expression.And(statusFlags, mutabilityFlagBitConstant), zeroConstant);
+						testRuleValidityExpression = 
+							Expression.AndAlso(
+								Expression.AndAlso(
+									Expression.ReferenceEqual(self, modelConstant),
+									isMutable),
+								ExpressionTreeGuru.expressionToTestThatESObjectHasSameClassVersion(self, Expression.Constant(classVersionId)));
+						setVariableValueExpression = 
+							Expression.Assign(
+								Expression.ArrayAccess(
+									Expression.Constant(namedSlots),
+									Expression.Constant((int)index)),
+									value);
+					}
 				}, 
 				(BindingHandle handle, long classVersionId) => {
 					if (classVersionId >= 0) {

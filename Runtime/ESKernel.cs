@@ -865,9 +865,8 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual void installCanonicalPrimitivesInCanonicalClasses(ESSymbol protocol) {
-			// primitiveDomainsDo(domain => domain.installPublishedPrimitivesInDomainClass(protocol));
 
-			primitiveDomainsDo(delegate (PrimitiveDomain domain) {
+			primitiveDomainsDo((PrimitiveDomain domain) => {
 				switch (domain.Type) {
 					case PrimitiveDomainType.Object:
 					case PrimitiveDomainType.IndexedSlots:
@@ -919,6 +918,19 @@ namespace EssenceSharp.Runtime {
 
 				}
 			});
+
+		}
+
+		public virtual void generateDefaultPrimitiveMethodSource(DirectoryInfo basePath) {
+
+			primitiveDomainsDo((PrimitiveDomain domain) => {
+				domain.generateDefaultPrimitiveMethodSource(basePath);
+			});
+	
+		}
+
+		public virtual void generateDefaultPrimitiveMethodSource() {
+			generateDefaultPrimitiveMethodSource(StandardLibraryPath);
 		}
 
 		#endregion
@@ -1135,7 +1147,7 @@ namespace EssenceSharp.Runtime {
 		protected virtual void establishCanonicalClassInheritanceStructure() {
 
 			canonicalObjectClass.Superclass = null;
-			canonicalNamespaceClass.Superclass = canonicalCollectionClass;
+			canonicalNamespaceClass.Superclass = canonicalKeyedCollectionClass;
 			canonicalBehaviorClass.Superclass = canonicalNamespaceClass;
 			canonicalClassClass.Superclass = canonicalBehaviorClass;
 			canonicalMetaclassClass.Superclass = canonicalBehaviorClass;
@@ -2247,9 +2259,67 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public void installPublishedPrimitivesInClass(ESSymbol protocol, ESBehavior targetClass) {
-			publishedPrimitivesDo(delegate (PrimitiveDomainType domain, String name, Delegate function) {
+			publishedPrimitivesDo((PrimitiveDomainType domain, String name, Delegate function) => {
 				targetClass.addMethod(kernel.newMethod(SymbolRegistry.symbolFor(name), function));
 			});
+		}
+
+		public void generateDefaultPrimitiveMethodSource(DirectoryInfo basePath) {
+
+			var folderPath = basePath.FullName;
+			DomainClass.pathname().elementsDo(name => folderPath = Path.Combine(folderPath, name));
+			var filePath = Path.Combine(folderPath, "system.primitives");
+			var methodsFile = new FileInfo(filePath);
+				
+			using (var writeStream = methodsFile.CreateText()) {
+				writeStream.Write("\t\"Published system primitives for ");
+				writeStream.Write(DomainClass.NameString);
+				writeStream.WriteLine("\"");
+				writeStream.WriteLine("\t\"**** Code generated in order to document built-in system primitives (which may or may not be used by any classes.) So, although the library loader ignores this file, DO NOT MODIFY IT! ****\"");
+				publishedPrimitivesDo((PrimitiveDomainType domain, String name, Delegate function) => {
+					writeStream.WriteLine("");
+					writeStream.Write("\t");
+					writeStream.WriteLine("protocol: #'system primitives' method:");
+					writeStream.Write("\t[## ");
+					var selector = symbolRegistry.symbolFor(name);
+					MethodInfo method;
+					ParameterInfo[] parameters;
+					switch (selector.Type) {
+						case SymbolType.Keyword:
+							method = function.Method;
+							parameters = method.GetParameters();
+							var parameterIndex = 1;
+							selector.keywordsDo(keyword => {
+								writeStream.Write(keyword);
+								writeStream.Write(": ");
+								writeStream.Write(parameters[parameterIndex++].Name);
+								writeStream.Write(" ");
+							});
+							break;
+						case SymbolType.BinaryMessageSelector:
+							method = function.Method;
+							parameters = method.GetParameters();
+							writeStream.Write(name);
+							writeStream.Write(" ");
+							writeStream.Write(parameters[1].Name);
+							break;
+						default:
+							writeStream.Write(name);
+							break;
+					}
+					writeStream.WriteLine("");
+					writeStream.WriteLine("");
+					writeStream.Write("\t\t<primitive: ");
+					if (selector.Type != SymbolType.Identifier) writeStream.Write("#");
+					writeStream.Write(name);
+					writeStream.Write(" domain: ");
+					writeStream.Write(Type.ToString());
+					writeStream.WriteLine(">");
+					writeStream.WriteLine("\t];");
+
+				});
+			}
+
 		}
 
 	}

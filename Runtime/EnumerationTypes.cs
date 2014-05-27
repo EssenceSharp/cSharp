@@ -32,77 +32,129 @@
 
 namespace EssenceSharp.Runtime {
 
+	/*
+	 
+	Object state architecture is the "shape," "format," "internal structure" or "memory layout" of an object. It's the difference between a stateless object and one with state. 
+	It's the difference between a "value" type with no internal structure other than its bits and a "structured" type with individually-addressable slots ("members" or "fields" 
+	or "instance variables.") It's the difference between an object whose slots are accessed by index (e.g., an array) or one whose slots are accessed by name (e.g, a struct or 
+	record.)
+
+	In essence, object state architecture defines the structure of an object and the way the bits of its value are interpreted, In other words, it defines both the syntax and 
+	the semantics of the bits of the object's value.
+	
+	*/
+
 	public enum ObjectStateArchitecture {
-		// General
-		Abstract,					// The instance architecture of an abstract class--there can't be any instances.
-		Stateless,					// The instance architectue of a class whose instances must have no instance variables (e.g. UndefinedObject)
-		IndexedByteSlots,				// CLR byte[]; wrapped
-		IndexedCharSlots,				// CLR char[]; wrapped; used to implement the Smalltalk (mutable) String class.
-		IndexedHalfWordSlots,				// CLR ushort[]; wrapped
-		IndexedWordSlots,				// CLR uint[]; wrapped
-		IndexedLongWordSlots,				// CLR ulong[]; wrapped
-		IndexedSinglePrecisionSlots,			// CLR float[]; wrapped
-		IndexedDoublePrecisionSlots,			// CLR double[]; wrapped
-		IndexedQuadPrecisionSlots,			// CLR Decimal[]; wrapped
-		IndexedObjectSlots,				// CLR STObject[]; wrapped: Implements any Smalltalk class with indexed Object instance variables.
-		NamedSlots,					// For any any Smalltalk class whose instances have named instance variables (generally analogous to instances 
-								// of a normal C# class)
+
+		// General Objects
+
+		Abstract,					// A class whose instance architecture is #Abstract cannot have any instances.
+		Stateless,					// The instances of a class whose instance architecture is #Stateless cannot have any state at all. For example, 
+								// the class Object.
+		NamedSlots,					// The instances of a class whose instance architecture is #NamedSlots can have named instance variables ("fields" 
+								// in CLR-speak.) The instance variables ("fields") are dynamically typed; they work as though they had the C# type 
+								// "Dynamic." (Note that there are more specific object state architectures that can also have named instance variables. 
+								// So #NamedSlots is just the most abstract or general case.)
+
+		IndexedObjectSlots,				// The instances of a class whose instance architecture is #IndexedObjectSlots can have any number of indexable 
+								// slots--including none at all. They can also optionally have named instance variables. In both cases, the slots work 
+								// as though they had the C# type "Dynamic." Such objects are the Essence# equivalent of C# object arrays.
+		IndexedByteSlots,				// The instances of a class whose instance architecture is #IndexedByteSlots can have any number of indexable 
+								// slots--including none at all--where each slot is physically stored as an unsigned 8-bit value. They can also 
+								// optionally have named instance variables. Such objects are the Essence# equivalent of C# byte arrays.
+		IndexedCharSlots,				// The instances of a class whose instance architecture is #IndexedCharSlots can have any number of indexable 
+								// slots--including none at all--where each slot is physically stored as a Unicode character value. They can also 
+								// optionally have named instance variables. Such objects are the Essence# equivalent of C# char arrays. The object 
+								// state architecture of instances of the Essence# String class is #IndexedCharSlots.
+		IndexedHalfWordSlots,				// The instances of a class whose instance architecture is #IndexedHalfWordSlots can have any number of indexable 
+								// slots--including none at all--where each slot is physically stored as an unsigned 16-bit value. They can also 
+								// optionally have named instance variables. Such objects are the Essence# equivalent of C# ushort arrays.
+		IndexedWordSlots,				// The instances of a class whose instance architecture is #IndexedWordSlots can have any number of indexable 
+								// slots--including none at all--where each slot is physically stored as an unsigned 32-bit value. They can also 
+								// optionally have named instance variables. Such objects are the Essence# equivalent of C# uint arrays.
+		IndexedLongWordSlots,				// The instances of a class whose instance architecture is #IndexedLongWordSlots can have any number of indexable 
+								// slots--including none at all--where each slot is physically stored as an unsigned 64-bit value. They can also 
+								// optionally have named instance variables. Such objects are the Essence# equivalent of C# ulong arrays.
+		IndexedSinglePrecisionSlots,			// The instances of a class whose instance architecture is #IndexedLongWordSlots can have any number of indexable 
+								// slots--including none at all--where each slot is physically stored as 32-bit IEEE floating point value. They can 
+								// also optionally have named instance variables. Such objects are the Essence# equivalent of C# float arrays.
+		IndexedDoublePrecisionSlots,			// The instances of a class whose instance architecture is #IndexedLongWordSlots can have any number of indexable 
+								// slots--including none at all--where each slot is physically stored as 64-bit IEEE floating point value. They can 
+								// also optionally have named instance variables. Such objects are the Essence# equivalent of C# double arrays.
+		IndexedQuadPrecisionSlots,			// The instances of a class whose instance architecture is #IndexedLongWordSlots can have any number of indexable 
+								// slots--including none at all--where each slot is physically stored as 128-bit floating point value, using a 
+								// CLR-specific format. They can also optionally have named instance variables. Such objects are the Essence# 
+								// equivalent of C# decimal arrays.
 		
-		// System classes: For any system class, neither adding instance variables nor changing the instance architecture is allowed.
+		// System Objects
 		
-		// System - Singletons or wrapped primitive values 
-		Nil,						// ANSI Smalltalk: No CLR equivalent; it's a sentinel or metavalue which is semantically the same as "null"
-		False,						// CLR bool (false as a singleton sentinel)
-		True,						// CLR bool (true as a singleton sentinel)
-		Char,						// CLR char (so it's full Unicode); wrapped
-		SmallInteger,					// CLR long (so it's a 64-bit "small" integer); wrapped
-		LargeInteger,					// CLR BigNum; wrapped
-		ScaledDecimal,					// No direct CLR equivalent, but serves the same purpose as Decimal: It's a fixed-point fraction where the 
-								// denominator is always a power of 10.
-		SinglePrecision,				// CLR float; wrapped
-		DoublePrecision,				// CLR double; wrapped
-		QuadPrecision,					// CLR Decimal: Pretends to be a "scaled decimal" a la ANSI, but is actually just a non-standard 16-byte 
-								// floating point number; wrapped
-		
-		// System - Internal
-		Symbol,						// CLR String (immutable,) but uses the wrapped strict-flyweight pattern for correctness and performance 
-								//reasons. Run time and primitives rely on it heavily.
-		Message,					// No CLR equivalent: It specifies the name of a method to be invoked along with the arguments, if any. 
-								// Created by the run time when needed.
-		MessageSend,					// Conceptually a DLR CallSite: Same as a Message, but also specifies the receiver of the message (it caches 
-								// method lookup, so it's a polymorphic inline cache)
-		Association,					// Conceptually the same thing as a KeyValuePair.
-		BindingReference,					// The type of Association used by a Namespace.
-		IdentityDictionary,				// A Dictionary, implemented as a wrapper over a CLR Dictionary, and which uses ReferenceEqual to compare keys.
-		Dictionary,					// A Dictionary, implemented as a wrapper over a CLR Dictionary
-		Namespace,					// Conceptually the same thing as a CLR namespace...except it's an Object at runtime, can be sent messages,
-								// be assigned to a variable and passed as an argument.
-		Pathname,					// A pathname is a hierachical key whose elements are Strings. It's used for spececifing namespaces, 
-								// filenames, URLs, etc.
-		Block,						// CLR delegate, also known as a BlockClosure.
-		Method,						// CLR delegate: But its first argument must be the reciver ('this' in C# terminology, 'self' in Smalltalk 
-								// terminology); and it can access instance variables, class variables and whatever its class imports.
-		Behavior,					// Basic Smalltalk Class which is a direct subclass of (Smaltalk) class Object. The instances of a Behavior 
-								// may be any Smalltalk Object, including another Behavior, a Class or a Metaclass.
-		Class,						// A full Smalltalk class which is a subclass of Behavior and is an instance of either a Class, a Metaclass or 
-								// of a Behavior, and whose instances can be a Behavior, a Class, a Metaclass or (much more usually) a Smalltalk 
-								// Object that isn't a Behavior, Class or Metaclass. The term 'class' is usually intended to refer to an 
-								// instance of the class Class, but technically can refer to any Object that can create instances of itself, 
-								// such as a Behavior or a Metclass (i.e., any instance of Behavior or anything that inherits from Behavior.) 
-		Metaclass,					// A Smalltalk class which is a direct subclass of (Smalltalk) class Behavior. It may be an instance of either 
-								// a Class or of a Behavior, and its instances must be Classes. A Metaclass can have only one non-obsolete 
-								// instance which is called the canonicalInstance. Note that the superclass of the Metaclass of any root 
-								// Behavior (e.g., the metaclass of class Object) is (and must be) the class Class.
-		HostSystemObject				// A non-Essence Smalltalk Object. A class whose instance architecture is addMethod creates instances 
-								// that are not Essence Smalltalk objects. Its CompiledMethods expect an instance of a particular non-Essence 
-								// Smalltalk class as their "receiver" argument. Its purpose is to map Essence Smalltalk messages to 
-								// non-Smalltalk method calls. At least some of its methods should be primitives whose primitive descriptor 
-								// provides the reflection parameters necessary to invoke the methods of the non-Essence Smalltalk Object. 
-								// 
-								// Example: 
-								//
-								//		## copyFrom: startIndex for: length
-								//			<context: #CSharp memberName: #Substring paramType: #Int32 paramType: #Int32>
+		Symbol,						// An Essence# Symbol is an immutable character string, such that there is only ever one instance with the same 
+								// characters; symbol instances also have some system reflective/introspective behaviors and usages. Instances 
+								// may optionally have programmer-accessible named instance variables.
+		Message,					// A Message instance specifies a message that was or could be be sent, along with the message arguments, if any. 
+								// Instances are created by the run time system when and as needed, although application code may also create and 
+								// use instances. Message instances cannot have programmer-accessible named instance variables. Created by the run 
+								// time when needed.
+		Association,					// An Association is conceptually the same thing as a CLR KeyValuePair. Associations cannot have 
+								// programmer-accessible named instance variables.
+		BindingReference,				// A BindingReference is a specialized type of of Association used by Namespaces. BindingReferences cannot have 
+								// programmer-accessible named instance variables.
+		IdentityDictionary,				// IdentityDictionary instances act as "dictionaries" that map keys to values. An IdentityDictionary compares keys 
+								// using object identity. Instances may optionally have programmer-accessible named instance variables.
+		Dictionary,					// Dictionary instances act as "dictionaries" that map keys to values. A Dictionary compares keys based on the 
+								// logical or conceptual value of the keys. Instances may optionally have programmer-accessible named instance 
+								// variables. 
+		Namespace,					// Namespace instances serve as dynamic namespaces at runtime. Instances may optionally have programmer-accessible 
+								// named instance variables.
+		Pathname,					// A Pathname instance serves as a hierarchical key whose elements are Strings. It's used for identifying namespaces, 
+								// file pathnames, URLs, etc. Instances may optionally have programmer-accessible named instance variables.
+		Block,						// A block is an anonymous function with full closure semantics. The implementation uses CLR delegates. Blocks cannot 
+								// have programmer-accessible named instance variables.
+		Method,						// A method is executable code that runs in the context of a specific class, with full access to the internal state 
+								// of the distinguished object that receives the message that invokes the method. Methods cannot have 
+								// programmer-accessible named instance variables.
+		Behavior,					// A Behavior is a proto-class. There can actually be instances--it's not abstract. Instances may optionally have 
+								// programmer-accessible named instance variables. 
+		Class,						// A Class is a full Essence# class which is a subclass of Behavior, is an instance of a Metaclass, and whose instances 
+								// (if it's allowed to have any) can be an object (value) of any type. The term 'class' is usually intended to refer 
+								// to an (indirect) instance of the class Class, but technically can refer to any Object that can create instances 
+								// of itself, such as a Behavior or a Metclass (i.e., any instance of Behavior or anything that inherits from Behavior.) 
+								// Instances may optionally have programmer-accessible named instance variables. 
+		Metaclass,					// A Metaclass is an Essence# class which is a direct subclass of the (Essence#) class Behavior. A Metaclass is an 
+								// instance of the class Metaclass, and its instances must be Classes. A Metaclass can have only one instance which 
+								// is called either the canonical instance or the sole instance. Note that the superclass of the Metaclass of any root 
+								// Behavior (e.g., the metaclass of class Object) is (and must be) the class Class. Instances may optionally have 
+								// programmer-accessible named instance variables. 
+		HostSystemObject,				// A "host system object" is simply an instance of any CLR type which is not a formal part of the Essence# runtime 
+								// system. One of the requirements for an Essence# class to represent a CLR type (which may or may not be a "class" 
+								// as the CLR defines that term) is that its instance type must be #HostSystemObject.
+								
+		// Values adopted as-is from the CLR
+
+		Nil,						// A class whose instance architecture is #Nil governs the behavior (in Essence# code) of the value "null," which in 
+								// Essence# syntax is written as nil. Nil (or "null") is technically a sentinel or metavalue whose meaning is "there 
+								// is no value being referenced."
+		False,						// A class whose instance architecture is #False governs the behavior (in Essence# code) of the value false.
+		True,						// A class whose instance architecture is #True governs the behavior (in Essence# code) of the value true.
+		Char,						// A class whose instance architecture is #Char governs the behavior (in Essence# code) of values of CLR type char 
+								// (Unicode character values.)
+		SmallInteger,					// A class whose instance architecture is #SmallInteger governs the behavior (in Essence# code) of all integer values 
+								// that aren't BigNums. The Essence# compiler always uses Int64 values for integer literals.
+		SinglePrecision,				// A class whose instance architecture is #SinglePrecision governs the behavior (in Essence# code) of all IEEE 32-bit 
+								// floating point values.
+		DoublePrecision,				// A class whose instance architecture is #DoublePrecision governs the behavior (in Essence# code) of all IEEE 64-bit 
+								// floating point values.
+		QuadPrecision,					// A class whose instance architecture is #QuadPrecision governs the behavior (in Essence# code) of all CLR values 
+								// of type Decimal (128-bit floating point values that use a proprietary format.)
+
+		// Not yet implemented
+		LargeInteger,					// Support for large integers is currently in the development plan. When implemented, there will be an Essence# class 
+								// that can create and govern the behavior of BigNum values. Also, Int64 and UInt64 arithmetic operations will 
+								// transparently overflow into BigNum values.
+		ScaledDecimal,					// When implemented, the ScaledDecimal class will provide unlimited-precision rational numbers with a fixed decimal point.
+		MessageSend,					// When implemented, the MessageSend class will enable the creation and use of polymorphic inline caches by Essence# code 
+								// (which is not the same thing as the use of DLR CallSites by the Essence# runtime system.)
+
 	}
 
 	public enum PrimitiveDomainType {

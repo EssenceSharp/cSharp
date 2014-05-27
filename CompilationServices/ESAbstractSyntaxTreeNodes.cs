@@ -41,7 +41,6 @@ using Expression = System.Linq.Expressions.Expression;
 using EssenceSharp.ParsingServices;
 using EssenceSharp.Runtime;
 using EssenceSharp.Runtime.Binding;
-using InvalidOperationException = EssenceSharp.Runtime.InvalidOperationException;
 #endregion
 
 namespace EssenceSharp.CompilationServices { 

@@ -31,10 +31,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using EssenceSharp.Runtime;
+using EssenceSharp.UtilityServices;
 #endregion
 
-namespace EssenceSharp.UtilityServices {
+namespace EssenceSharp.Runtime {
 
 	public class ESLibraryLoader {
 

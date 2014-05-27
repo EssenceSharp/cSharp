@@ -30,6 +30,7 @@
 #region Using declarations
 using System;
 using System.Text;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 #if CLR2
@@ -122,6 +123,22 @@ namespace EssenceSharp.Runtime {
 		
 		public override sealed void postCopy() {
 		}
+
+		public override ESSymbol asESSymbol() {
+			return this;
+		}
+		
+		public override ESString asESString() {
+			return Class.Kernel.newString(IndexedSlots);
+		}
+		
+		public override ESPathname asESPathname() {
+			return Class.Kernel.pathnameFromString(PrimitiveValue, QualifiedNameSeparatorChar, null);
+		}
+
+		public override ESObject asMutable() {
+			return asESString();
+		}
 				
 		public override String asHostString() {
 			return stringValue;
@@ -174,20 +191,15 @@ namespace EssenceSharp.Runtime {
 			return sb.ToString();
 		}
 
-		public override ESSymbol asESSymbol() {
-			return this;
-		}
-		
-		public override ESString asESString() {
-			return Class.Kernel.newString(IndexedSlots);
-		}
-		
-		public override ESPathname asESPathname() {
-			return Class.Kernel.pathnameFromString(PrimitiveValue, QualifiedNameSeparatorChar, null);
-		}
-
-		public override ESObject asMutable() {
-			return asESString();
+		public void keywordsDo(System.Action<String> enumerator1) {
+			if (Type != SymbolType.Keyword) return;
+			var stream = new StringReader(PrimitiveValue);
+			var keywordString = ESLexicalUtility.nextIdentifierFrom(stream);
+			do {
+				enumerator1(keywordString);
+				ESLexicalUtility.nextMatches(stream, ':');
+				keywordString = ESLexicalUtility.nextIdentifierFrom(stream);
+			} while (keywordString != null && keywordString.Length > 0);
 		}
 
 		public override long hash() {

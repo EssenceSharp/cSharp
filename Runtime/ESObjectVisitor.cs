@@ -31,7 +31,7 @@ using System;
 using EssenceSharp.Runtime;
 #endregion
 
-namespace EssenceSharp.UtilityServices {
+namespace EssenceSharp.Runtime {
 
 	public interface Operation<T> {
 
@@ -40,7 +40,7 @@ namespace EssenceSharp.UtilityServices {
         
 		// Generic
 		T applyToHostSystemObject(Object operand);
-		T applyToSTObject(ESObject operand);
+		T applyToESObject(ESObject operand);
 
 		// Runtime objects
 		T applyToObject(ESObject operand);
@@ -84,106 +84,106 @@ namespace EssenceSharp.UtilityServices {
 			throw new UnsupportedOperationException();
 		}
 
-		public virtual T applyToSTObject(ESObject operand) {
+		public virtual T applyToESObject(ESObject operand) {
 			throw new UnsupportedOperationException();
 		}
 
 		// Runtime objects
 
 		public virtual T applyToObject(ESObject operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToNamedSlotsObject(ESNamedSlotsObject operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToIndexedObjectSlotsObject(ESArray operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToIndexedByteSlotsObject(ESByteArray operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToIndexedCharSlotsObject(ESString operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToIndexedHalfWordSlotsObject(ESHalfWordArray operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToIndexedWordSlotsObject(ESWordArray operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToIndexedLongWordSlotsObject(ESLongWordArray operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToIndexedSinglePrecisionSlotsObject(ESFloatArray operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToIndexedDoublePrecisionSlotsObject(ESDoubleArray operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToIndexedQuadPrecisionSlotsObject(ESQuadArray operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToSymbol(ESSymbol operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToMessage(ESMessage operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToAssociation(ESAssociation operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToBindingReference(ESBindingReference operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToIdentityDictionary(ESIdentityDictionary operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToDictionary(ESDictionary operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToNamespace(ESNamespace operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToPathname(ESPathname operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToCompiledBlock(ESBlock operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToCompiledMethod(ESMethod operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToBehavior(ESBehavior operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToClass(ESClass operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 		public virtual T applyToMetaclass(ESMetaclass operand) {
-			return applyToSTObject(operand);
+			return applyToESObject(operand);
 		}
 
 	}
@@ -200,8 +200,8 @@ namespace EssenceSharp.UtilityServices {
 			return operation.applyToHostSystemObject(operand);
 		}
 
-		public override T applyToSTObject(ESObject operand) {
-			return operation.applyToSTObject(operand);
+		public override T applyToESObject(ESObject operand) {
+			return operation.applyToESObject(operand);
 		}
 
 		public override T applyToObject(ESObject operand) {

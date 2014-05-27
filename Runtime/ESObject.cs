@@ -753,7 +753,7 @@ namespace EssenceSharp.Runtime {
 		#endregion
 
 		public virtual T valueBy<T>(Operation<T> operation) {
-			return operation.applyToSTObject(this);
+			return operation.applyToESObject(this);
 		}
 
 		public class Primitives : PrimitiveDomain {

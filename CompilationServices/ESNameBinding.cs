@@ -37,7 +37,6 @@ using Expression = Microsoft.Scripting.Ast.Expression;
 using System.Linq.Expressions;
 using Expression = System.Linq.Expressions.Expression;
 #endif
-using InvalidOperationException = EssenceSharp.Runtime.InvalidOperationException;
 using EssenceSharp.Runtime;
 using EssenceSharp.Runtime.Binding;
 #endregion
@@ -539,23 +538,36 @@ namespace EssenceSharp.CompilationServices {
 
 	public class InstanceVariableDeclaration : AbstractNonStackResidentVariableDeclaration {
 
-		protected ConstantExpression indexExpression;
-		protected Expression getNamedSlotsExpression;
+		protected static readonly ConstantExpression mutabilityFlagBitConstant	= Expression.Constant(ESInitiallyMutableObject.mutabilityFlagBit);
+		protected static readonly ConstantExpression zeroConstant		= Expression.Constant((byte)0);
+
+		protected ConstantExpression slotIndex;
+		protected Expression namedSlots;
+		protected Expression isMutable;
 
 		public InstanceVariableDeclaration(NameBindingScope scope, ESSymbol name) : base(scope, name) {
-			getNamedSlotsExpression = Expression.Field(Expression.Convert(Scope.SelfParameter, TypeGuru.esNamedSlotsObjectType), "namedSlots");
+			var namedSlotsObject = Expression.Convert(Scope.SelfParameter, TypeGuru.esNamedSlotsObjectType);
+			namedSlots = Expression.Field(namedSlotsObject, "namedSlots");
+			var statusFlags = Expression.Field(namedSlotsObject, "statusFlags");
+			isMutable = Expression.Equal(Expression.And(statusFlags, mutabilityFlagBitConstant), zeroConstant);
 		}
 
 		public override Expression asCLRGetValueExpression() {
-			return Expression.ArrayAccess(getNamedSlotsExpression, indexExpression);
+			return Expression.ArrayAccess(namedSlots, slotIndex);
 		}
 
 		public override Expression asCLRSetValueExpression(Expression newValue) {
-			return Expression.Assign(Expression.ArrayAccess(getNamedSlotsExpression, indexExpression), newValue);
+			return Expression.Condition(
+						isMutable,
+							Expression.Assign(Expression.ArrayAccess(namedSlots, slotIndex), newValue),
+							Expression.Block(
+								TypeGuru.objectType,
+								Expression.Throw(Expression.Constant(new ImmutableObjectException())),
+								newValue));
 		}
 
 		public int Index {
-			set {indexExpression = Expression.Constant(value);}
+			set {slotIndex = Expression.Constant(value);}
 		}
 
 	}

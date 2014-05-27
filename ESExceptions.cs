@@ -31,7 +31,7 @@
 using System;
 #endregion
 
-namespace EssenceSharp.Runtime {
+namespace EssenceSharp {
 
 	public abstract class EssenceSharpException : Exception {
 

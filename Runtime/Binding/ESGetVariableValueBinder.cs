@@ -57,9 +57,10 @@ namespace EssenceSharp.Runtime.Binding {
 				args, 
 				(ESObject model, long index, Object[] namedSlots, long classVersionId) => {
 					ParameterExpression self = parameters[0];
+					var modelConstant = Expression.Constant(model);
 					testRuleValidityExpression = 
-						Expression.And(
-							Expression.ReferenceEqual(self, Expression.Constant(model)),
+						Expression.AndAlso(
+							Expression.ReferenceEqual(self, modelConstant),
 					                ExpressionTreeGuru.expressionToTestThatESObjectHasSameClassVersion(self, Expression.Constant(classVersionId)));
 					getVariableValueExpression = 
 						Expression.ArrayAccess(
