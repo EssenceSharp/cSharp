@@ -410,7 +410,7 @@ namespace EssenceSharp.Runtime {
 
 	}
 
-	public class ESImportSpec {
+	public class ESImportSpec : IEquatable<ESImportSpec> {
 
 		protected ESNamespace										source					= null;
 		protected AccessPrivilegeLevel									accessPrivilegeLevel			= Runtime.AccessPrivilegeLevel.Local;
@@ -434,6 +434,23 @@ namespace EssenceSharp.Runtime {
 			get {return transitivity;}
 		}
 
+		public virtual bool Equals(ESImportSpec other) {
+			if (this == other) return true;
+			if (other == null) return false;
+			if (GetType() != other.GetType()) return false;
+			if (source != other.Source) return false;
+			if (AccessPrivilegeLevel != other.AccessPrivilegeLevel) return false;
+			return Transitivity == other.Transitivity;
+		}
+
+		public override bool Equals(Object other) {
+			if (this == other) return true;
+			if (other == null) return false;
+			var comparand = other as ESImportSpec;
+			if (comparand == null) return false;
+			return comparand.Equals(this);
+		}
+
 	}
 
 	public class ESSpecifImportSpec : ESImportSpec {
@@ -446,6 +463,11 @@ namespace EssenceSharp.Runtime {
 
 		public String NameInSource {
 			get {return nameInSource;}
+		}
+
+		public override bool Equals(ESImportSpec other) {
+			if (!base.Equals(other)) return false;
+			return NameInSource == ((ESSpecifImportSpec)other).NameInSource;
 		}
 
 	}
@@ -890,11 +912,11 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public void addImport(ESImportSpec importSpec) {
-			GeneralImports.Add(importSpec);
+			if (!GeneralImports.Contains(importSpec)) GeneralImports.Add(importSpec);
 		}
 
 		public void addImports(List<ESImportSpec> importSpecs) {
-			GeneralImports.AddRange(importSpecs);
+			foreach (var importSpec in importSpecs) addImport(importSpec);
 		}
 
 		public void importAs(String localName, ESSpecifImportSpec specificImport) {

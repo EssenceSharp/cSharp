@@ -334,11 +334,11 @@ namespace Microsoft.Scripting.Hosting {
 			return engine.CreateScriptSourceFromFile(scriptPathameSuffix);
 		}
 
-		internal static EssenceSharpContext essenceSharpContext(this ScriptEngine engine) {
+		public static EssenceSharpContext essenceSharpContext(this ScriptEngine engine) {
 			return (EssenceSharpContext)HostingHelpers.GetLanguageContext(engine);
 		}
 
-		internal static ESKernel essenceSharpKernel(this ScriptEngine engine) {
+		public static ESKernel essenceSharpKernel(this ScriptEngine engine) {
 			return engine.essenceSharpContext().Kernel;
 		}
 

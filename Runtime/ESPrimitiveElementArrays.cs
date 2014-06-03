@@ -390,7 +390,7 @@ namespace EssenceSharp.Runtime {
 				Class.Kernel.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparand);
 			}
 			if (ReferenceEquals(this, comparand)) return 0;
-			ESIndexedComparableSlotsObject<char> stArray = comparand as ESIndexedComparableSlotsObject<char>;
+			var stArray = comparand as ESIndexedComparableSlotsObject<char>;
 			if (stArray == null) {
 				ESSymbol symbolComparand = comparand as ESSymbol;
 				if (symbolComparand == null) return foreignCompareTo(comparand);
@@ -400,15 +400,15 @@ namespace EssenceSharp.Runtime {
 			}
 		}	
 		
-		public virtual ESBindingReference bindingInNamespaceIfAbsent(ESNamespace stNamespace, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, Functor0<ESBindingReference> ifAbsentAction) {
-			ESBindingReference binding = stNamespace.bindingAt(asHostString(), requestorRights, importTransitivity, null);
+		public virtual ESBindingReference bindingInNamespaceIfAbsent(ESNamespace environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, Functor0<ESBindingReference> ifAbsentAction) {
+			var binding = environment.bindingAt(asHostString(), requestorRights, importTransitivity, null);
 			return binding == null ?
 				ifAbsentAction == null ? null : ifAbsentAction() :
 				binding;
 		}
 		
-		public virtual Object valueInNamespaceIfAbsent(ESNamespace stNamespace, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, FuncNs.Func<Object> ifAbsentAction) {
-			ESBindingReference binding = stNamespace.bindingAt(asHostString(), requestorRights, importTransitivity, null);
+		public virtual Object valueInNamespaceIfAbsent(ESNamespace environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, FuncNs.Func<Object> ifAbsentAction) {
+			var binding = environment.bindingAt(asHostString(), requestorRights, importTransitivity, null);
 			return binding == null ?
 				ifAbsentAction == null ? null : ifAbsentAction() :
 				binding.Value.Value;
@@ -472,26 +472,26 @@ namespace EssenceSharp.Runtime {
 				return ((ESString)receiver).asESPathname();
 			}
 		
-			public Object _bindingInNamespaceIfAbsent_ (Object receiver, Object stNamespace, Object importTransitivity, Object ifAbsentAction) {
+			public Object _bindingInNamespaceIfAbsent_ (Object receiver, Object environment, Object importTransitivity, Object ifAbsentAction) {
 				ImportTransitivity transitivity;
 				try {
 					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), kernel.asESSymbol(importTransitivity));
 				} catch {
 					throw new PrimInvalidOperandException("valueInNamespaceIfAbsent: <importTransitivity> must be a Symbol or String identifying a valid import transitivity.");
 				}
-				var binding = ((ESString)receiver).bindingInNamespaceIfAbsent((ESNamespace)stNamespace, AccessPrivilegeLevel.Public, transitivity, null);
+				var binding = ((ESString)receiver).bindingInNamespaceIfAbsent((ESNamespace)environment, AccessPrivilegeLevel.Public, transitivity, null);
 				if (binding == null) return asFunctor0(ifAbsentAction)();
 				return binding;
 			}
 		
-			public Object _valueInNamespaceIfAbsent_ (Object receiver, Object stNamespace, Object importTransitivity, Object ifAbsentAction) {
+			public Object _valueInNamespaceIfAbsent_ (Object receiver, Object environment, Object importTransitivity, Object ifAbsentAction) {
 				ImportTransitivity transitivity;
 				try {
 					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), kernel.asESSymbol(importTransitivity));
 				} catch {
 					throw new PrimInvalidOperandException("valueInNamespaceIfAbsent: <importTransitivity> must be a Symbol or String identifying a valid import transitivity.");
 				}
-				return ((ESString)receiver).valueInNamespaceIfAbsent((ESNamespace)stNamespace, AccessPrivilegeLevel.Public, transitivity, asFunctor0(ifAbsentAction));
+				return ((ESString)receiver).valueInNamespaceIfAbsent((ESNamespace)environment, AccessPrivilegeLevel.Public, transitivity, asFunctor0(ifAbsentAction));
 			}
 		
 			public Object _asBindingReferenceKeyWithValue_ (Object receiver, Object value) {
@@ -1786,26 +1786,26 @@ namespace EssenceSharp.Runtime {
 			return copyWithoutExtension;
 		}
 
-		public ESBindingReference bindingInNamespaceIfAbsent(ESNamespace stNamespace, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, Functor0<ESBindingReference> ifAbsentAction) {
+		public ESBindingReference bindingInNamespaceIfAbsent(ESNamespace environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, Functor0<ESBindingReference> ifAbsentAction) {
 			long mySize = IndexedSlots.Length;
 			if (mySize < 1) return ifAbsentAction == null ? null : ifAbsentAction();
-			ESNamespace environment = stNamespace;
+			var ns = environment;
 			ESBindingReference binding = null;
 			var index = 0;
 			String key;
-			while (environment != null && index < mySize) {
+			while (ns != null && index < mySize) {
 				key = slots[index++];
-				binding = environment.bindingAt(key, requestorRights, importTransitivity, null);
+				binding = ns.bindingAt(key, requestorRights, importTransitivity, null);
 				if (binding == null) return ifAbsentAction == null ? null : ifAbsentAction();
-				environment = binding.Value.Value as ESNamespace;
+				ns = binding.Value.Value as ESNamespace;
 				requestorRights = AccessPrivilegeLevel.Public;
 			}
 			if (index != mySize) return ifAbsentAction == null ? null : ifAbsentAction();
 			return binding;
 		}
 
-		public Object valueInNamespaceIfAbsent(ESNamespace stNamespace, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, FuncNs.Func<Object> ifAbsentAction) {
-			var binding = bindingInNamespaceIfAbsent(stNamespace, requestorRights, importTransitivity, null);
+		public Object valueInNamespaceIfAbsent(ESNamespace environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, FuncNs.Func<Object> ifAbsentAction) {
+			var binding = bindingInNamespaceIfAbsent(environment, requestorRights, importTransitivity, null);
 			return binding == null ?
 				(ifAbsentAction == null ? null : asFunctor0(ifAbsentAction)()) :
 				binding.Value.Value;
@@ -1940,27 +1940,27 @@ namespace EssenceSharp.Runtime {
 				return receiver;
 			}
 		
-			public Object _bindingInNamespaceIfAbsent_ (Object receiver, Object stNamespace, Object importTransitivity, Object ifAbsentAction) {
+			public Object _bindingInNamespaceIfAbsent_ (Object receiver, Object environment, Object importTransitivity, Object ifAbsentAction) {
 				ImportTransitivity transitivity;
 				try {
 					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), kernel.asESSymbol(importTransitivity));
 				} catch {
 					throw new PrimInvalidOperandException("valueInNamespaceIfAbsent: <importTransitivity> must be a Symbol or String identifying a valid import transitivity.");
 				}
-				var binding = ((ESPathname)receiver).bindingInNamespaceIfAbsent((ESNamespace)stNamespace, AccessPrivilegeLevel.Public, transitivity, null);
+				var binding = ((ESPathname)receiver).bindingInNamespaceIfAbsent((ESNamespace)environment, AccessPrivilegeLevel.Public, transitivity, null);
 				return binding == null ?
 					asFunctor0(ifAbsentAction)() :
 					binding;
 			}
 		
-			public Object _valueInNamespaceIfAbsent_ (Object receiver, Object stNamespace, Object importTransitivity, Object ifAbsentAction) {
+			public Object _valueInNamespaceIfAbsent_ (Object receiver, Object environment, Object importTransitivity, Object ifAbsentAction) {
 				ImportTransitivity transitivity;
 				try {
 					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), kernel.asESSymbol(importTransitivity));
 				} catch {
 					throw new PrimInvalidOperandException("valueInNamespaceIfAbsent: <importTransitivity> must be a Symbol or String identifying a valid import transitivity.");
 				}
-				return ((ESPathname)receiver).valueInNamespaceIfAbsent((ESNamespace)stNamespace, AccessPrivilegeLevel.Public, transitivity, asFunctor0(ifAbsentAction));
+				return ((ESPathname)receiver).valueInNamespaceIfAbsent((ESNamespace)environment, AccessPrivilegeLevel.Public, transitivity, asFunctor0(ifAbsentAction));
 			}
 
 			#endregion

@@ -253,16 +253,16 @@ namespace EssenceSharp.Runtime {
 			return Class.Kernel.newString(slots);
 		}
 		
-		public override ESBindingReference bindingInNamespaceIfAbsent(ESNamespace stNamespace, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, Functor0<ESBindingReference> ifAbsentAction) {
-			if (PathElementCount > 1) return asESPathname().bindingInNamespaceIfAbsent(stNamespace, requestorRights, importTransitivity, ifAbsentAction);
-			ESBindingReference binding = stNamespace.bindingAt(PrimitiveValue, requestorRights, importTransitivity, null);
+		public override ESBindingReference bindingInNamespaceIfAbsent(ESNamespace environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, Functor0<ESBindingReference> ifAbsentAction) {
+			if (PathElementCount > 1) return asESPathname().bindingInNamespaceIfAbsent(environment, requestorRights, importTransitivity, ifAbsentAction);
+			var binding = environment.bindingAt(PrimitiveValue, requestorRights, importTransitivity, null);
 			return binding == null ?
 				ifAbsentAction == null ? null : ifAbsentAction() :
 				binding;
 		}
 		
-		public override Object valueInNamespaceIfAbsent(ESNamespace stNamespace, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, FuncNs.Func<Object> ifAbsentAction) {
-			var binding = bindingInNamespaceIfAbsent(stNamespace, requestorRights, importTransitivity, null);
+		public override Object valueInNamespaceIfAbsent(ESNamespace environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, FuncNs.Func<Object> ifAbsentAction) {
+			var binding = bindingInNamespaceIfAbsent(environment, requestorRights, importTransitivity, null);
 			return binding == null ?
 				ifAbsentAction == null ? null : asFunctor0(ifAbsentAction)() :
 				binding.Value.Value;

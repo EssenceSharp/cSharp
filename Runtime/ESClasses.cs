@@ -214,6 +214,10 @@ namespace EssenceSharp.Runtime {
 			return this;
 		}
 
+		public virtual bool IsHostSystemMetaclass {
+			get {return false;}
+		}
+
 		#region Internal Protocol
 
 		protected void initialize() {
@@ -295,6 +299,10 @@ namespace EssenceSharp.Runtime {
 				isInstanceTypeLocked = true;
 				isInstanceArchitectureLocked = true;
 			}
+		}
+
+		protected virtual Type ReflectionType {
+			get { return InstanceType;}
 		}
 
 		public Type InstanceType {
@@ -1130,16 +1138,16 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ConstructorInfo getHostConstructor() {
-			return getHostConstructor(InstanceType, TypeGuru.emptyTypeArray);
+			return getHostConstructor(ReflectionType, TypeGuru.emptyTypeArray);
 		}
 
 		public ConstructorInfo getHostConstructor(Type[] signature) {
-			return getHostConstructor(InstanceType, signature);
+			return getHostConstructor(ReflectionType, signature);
 		}
 
 		public virtual List<ConstructorInfo> getHostConstructors(long arity) {
 			var matchingConstructors = new List<ConstructorInfo>();
-			var type = InstanceType;
+			var type = ReflectionType;
 			var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 			foreach (var ci in constructors) {
 				var parameters = ci.GetParameters();
@@ -1150,16 +1158,16 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual MethodInfo getHostMethod(String methodName) {
-			return getHostInstanceMethod(InstanceType, methodName);
+			return getHostInstanceMethod(ReflectionType, methodName);
 		}
 
 		public virtual MethodInfo getHostMethod(String methodName, Type[] signature) {
-			return getHostInstanceMethod(InstanceType, methodName, signature);
+			return getHostInstanceMethod(ReflectionType, methodName, signature);
 		}
 
 		public virtual List<MethodInfo> getHostMethodsMatching(String methodName, long arity) {
 			var matchingMethods = new List<MethodInfo>();
-			var methods = InstanceType.GetMethods(HostObjectMethodInvokeBindingFlags);
+			var methods = ReflectionType.GetMethods(HostObjectMethodInvokeBindingFlags);
 			foreach (var mi in methods) {
 				if (mi.Name != methodName) continue;
 				var parameters = mi.GetParameters();
@@ -1170,13 +1178,13 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public PropertyInfo getReadableProperty(String name) {
-			var property = InstanceType.GetProperty(name, HostObjectPropertyGetBindingFlags);
+			var property = ReflectionType.GetProperty(name, HostObjectPropertyGetBindingFlags);
 			if (property == null) return null;
 			return property.CanRead ? property : null;
 		}
 
 		public PropertyInfo getWritableProperty(String name) {
-			var property = InstanceType.GetProperty(name, HostObjectPropertySetBindingFlags);
+			var property = ReflectionType.GetProperty(name, HostObjectPropertySetBindingFlags);
 			if (property == null) return null;
 			return property.CanWrite ? property : null;
 		}
@@ -1218,11 +1226,11 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public Object newHostObjectInstance() {
-			return newInstanceOf(InstanceType);
+			return newInstanceOf(ReflectionType);
 		}
 
 		public Object newHostObjectInstance(Object[] args) {
-			return newInstanceOf(InstanceType, args);
+			return newInstanceOf(ReflectionType, args);
 		}
 
 		public virtual Object sendHostMessage(Object receiver, String messageName) {
@@ -1634,6 +1642,12 @@ namespace EssenceSharp.Runtime {
 			get {return true;}
 		}
 		
+		public override bool IsHostSystemMetaclass {
+			get {	var baseClass = CanonicalInstance;
+				if (baseClass == null) return false;
+				return baseClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject;}
+		}
+		
 		public ESClass CanonicalInstance {
 			get {return (ESClass)environment;}
 		}
@@ -1704,6 +1718,14 @@ namespace EssenceSharp.Runtime {
 			// Should not implement
 		}
 
+		protected override Type ReflectionType {
+			get {	var baseClass = CanonicalInstance;
+				if (baseClass == null) return InstanceType;
+				return baseClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
+					baseClass.InstanceType :
+					InstanceType;}
+		}
+
 		public override BindingFlags HostObjectMethodInvokeBindingFlags {
 			get { return staticMethodInvokeBindingFlags; }
 		}
@@ -1725,11 +1747,11 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public override MethodInfo getHostMethod(String methodName) {
-			return getHostClassMethod(InstanceType, methodName);
+			return getHostClassMethod(ReflectionType, methodName);
 		}
 
 		public override MethodInfo getHostMethod(String methodName, Type[] signature) {
-			return getHostClassMethod(InstanceType, methodName, signature);
+			return getHostClassMethod(ReflectionType, methodName, signature);
 		}
 
 		public override Object sendHostMessage(Object receiver, String messageName) {

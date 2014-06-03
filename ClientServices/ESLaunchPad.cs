@@ -37,8 +37,8 @@ namespace EssenceSharp.ClientServices {
 
 	public static class EssenceLaunchPad {
 
-		private static ESKernel			defaultKernel		= new ESKernel();
 		private static readonly IList<String>	scriptSearchPaths	= new List<String>();
+		private static ESKernel			defaultKernel		= new ESKernel();
 
 		public static ESKernel DefaultKernel {
 			get {return defaultKernel;}
@@ -52,8 +52,17 @@ namespace EssenceSharp.ClientServices {
 
 		public static void scriptSearchPathAddLast(String pathname) {
 			if (String.IsNullOrEmpty(pathname)) return;
+			pathname = Environment.ExpandEnvironmentVariables(pathname);
 			var index = scriptSearchPaths.IndexOf(pathname);
 			if (index >= 0) scriptSearchPaths.RemoveAt(index);
+			scriptSearchPaths.Add(pathname);
+		}
+
+		public static void scriptSearchPathAddLastIfAbsent(String pathname) {
+			if (String.IsNullOrEmpty(pathname)) return;
+			pathname = Environment.ExpandEnvironmentVariables(pathname);
+			var index = scriptSearchPaths.IndexOf(pathname);
+			if (index >= 0) return;
 			scriptSearchPaths.Add(pathname);
 		}
 
@@ -63,6 +72,7 @@ namespace EssenceSharp.ClientServices {
 
 		public static void scriptSearchPathInsert(int insertionIndex, String pathname) {
 			if (String.IsNullOrEmpty(pathname)) return;
+			pathname = Environment.ExpandEnvironmentVariables(pathname);
 			var index = scriptSearchPaths.IndexOf(pathname);
 			if (index >= 0) {
 				scriptSearchPaths.RemoveAt(index);

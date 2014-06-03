@@ -235,18 +235,18 @@ namespace EssenceSharp.Runtime.Binding {
 						break;
 					case MethodOperationType.GetField:
 						field = esClass.getField(operation.Operand);
-						expression = Expression.Field(receiver.asExpressionWithFormalType(), field);
+						expression = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), field);
 						break;
 					case MethodOperationType.GetProperty:
 						property = esClass.getReadableProperty(operation.Operand);
-						expression = Expression.Property(receiver.asExpressionWithFormalType(), property);
+						expression = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), property);
 						break;
 					case MethodOperationType.SetField:
 						field = esClass.getField(operation.Operand);
 						arg = argumentsWithoutReceiver[0];
 						argGuru = arg.typeBindingGuru(kernel);
 						arg = argGuru.metaObjectToConvertTo(field.FieldType);
-						fieldExpression = Expression.Field(receiver.asExpressionWithFormalType(), field);
+						fieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), field);
 						expression = Expression.Block(Expression.Assign(fieldExpression, arg.asExpressionWithFormalType()), self);
 						bindingRestrictions = bindingRestrictions.Merge(arg.Restrictions);
 						break;
@@ -255,14 +255,14 @@ namespace EssenceSharp.Runtime.Binding {
 						arg = argumentsWithoutReceiver[0];
 						argGuru = arg.typeBindingGuru(kernel);
 						arg = argGuru.metaObjectToConvertTo(property.PropertyType);
-						propertyExpression = Expression.Property(receiver.asExpressionWithFormalType(), property);
+						propertyExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), property);
 						expression = Expression.Block(Expression.Assign(propertyExpression, arg.asExpressionWithFormalType()), self);
 						bindingRestrictions = bindingRestrictions.Merge(arg.Restrictions);
 						break;
 					case MethodOperationType.InvokeField:
 						field = esClass.getField(operation.Operand);
 						if (TypeGuru.delegateType.IsAssignableFrom(field.FieldType)) {
-							fieldExpression = Expression.Field(receiver.asExpressionWithFormalType(), field);
+							fieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), field);
 							methodInfo = field.FieldType.GetMethod("Invoke");
 							dynamicBindingGuru = kernel.DynamicBindingGuru;
 							var argGurus = dynamicBindingGuru.dynamicMetaObjectArgumentGurusFor(argumentsWithoutReceiver);
@@ -275,7 +275,7 @@ namespace EssenceSharp.Runtime.Binding {
 					case MethodOperationType.InvokeProperty:
 						property = esClass.getReadableProperty(operation.Operand);
 						if (TypeGuru.delegateType.IsAssignableFrom(property.PropertyType)) {
-							propertyExpression = Expression.Property(receiver.asExpressionWithFormalType(), property);
+							propertyExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), property);
 							methodInfo = property.PropertyType.GetMethod("Invoke");
 							dynamicBindingGuru = kernel.DynamicBindingGuru;
 							var argGurus = dynamicBindingGuru.dynamicMetaObjectArgumentGurusFor(argumentsWithoutReceiver);
@@ -288,7 +288,19 @@ namespace EssenceSharp.Runtime.Binding {
 					case MethodOperationType.InvokeMethod:
 						dynamicBindingGuru = kernel.DynamicBindingGuru;
 						if (dynamicBindingGuru.getMethodAndTypeCompatibleArgumentsFor(operation.Operand, esClass, argumentsWithoutReceiver, out methodInfo, out typedArguments)) {
-							expression = Expression.Call(receiver.asExpressionWithFormalType(), methodInfo, expressionArrayFor(typedArguments.ToArray()));
+							if (methodInfo.IsStatic) {
+								expression = Expression.Call(
+										null, 
+										methodInfo, 
+										expressionArrayFor(typedArguments.ToArray()));
+							} else { 
+								self = receiver.asExpressionWithFormalType();
+								if (!methodInfo.DeclaringType.IsAssignableFrom(self.Type)) self = Expression.Convert(self, methodInfo.DeclaringType);
+								expression = Expression.Call(
+										self, 
+										methodInfo, 
+										expressionArrayFor(typedArguments.ToArray()));
+							}
 							foreach(var argMo in typedArguments) bindingRestrictions = bindingRestrictions.Merge(argMo.Restrictions);
 							if (methodInfo.ReturnType == TypeGuru.voidType) expression = Expression.Block(TypeGuru.objectType, expression, receiver.Expression);
 						}
@@ -312,20 +324,6 @@ namespace EssenceSharp.Runtime.Binding {
 				}
 			}
 			return new DynamicMetaObject(expression, bindingRestrictions, receiver.Value);
-
-		}
-
-		public static DynamicMetaObject metaObjectToSendMessageToESObject(DynamicMetaObject receiver, ESKernel kernel, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
-
-			var method = esClass == null ? null : esClass.compiledMethodAt(selector);
-			return metaObjectToSendMessage(
-					receiver, 
-					kernel,
-					esClass, 
-					selector, 
-					method,
-					metaObjectArgs, 
-					receiver.bindingRestrictionsForESObjectReceiver(esClass));
 
 		}
 
@@ -1683,11 +1681,34 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#region DynamicMetaObjects for general message sending
 
+		public DynamicMetaObject metaObjectToSendMessageToESObject(DynamicMetaObject receiver, ESKernel kernel, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
+
+			ESMethod method;
+			if (esClass == null) {
+				method = null;
+			} else {
+				method = esClass.compiledMethodAt(selector);
+				if (method == null && esClass.IsHostSystemMetaclass) {
+					var name = selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital);
+					return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, name), metaObjectArgs);
+				}
+			}
+
+			return metaObjectToSendMessage(
+					receiver, 
+					kernel,
+					esClass, 
+					selector, 
+					method,
+					metaObjectArgs, 
+					receiver.bindingRestrictionsForESObjectReceiver(esClass));
+
+		}
+
 		public DynamicMetaObject metaObjectToSendMessageToObject(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 			var model = receiver.Value;
 			if (model == null) return metaObjectToSendMessageToNil(receiver, selector, metaObjectArgs);
 			var esObject = model as ESObject;
-			// if (esObject == null || model is ESBlock) {
 			if (esObject == null) {
 				return metaObjectToSendMessageToForeignObject(receiver, model, selector, metaObjectArgs);
 			} else {
@@ -1860,11 +1881,6 @@ namespace EssenceSharp.Runtime.Binding {
 						esClass, 
 						metaObjectToSendMessageToESObject(symbolMO, kernel, kernel.SymbolClass, selector, metaObjectArgs).Expression);
 			}
-			/*
-			if (selector.PrimitiveValue == "showCr") {
-				Debugger.Break();
-			}
-			*/
 			var method = esClass.compiledMethodAt(selector);
 			if (method == null) {
 				return metaObjectToSendSyntheticMessageToForeignObject(receiver, esClass, selector, metaObjectArgs);
@@ -2305,8 +2321,8 @@ namespace EssenceSharp.Runtime.Binding {
 
 				if (esClass.getReadablePropertyOrElseField(
 							Name, 
-							(property) => getPropertyOrFieldExpression = Expression.Property(self, property), 
-							(field) => getPropertyOrFieldExpression = Expression.Field(self, field))) {
+							(property) => getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property), 
+							(field) => getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field))) {
 
 					if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = Expression.Convert(getPropertyOrFieldExpression, TypeGuru.objectType);
 					return new DynamicMetaObject(
@@ -2317,8 +2333,8 @@ namespace EssenceSharp.Runtime.Binding {
 				} else if (Selector.CanonicalSemantics == CanonicalSelectorSemantics.Size) {
 					if (esClass.getReadablePropertyOrElseField(
 								"Count", 
-								(property) => getPropertyOrFieldExpression = Expression.Property(self, property), 
-								(field) => getPropertyOrFieldExpression = Expression.Field(self, field))) {
+								(property) => getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property), 
+								(field) => getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field))) {
 
 						if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = Expression.Convert(getPropertyOrFieldExpression, TypeGuru.objectType);
 						return new DynamicMetaObject(
@@ -2328,8 +2344,8 @@ namespace EssenceSharp.Runtime.Binding {
 		
 					} else if (esClass.getReadablePropertyOrElseField(
 								"Length", 
-								(property) => getPropertyOrFieldExpression = Expression.Property(self, property), 
-								(field) => getPropertyOrFieldExpression = Expression.Field(self, field))) {
+								(property) => getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property), 
+								(field) => getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field))) {
 
 						if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = Expression.Convert(getPropertyOrFieldExpression, TypeGuru.objectType);
 						return new DynamicMetaObject(
@@ -2402,20 +2418,20 @@ namespace EssenceSharp.Runtime.Binding {
 				if (!target.HasValue) return Defer(target, value);
 
 				var self = target.asExpressionWithFormalType();
-				Expression setPropertyOrFieldExpression = null;
+				Expression getPropertyOrFieldExpression = null;
 				Type parameterType = null;
 
 				if (esClass.getWritablePropertyOrElseField(
 							Name, 
 							(PropertyInfo property) => {
 								parameterType = property.PropertyType; 
-								setPropertyOrFieldExpression = Expression.Property(self, property);}, 
+								getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property);}, 
 							(FieldInfo field)	=> {
 								parameterType = field.FieldType; 
-								setPropertyOrFieldExpression = Expression.Field(self, field);})) {
+								getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field);})) {
 					var argGuru = value.typeBindingGuru(kernel);
 					value = argGuru.metaObjectToConvertTo(parameterType);
-					Expression assignExpression = Expression.Assign(setPropertyOrFieldExpression, value.Expression);
+					Expression assignExpression = Expression.Assign(getPropertyOrFieldExpression, value.Expression);
 					return new DynamicMetaObject(
 						Expression.Block(assignExpression, self),
 						target.bindingRestrictionsForForeignObjectReceiver(esClass, value),
@@ -2522,7 +2538,7 @@ namespace EssenceSharp.Runtime.Binding {
 					} else {
 						index = typedIndexMo.Expression;
 					}
-					performOperationExpression = Expression.Call(target.asExpressionWithFormalType(), methodInfo, index);
+					performOperationExpression = Expression.Call(methodInfo.IsStatic ? null : target.asExpressionWithFormalType(), methodInfo, index);
 				}
 
 				if (performOperationExpression.Type != TypeGuru.objectType) performOperationExpression = Expression.Convert(performOperationExpression, TypeGuru.objectType);
@@ -2631,7 +2647,7 @@ namespace EssenceSharp.Runtime.Binding {
 						index = typedIndexMo.Expression;
 					}
 					typedValue = valueGuru.metaObjectToConvertTo(methodInfo.ReturnType);
-					performOperationExpression = Expression.Call(target.asExpressionWithFormalType(), methodInfo, new Expression[]{index, typedValue.Expression});
+					performOperationExpression = Expression.Call(methodInfo.IsStatic ? null : target.asExpressionWithFormalType(), methodInfo, new Expression[]{index, typedValue.Expression});
 				}
 
 				if (performOperationExpression.Type != TypeGuru.objectType) performOperationExpression = Expression.Convert(performOperationExpression, TypeGuru.objectType);
@@ -3230,7 +3246,13 @@ namespace EssenceSharp.Runtime.Binding {
 							break;
 					}
 				} else {
-					invokeMemberExpression = Expression.Call(target.asExpressionWithFormalType(), methodInfo, expressionArrayFor(typedArguments.ToArray()));
+					if (methodInfo.IsStatic) {
+						invokeMemberExpression = Expression.Call(null, methodInfo, expressionArrayFor(typedArguments.ToArray()));
+					} else { 
+						var self = target.asExpressionWithFormalType();
+						if (!methodInfo.DeclaringType.IsAssignableFrom(self.Type)) self = Expression.Convert(self, methodInfo.DeclaringType);
+						invokeMemberExpression = Expression.Call(self, methodInfo, expressionArrayFor(typedArguments.ToArray()));
+					}
 					if (methodInfo.ReturnType == TypeGuru.voidType) invokeMemberExpression = Expression.Block(TypeGuru.objectType, invokeMemberExpression, target.Expression);
 				}
 
@@ -3348,7 +3370,7 @@ namespace EssenceSharp.Runtime.Binding {
 							break;
 					}
 					var wrapperMetaObject = new DynamicMetaObject(Expression.Constant(wrapperClass), target.Restrictions, wrapperClass);
-					return metaObjectToSendMessageToESObject(wrapperMetaObject, kernel, wrapperClass.Class, Selector, args);
+					return dynamicBindingGuru.metaObjectToSendMessageToESObject(wrapperMetaObject, kernel, wrapperClass.Class, Selector, args);
 				} else {
 					return target.BindInvokeMember(
 							dynamicBindingGuru.canonicalInvokeMemberBinderFor(

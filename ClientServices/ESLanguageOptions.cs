@@ -56,6 +56,8 @@ namespace EssenceSharp.ClientServices {
 		protected HashSet<String>		libraryNames			= new HashSet<String>();
 		protected IDictionary<String, String>	assemblyNameBindings;
 		protected IDictionary<String, String>	assemblyPathBindings;
+		protected bool				loadLibrariesVerbosely		= false;
+		protected bool				reportLibraryLoadTime		= false;
 
 		protected virtual void transferValuesToOptionsDictionary() {
 			options[EssenceSharpOptions.exceptionDetailKey]		= ProvideExceptionDetail;
@@ -64,6 +66,8 @@ namespace EssenceSharp.ClientServices {
 			options[EssenceSharpOptions.noAdaptiveCompilationKey]	= !AllowAdaptiveCompilation;
 			options[EssenceSharpOptions.compilationThresholdKey]	= CompilationThreshold;
 			options[EssenceSharpOptions.essenceSharpPathKey]	= EssenceSharpPath;
+			options[EssenceSharpOptions.loadLibrariesVerboselyKey]	= loadLibrariesVerbosely;
+			options[EssenceSharpOptions.reportLibraryLoadTimeKey]	= reportLibraryLoadTime;
 			
 			var libraryNamesList = new List<String>();
 			foreach (var name in libraryNames)			libraryNamesList.Add(name);
@@ -115,6 +119,16 @@ namespace EssenceSharp.ClientServices {
 		public DirectoryInfo EssenceSharpPath {
 			get {return essenceSharpPath ?? ESFileUtility.defaultEssenceSharpPath();}
 			set { essenceSharpPath = value;}
+		}
+
+		public bool LoadLibrariesVerbosely {
+			get {return loadLibrariesVerbosely;}
+			set { loadLibrariesVerbosely = value;}
+		}
+
+		public bool ReportLibraryLoadTime {
+			get {return reportLibraryLoadTime;}
+			set { reportLibraryLoadTime = value;}
 		}
 
 		public HashSet<String> Libraries {
@@ -174,6 +188,8 @@ namespace EssenceSharp.ClientServices {
 		public static readonly String	libraryNamesKey			= "LibraryNames";
 		public static readonly String	assemblyNameBindingsKey		= "AssemblyNameBindings";
 		public static readonly String	assemblyPathBindingsKey		= "AssemblyPathBindings";
+		public static readonly String	loadLibrariesVerboselyKey	= "LoadLibrariesVerbosely";
+		public static readonly String	reportLibraryLoadTimeKey	= "ReportLibraryLoadTime";
 
 		public static IDictionary<String, String> getStringMapOption(IDictionary<String, Object> options, String key) {
 
@@ -193,6 +209,8 @@ namespace EssenceSharp.ClientServices {
 		protected HashSet<String>		libraryNames			= new HashSet<String>();
 		protected IDictionary<String, String>	assemblyNameBindings;
 		protected IDictionary<String, String>	assemblyPathBindings;
+		protected bool				loadLibrariesVerbosely		= false;
+		protected bool				reportLibraryLoadTime		= false;
 
 		public EssenceSharpOptions() : base(null) {
 		}
@@ -203,6 +221,8 @@ namespace EssenceSharp.ClientServices {
 			assemblyPathBindings		= getStringMapOption(options, assemblyPathBindingsKey);
 			var libraryNamesList		= GetOption(options, libraryNamesKey, new ReadOnlyCollection<String>(new String[0]));
 			foreach (var name in libraryNamesList) libraryNames.Add(name);
+			loadLibrariesVerbosely		= GetOption(options, loadLibrariesVerboselyKey, false);
+			reportLibraryLoadTime		= GetOption(options, reportLibraryLoadTimeKey, false);
 		}
 
 		public EssenceSharpOptions(EssenceSharpOptionsBuilder optionsBuilder) : this(optionsBuilder.Options) {
@@ -214,6 +234,14 @@ namespace EssenceSharp.ClientServices {
 
 		public HashSet<String> LibraryNames {
 			get {return libraryNames;}
+		}
+
+		public bool LoadLibrariesVerbosely {
+			get {return loadLibrariesVerbosely;}
+		}
+
+		public bool ReportLibraryLoadTime {
+			get {return reportLibraryLoadTime;}
 		}
 
 		public void assemblyNameBindingsDo(Action<String, String> enumerator2) {

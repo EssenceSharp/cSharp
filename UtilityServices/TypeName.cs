@@ -67,7 +67,7 @@ namespace EssenceSharp.UtilityServices {
 			if (element.Length < 1) throw new PrimInvalidOperandException("Type name must start with a letter or underscore."); 
 			
 			List<String>	namespaceElements	= null;
-			List<String>	containingTypes	= null;
+			List<String>	containingTypes		= null;
 			String		outerTypeElement	= element;
 			String		innerTypeElement	= element;
 			int		genericArity		= 0;

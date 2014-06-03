@@ -313,6 +313,36 @@ namespace EssenceSharp.UtilityServices {
 					isIdentifierChar);
 		}
 			
+		public static String nextQualifiedIdentifierFrom(TextReader stream) {
+
+			var element = nextIdentifierFrom(stream);
+			if (element == null) return element; 
+			
+			List<String>	qualifiedNameElements	= null;
+			var		c			= stream.Peek();
+			var		ch			= (char)c;
+
+			if (ch == '.') {
+				qualifiedNameElements = new List<String>();
+				while (nextMatches(stream, '.')) {
+					if (element.Length < 1) {
+						var prefix = compose(qualifiedNameElements.ToArray(), ".");
+						throw new InvalidArgumentException("Qualified identifier path element cannot have a length of zero. Check for unintentional duplication of the separator character ('.'). Prefix = " + prefix);
+					}
+					qualifiedNameElements.Add(element);
+					element = ESLexicalUtility.nextIdentifierFrom(stream);
+					if (element == null) {
+						var prefix = compose(qualifiedNameElements.ToArray(), ".");
+						throw new InvalidArgumentException("Qualified identifier name cannot end with a period. Prefix = " + prefix);
+					}
+				}
+				qualifiedNameElements.Add(element);
+				return compose(qualifiedNameElements.ToArray(), ".");
+			} else {
+				return element;
+			}
+		}
+
 		public static long? nextIntegerFrom(TextReader stream) {
 			String token =
 				nextTokenFrom(

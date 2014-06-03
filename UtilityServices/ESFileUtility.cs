@@ -42,6 +42,7 @@ namespace EssenceSharp.UtilityServices {
 
 		public static readonly String illegalFilenameChars			= @"<>|:*?\/";
 		
+		private static readonly String userEssenceSharpPathString		= Environment.ExpandEnvironmentVariables(Settings.Default.PathEnvironmentVarName);
 		private static readonly String userProfilePathString			= Environment.ExpandEnvironmentVariables("%UserProfile%");
 		private static readonly String userDocumentsPathString			= Path.Combine(userProfilePathString, Settings.Default.UserDocumentsPathString);
 		private static readonly String userDesktopPathString			= Path.Combine(userProfilePathString, "Desktop");
@@ -67,7 +68,9 @@ namespace EssenceSharp.UtilityServices {
 		}
 			
 		public static String DefaultEssenceSharpPathString {
-			get {return defaultEssenceSharpPathString;}
+			get {	var userPath = userEssenceSharpPathString;
+				if (userPath.Length > 0 && userPath[0] != '%') return userPath;
+				return defaultEssenceSharpPathString;}
 		}
 			
 		public static DirectoryInfo userProfilePath() {

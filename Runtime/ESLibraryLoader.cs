@@ -38,21 +38,25 @@ namespace EssenceSharp.Runtime {
 
 	public class ESLibraryLoader {
 
-		public static bool load(ESKernel kernel, DirectoryInfo baseDirectory, out List<ESNamespace> rootNamespaces) {
+		public static bool load(ESKernel kernel, DirectoryInfo baseDirectory, bool beVerbose, out List<ESNamespace> rootNamespaces) {
 			var libraryLoader = new ESLibraryLoader(kernel, baseDirectory);
+			libraryLoader.IsVerbose = beVerbose;
 			return libraryLoader.load(out rootNamespaces);
 		}
 
-		public static bool load(ESKernel kernel, DirectoryInfo baseDirectory, bool recurseIntoNestedNamespaces, out List<ESNamespace> rootNamespaces) {
+		public static bool load(ESKernel kernel, DirectoryInfo baseDirectory, bool beVerbose, bool recurseIntoNestedNamespaces, out List<ESNamespace> rootNamespaces) {
 			var libraryLoader = new ESLibraryLoader(kernel, baseDirectory, recurseIntoNestedNamespaces);
+			libraryLoader.IsVerbose = beVerbose;
 			return libraryLoader.load(out rootNamespaces);
 		}
 
-		public static bool load(ESKernel kernel, ESNamespace baseEnvironment, DirectoryInfo baseDirectory, bool recurseIntoNestedNamespaces, out List<ESNamespace> rootNamespaces) {
+		public static bool load(ESKernel kernel, ESNamespace baseEnvironment, DirectoryInfo baseDirectory, bool beVerbose, bool recurseIntoNestedNamespaces, out List<ESNamespace> rootNamespaces) {
 			var libraryLoader = new ESLibraryLoader(kernel, baseEnvironment, baseDirectory, recurseIntoNestedNamespaces);
+			libraryLoader.IsVerbose = beVerbose;
 			return libraryLoader.load(out rootNamespaces);
 		}
 
+		protected bool						isVerbose			= false;
 		protected ESKernel					kernel				= null;
 		protected ESNamespace					baseEnvironment			= null;
 		protected DirectoryInfo					baseDirectory			= null;
@@ -80,6 +84,11 @@ namespace EssenceSharp.Runtime {
 		}
 
 		#region Public protocol
+
+		public bool IsVerbose {
+			get { return isVerbose;}
+			set { isVerbose = value;}
+		}
 
 		public ESKernel Kernel {
 			get {return kernel;}
@@ -237,6 +246,7 @@ namespace EssenceSharp.Runtime {
 				namespaceFactory = new NamespaceFactory(kernel, baseEnvironment, nameSymbol);
 				namespaceFactories.Add(namespaceFactory);
 			}
+			namespaceFactory.IsVerbose = IsVerbose;
 			if (!namespaceFactory.declareNamespace()) return false;
 			loadedNamespace = namespaceFactory.ThisNamespace;
 			namespaceFactory.NamespaceConfigurationFile = (FileInfo)namespaceConfigurationFile;
@@ -290,6 +300,7 @@ namespace EssenceSharp.Runtime {
 
 		}
 
+		protected bool							isVerbose			= false;
 		protected ESKernel						kernel				= null;
 		protected ESNamespace						baseEnvironment;
 		protected ESSymbol						name;
@@ -303,6 +314,11 @@ namespace EssenceSharp.Runtime {
 			this.kernel		= kernel;
 			this.baseEnvironment	= baseEnvironment;
 			this.name		= name;
+		}
+
+		public bool IsVerbose {
+			get { return isVerbose;}
+			set { isVerbose = value;}
 		}
 
 		public ESKernel Kernel {
@@ -335,7 +351,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual bool declareNamespace() {
-			Console.WriteLine("Declaring namespace: #" + Name);
+			if (IsVerbose) Console.WriteLine("Declaring namespace: #" + Name);
 			if (baseEnvironment == null) {
 				thisNamespace = kernel.newNamespace();
 				thisNamespace.setName(Name);
@@ -401,7 +417,7 @@ namespace EssenceSharp.Runtime {
 		protected virtual bool declareConstant(Association<ESBindingReference, FileInfo> association) {
 			var file = association.Value;
 			var name = ESFileUtility.filenameWithoutExtensionsFrom(file);
-			Console.WriteLine("Declaring constant: " + name + " in: " + ThisNamespace.NameString);
+			if (IsVerbose) Console.WriteLine("Declaring constant: " + name + " in: " + ThisNamespace.NameString);
 			var binding = ThisNamespace.declareVariable(name, DefaultConstantAccessPrivilege, null);
 			if (binding == null) {
 				Console.WriteLine("Name binding collision: " + name + " in: " + ThisNamespace.PathnameString);
@@ -414,7 +430,7 @@ namespace EssenceSharp.Runtime {
 		protected virtual bool declareVariable(Association<ESBindingReference, FileInfo> association) {
 			var file = association.Value;
 			var name = ESFileUtility.filenameWithoutExtensionsFrom(file);
-			Console.WriteLine("Declaring variable: " + name + " in: " + ThisNamespace.NameString);
+			if (IsVerbose) Console.WriteLine("Declaring variable: " + name + " in: " + ThisNamespace.NameString);
 			var binding = ThisNamespace.declareVariable(name, DefaultVariableAccessPrivilege, null);
 			if (binding == null) {
 				Console.WriteLine("Name binding collision: " + name + " in: " + ThisNamespace.PathnameString);
@@ -426,14 +442,14 @@ namespace EssenceSharp.Runtime {
 
 		protected virtual bool configureNamespace() {
 			if (NamespaceConfigurationFile == null) return true;
-			Console.WriteLine("Configuring namespace: " + ThisNamespace.PathnameString);
+			if (IsVerbose) Console.WriteLine("Configuring namespace: " + ThisNamespace.PathnameString);
 			return evaluateAsSelfExpression(ThisNamespace, ThisNamespace, NamespaceConfigurationFile);
 		}
 
 		protected virtual bool initializeConstant(Association<ESBindingReference, FileInfo> association) {
 			var binding = association.Key;
 			var file = association.Value;
-			Console.WriteLine("Initializing constant: " + binding.Key + " in: " + ThisNamespace.PathnameString);
+			if (IsVerbose) Console.WriteLine("Initializing constant: " + binding.Key + " in: " + ThisNamespace.PathnameString);
 			var success = evaluateAsSelfExpression(ThisNamespace, binding, file);
 			if (success) binding.beImmutable();
 			return success;
@@ -442,7 +458,7 @@ namespace EssenceSharp.Runtime {
 		protected virtual bool initializeVariable(Association<ESBindingReference, FileInfo> association) {
 			var binding = association.Key;
 			var file = association.Value;
-			Console.WriteLine("Initializing variable: " + binding.Key + " in: " + ThisNamespace.PathnameString);
+			if (IsVerbose) Console.WriteLine("Initializing variable: " + binding.Key + " in: " + ThisNamespace.PathnameString);
 			var success = evaluateAsSelfExpression(ThisNamespace, binding, file);
 			return success;
 		}
@@ -521,7 +537,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual bool declareClassAndMetaclass() {
-			Console.WriteLine("Declaring class: #" + Name);
+			if (IsVerbose) Console.WriteLine("Declaring class: #" + Name);
 			thisClass = null; 
 			if (baseEnvironment == null) {
 				thisClass = kernel.newClass(Name, ObjectStateArchitecture.Stateless);
@@ -546,19 +562,19 @@ namespace EssenceSharp.Runtime {
 
 		protected virtual bool configureClass() {
 			if (ClassConfigurationFile == null) return true;
-			Console.WriteLine("Configuring class : " + ThisClass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Configuring class : " + ThisClass.PathnameString);
 			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile);
 		}
 
 		protected virtual bool configureMetaclass() {
 			if (MetaclassConfigurationFile == null) return true;
-			Console.WriteLine("Configuring metaclass: " + ThisMetaclass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Configuring metaclass: " + ThisMetaclass.PathnameString);
 			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassConfigurationFile);
 		}
 
 		protected virtual bool compileMethodsFor(ESBehavior methodClass, FileInfo methodDeclarationFile) {
 			if (methodDeclarationFile == null) return true;
-			Console.WriteLine("Compiling methods for: " + methodClass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Compiling methods for: " + methodClass.PathnameString);
 			return evaluateAsSelfExpression(methodClass, methodClass, methodDeclarationFile);
 		}
 
@@ -570,13 +586,13 @@ namespace EssenceSharp.Runtime {
 
 		protected virtual bool initializeClass() {
 			if (ClassInitializationFile == null) return true;
-			Console.WriteLine("Initializing class : " + ThisClass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Initializing class : " + ThisClass.PathnameString);
 			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassInitializationFile);
 		}
 
 		protected virtual bool initializeMetaclass() {
 			if (MetaclassInitializationFile == null) return true;
-			Console.WriteLine("Initializing metaclass: " + ThisMetaclass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Initializing metaclass: " + ThisMetaclass.PathnameString);
 			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassInitializationFile);
 		}
 

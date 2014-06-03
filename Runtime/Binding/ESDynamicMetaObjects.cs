@@ -110,8 +110,14 @@ namespace EssenceSharp.Runtime.Binding {
 					messageSendMO = metaObjectToSendDoesNotUnderstand(esClass, kernel.symbolFor(messageName), args);
 					return false;
 				} else {
-					messageSendMO = DynamicBindingGuru.metaObjectToSendMessageToESObject(this, kernel, esClass, selector, args); 
-					return true;
+					method = esClass.compiledMethodAt(selector);
+					if (method != null) { 
+						messageSendMO =  DynamicBindingGuru.metaObjectToSendMessage(this, kernel, esClass, selector, method, args, this.bindingRestrictionsForESObjectReceiver(esClass));
+						return true;
+					} else {
+						messageSendMO =  null;
+						return false;
+					}
 				}
 			} else {
 				messageSendMO = DynamicBindingGuru.metaObjectToSendMessage(this, kernel, esClass, method.Selector, method, args, DefaultBindingRestrictions);

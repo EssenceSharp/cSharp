@@ -53,6 +53,8 @@ namespace EssenceSharp.Runtime {
 		
 		#region Instance variables
 
+		protected bool									beVerbose			= false;
+
 		#region Canonical Classes
 
 		#region Architecturally-required classes
@@ -935,16 +937,6 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Utilities
-
-		public ESNamespace getNamespace(String qualifiedNamespaceName, AccessPrivilegeLevel requestorPrivilege) {
-			var pathname = pathnameFromString(qualifiedNamespaceName);
-			var value = pathname.valueInNamespaceIfAbsent(RootNamespace, requestorPrivilege, ImportTransitivity.Intransitive, null);
-			return value as ESNamespace;
-		}
-
-		#endregion
-
 		#region File paths
 
 		protected virtual void setEssenceSharpPath(DirectoryInfo newDefaultEssenceSharpPath) {
@@ -978,23 +970,36 @@ namespace EssenceSharp.Runtime {
 			get {return standardLibraryPath;}
 		}
 
-		public DirectoryInfo libraryPathFor(String libraryName) {
-			return new DirectoryInfo(Path.Combine(librariesPath.FullName,	libraryName));
+		public DirectoryInfo libraryPathFor(String userLibraryName) {
+			var libraryName = ESLexicalUtility.nextQualifiedIdentifierFrom(new StringReader(userLibraryName));
+			return new DirectoryInfo(Path.Combine(librariesPath.FullName, libraryName));
 		}
 
 		public bool findFullScriptPathnameFor(String scriptPathameSuffix, out FileInfo scriptPath) {
+			bool mustCheckForExtension = false;
+			String suffixWithExtension;
+			var extension = Path.GetExtension(scriptPathameSuffix);
+			if (extension == ".es") {
+				suffixWithExtension = scriptPathameSuffix;
+			} else {
+				mustCheckForExtension = true;
+				suffixWithExtension = scriptPathameSuffix + ".es";
+			}
 			scriptPath = new FileInfo(scriptPathameSuffix);
 			if (scriptPath.Exists) return true;
-			return basicFindFullScriptPathnameFor(scriptPathameSuffix, out scriptPath);
-		}
-
-		internal bool basicFindFullScriptPathnameFor(String scriptPathameSuffix, out FileInfo scriptPath) {
-			scriptPath = null;
+			if (mustCheckForExtension) {
+				scriptPath = new FileInfo(suffixWithExtension);
+				if (scriptPath.Exists) return true;
+			}
 			FileInfo innerScriptPath = null;
 			EssenceLaunchPad.scriptSearchPathsDoUntil(
 				pathnamePrefix => {
 					innerScriptPath = new FileInfo(Path.Combine(pathnamePrefix, scriptPathameSuffix));
 					if (innerScriptPath.Exists) return true;
+					if (mustCheckForExtension) {
+						innerScriptPath = new FileInfo(Path.Combine(pathnamePrefix, suffixWithExtension));
+						if (innerScriptPath.Exists) return true;
+					}
 					innerScriptPath = null;
 					return false;
 				});
@@ -1003,307 +1008,12 @@ namespace EssenceSharp.Runtime {
 				return true;
 			}
 			scriptPath = new FileInfo(Path.Combine(ScriptsPath.FullName, scriptPathameSuffix));
-			return scriptPath.Exists;
-		}
-
-		#endregion
-
-		#region System Initialization
-
-		protected virtual void intialize() {
-			assignMetaclassToCanonicalClasses();
-			createCanonicalNamespaces();
-			establishCanonicalNamespaceStructure();
-			assignCanonicalNamesToCanonicalClasses();
-			establishCanonicalClassInheritanceStructure();
-			assignCanonicalClassesToCanonicalNamspaces();
-			addCanonicalPrimitiveDomains();
-			publishCanonicalPrimitives();
-			installCanonicalPrimitivesInCanonicalClasses(SymbolRegistry.symbolFor("system primitives"));
-			registerAdoptedHostSystemClasses();
-			createDynamicBinderRegistries();
-			EssenceSharpPath = ESFileUtility.defaultEssenceSharpPath();
-		}
-
-		protected virtual void assignMetaclassToCanonicalClasses() {
-
-			canonicalObjectClass.setClass(newMetaclass());
-			canonicalNamespaceClass.setClass(newMetaclass());
-			canonicalBehaviorClass.setClass(newMetaclass());
-			canonicalClassClass.setClass(newMetaclass());
-			canonicalMetaclassClass.setClass(newMetaclass());
-			canonicalCompiledCodeClass.setClass(newMetaclass());
-			canonicalBlockClass.setClass(newMetaclass());
-			canonicalMethodClass.setClass(newMetaclass());
-			canonicalAssociationClass.setClass(newMetaclass());
-			canonicalBindingReferenceClass.setClass(newMetaclass());
-			canonicalMessageClass.setClass(newMetaclass());
-			canonicalMagnitudeClass.setClass(newMetaclass());
-
-			canonicalCollectionClass.setClass(newMetaclass());
-			canonicalKeyedCollectionClass.setClass(newMetaclass());
-			canonicalIdentityDictionaryClass.setClass(newMetaclass());
-			canonicalDictionaryClass.setClass(newMetaclass());
-			canonicalSequenceableCollectionClass.setClass(newMetaclass());
-			canonicalArrayedCollectionClass.setClass(newMetaclass());
-			canonicalArrayClass.setClass(newMetaclass());
-			canonicalByteArrayClass.setClass(newMetaclass());
-			canonicalStringClass.setClass(newMetaclass());
-			canonicalSymbolClass.setClass(newMetaclass());
-			canonicalHalfWordArrayClass.setClass(newMetaclass());
-			canonicalWordArrayClass.setClass(newMetaclass());
-			canonicalLongWordArrayClass.setClass(newMetaclass());
-			canonicalFloatArrayClass.setClass(newMetaclass());
-			canonicalDoubleArrayClass.setClass(newMetaclass());
-			canonicalQuadArrayClass.setClass(newMetaclass());
-			canonicalPathnameClass.setClass(newMetaclass());
-
-			canonicalPrimitiveValueClass.setClass(newMetaclass());
-			canonicalUndefinedObjectClass.setClass(newMetaclass());
-			canonicalBooleanClass.setClass(newMetaclass());
-			canonicalFalseClass.setClass(newMetaclass());
-			canonicalTrueClass.setClass(newMetaclass());
-			canonicalCharacterClass.setClass(newMetaclass());
-			canonicalArithmeticValueClass.setClass(newMetaclass());
-			canonicalNumberClass.setClass(newMetaclass());
-			canonicalIntegerClass.setClass(newMetaclass());
-			canonicalSmallIntegerClass.setClass(newMetaclass());
-			canonicalRationalClass.setClass(newMetaclass());
-			canonicalInvariantPrecisionRealClass.setClass(newMetaclass());
-			canonicalFloatClass.setClass(newMetaclass());
-			canonicalDoubleClass.setClass(newMetaclass());
-			canonicalQuadClass.setClass(newMetaclass());
-
-		}
-
-		protected virtual void createCanonicalNamespaces() {
-			rootNamespace		= newNamespace(null, SymbolRegistry.symbolFor("Root"));
-			smalltalkNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Smalltalk"));
-			undeclaredNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Undeclared"));
-			clrNamespace		= newNamespace(rootNamespace, SymbolRegistry.symbolFor("CLR"), true);
-			clrNamespace.Assembly	= TypeGuru.objectType.Assembly;
-		}
-
-		public virtual void establishCanonicalNamespaceStructure() {
-			rootNamespace.declareInSelf(true);
-			rootNamespace.declareInSelfAs(SymbolRegistry.symbolFor("EssenceSharp"), true);
-			clrNamespace.declareInSelfAs(SymbolRegistry.symbolFor("HostSystem"), true);
-			rootNamespace.addImport(new ESImportSpec(smalltalkNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
-			rootNamespace.addImport(new ESImportSpec(undeclaredNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
-			rootNamespace.addImport(new ESImportSpec(clrNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
-		}
-
-		protected virtual void assignCanonicalNamesToCanonicalClasses() {
-
-			canonicalObjectClass.setName(SymbolRegistry.symbolFor("Object"));
-			canonicalNamespaceClass.setName(SymbolRegistry.symbolFor("Namespace"));
-			canonicalBehaviorClass.setName(SymbolRegistry.symbolFor("Behavior"));
-			canonicalClassClass.setName(SymbolRegistry.symbolFor("Class"));
-			canonicalMetaclassClass.setName(SymbolRegistry.symbolFor("Metaclass"));
-			canonicalCompiledCodeClass.setName(SymbolRegistry.symbolFor("CompiledCode"));
-			canonicalBlockClass.setName(SymbolRegistry.symbolFor("Block"));
-			canonicalMethodClass.setName(SymbolRegistry.symbolFor("Method"));
-			canonicalAssociationClass.setName(SymbolRegistry.symbolFor("Association"));
-			canonicalBindingReferenceClass.setName(SymbolRegistry.symbolFor("BindingReference"));
-			canonicalMessageClass.setName(SymbolRegistry.symbolFor("Message"));
-			canonicalMagnitudeClass.setName(SymbolRegistry.symbolFor("Magnitude"));
-
-			canonicalCollectionClass.setName(SymbolRegistry.symbolFor("Collection"));
-			canonicalKeyedCollectionClass.setName(SymbolRegistry.symbolFor("KeyedCollection"));
-			canonicalIdentityDictionaryClass.setName(SymbolRegistry.symbolFor("IdentityDictionary"));
-			canonicalDictionaryClass.setName(SymbolRegistry.symbolFor("Dictionary"));
-			canonicalSequenceableCollectionClass.setName(SymbolRegistry.symbolFor("SequenceableCollection"));
-			canonicalArrayedCollectionClass.setName(SymbolRegistry.symbolFor("ArrayedCollection"));
-			canonicalArrayClass.setName(SymbolRegistry.symbolFor("Array"));
-			canonicalByteArrayClass.setName(SymbolRegistry.symbolFor("ByteArray"));
-			canonicalStringClass.setName(SymbolRegistry.symbolFor("String"));
-			canonicalSymbolClass.setName(SymbolRegistry.symbolFor("Symbol"));
-			canonicalHalfWordArrayClass.setName(SymbolRegistry.symbolFor("HalfWordArray"));
-			canonicalWordArrayClass.setName(SymbolRegistry.symbolFor("WordArray"));
-			canonicalLongWordArrayClass.setName(SymbolRegistry.symbolFor("LongWordArray"));
-			canonicalFloatArrayClass.setName(SymbolRegistry.symbolFor("FloatArray"));
-			canonicalDoubleArrayClass.setName(SymbolRegistry.symbolFor("DoubleArray"));
-			canonicalQuadArrayClass.setName(SymbolRegistry.symbolFor("QuadArray"));
-			canonicalPathnameClass.setName(SymbolRegistry.symbolFor("Pathname"));
-
-			canonicalPrimitiveValueClass.setName(SymbolRegistry.symbolFor("PrimitiveValue"));
-			canonicalUndefinedObjectClass.setName(SymbolRegistry.symbolFor("UndefinedObject"));
-			canonicalBooleanClass.setName(SymbolRegistry.symbolFor("Boolean"));
-			canonicalFalseClass.setName(SymbolRegistry.symbolFor("False"));
-			canonicalTrueClass.setName(SymbolRegistry.symbolFor("True"));
-			canonicalCharacterClass.setName(SymbolRegistry.symbolFor("Character"));
-			canonicalArithmeticValueClass.setName(SymbolRegistry.symbolFor("ArithmeticValue"));
-			canonicalNumberClass.setName(SymbolRegistry.symbolFor("Number"));
-			canonicalIntegerClass.setName(SymbolRegistry.symbolFor("Integer"));
-			canonicalSmallIntegerClass.setName(SymbolRegistry.symbolFor("SmallInteger"));
-			canonicalRationalClass.setName(SymbolRegistry.symbolFor("Rational"));
-			canonicalInvariantPrecisionRealClass.setName(SymbolRegistry.symbolFor("InvariantPrecisionReal"));
-			canonicalFloatClass.setName(SymbolRegistry.symbolFor("Float"));
-			canonicalDoubleClass.setName(SymbolRegistry.symbolFor("Double"));
-			canonicalQuadClass.setName(SymbolRegistry.symbolFor("Quad"));
-
-		}
-
-		protected virtual void establishCanonicalClassInheritanceStructure() {
-
-			canonicalObjectClass.Superclass = null;
-			canonicalNamespaceClass.Superclass = canonicalKeyedCollectionClass;
-			canonicalBehaviorClass.Superclass = canonicalNamespaceClass;
-			canonicalClassClass.Superclass = canonicalBehaviorClass;
-			canonicalMetaclassClass.Superclass = canonicalBehaviorClass;
-			canonicalCompiledCodeClass.Superclass = canonicalObjectClass;
-			canonicalBlockClass.Superclass = canonicalCompiledCodeClass;
-			canonicalMethodClass.Superclass = canonicalCompiledCodeClass;
-			canonicalAssociationClass.Superclass = canonicalObjectClass;
-			canonicalBindingReferenceClass.Superclass = canonicalObjectClass;
-			canonicalMessageClass.Superclass = canonicalObjectClass;
-			canonicalMagnitudeClass.Superclass = canonicalObjectClass;
-
-			canonicalCollectionClass.Superclass = canonicalObjectClass;
-			canonicalKeyedCollectionClass.Superclass = canonicalCollectionClass;
-			canonicalIdentityDictionaryClass.Superclass = canonicalKeyedCollectionClass;
-			canonicalDictionaryClass.Superclass = canonicalIdentityDictionaryClass;
-			canonicalSequenceableCollectionClass.Superclass = canonicalCollectionClass;
-			canonicalArrayedCollectionClass.Superclass = canonicalSequenceableCollectionClass;
-			canonicalArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalByteArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalStringClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalSymbolClass.Superclass = canonicalStringClass;
-			canonicalHalfWordArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalWordArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalLongWordArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalFloatArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalDoubleArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalQuadArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalPathnameClass.Superclass = canonicalArrayedCollectionClass;
-
-			canonicalPrimitiveValueClass.Superclass = null;
-			canonicalUndefinedObjectClass.Superclass = canonicalPrimitiveValueClass;
-			canonicalBooleanClass.Superclass = canonicalPrimitiveValueClass;
-			canonicalFalseClass.Superclass = canonicalBooleanClass;
-			canonicalTrueClass.Superclass = canonicalBooleanClass;
-			canonicalCharacterClass.Superclass = canonicalPrimitiveValueClass;
-			canonicalArithmeticValueClass.Superclass = canonicalPrimitiveValueClass;
-			canonicalNumberClass.Superclass = canonicalArithmeticValueClass;
-			canonicalIntegerClass.Superclass = canonicalNumberClass;
-			canonicalSmallIntegerClass.Superclass = canonicalIntegerClass;
-			canonicalRationalClass.Superclass = canonicalNumberClass;
-			canonicalInvariantPrecisionRealClass.Superclass = canonicalRationalClass;
-			canonicalFloatClass.Superclass = canonicalInvariantPrecisionRealClass;
-			canonicalDoubleClass.Superclass = canonicalInvariantPrecisionRealClass;
-			canonicalQuadClass.Superclass = canonicalInvariantPrecisionRealClass;
-
-		}
-
-		protected virtual void assignCanonicalClassesToCanonicalNamspaces() {
-
-			canonicalObjectClass.setEnvironment(SmalltalkNamespace);
-			canonicalNamespaceClass.setEnvironment(SmalltalkNamespace);
-			canonicalBehaviorClass.setEnvironment(SmalltalkNamespace);
-			canonicalClassClass.setEnvironment(SmalltalkNamespace);
-			canonicalMetaclassClass.setEnvironment(SmalltalkNamespace);
-			canonicalCompiledCodeClass.setEnvironment(SmalltalkNamespace);
-			canonicalBlockClass.setEnvironment(SmalltalkNamespace);
-			canonicalMethodClass.setEnvironment(SmalltalkNamespace);
-			canonicalAssociationClass.setEnvironment(SmalltalkNamespace);
-			canonicalBindingReferenceClass.setEnvironment(SmalltalkNamespace);
-			canonicalMessageClass.setEnvironment(SmalltalkNamespace);
-			canonicalMagnitudeClass.setEnvironment(SmalltalkNamespace);
-
-			canonicalCollectionClass.setEnvironment(SmalltalkNamespace);
-			canonicalKeyedCollectionClass.setEnvironment(SmalltalkNamespace);
-			canonicalIdentityDictionaryClass.setEnvironment(SmalltalkNamespace);
-			canonicalDictionaryClass.setEnvironment(SmalltalkNamespace);
-			canonicalSequenceableCollectionClass.setEnvironment(SmalltalkNamespace);
-			canonicalArrayedCollectionClass.setEnvironment(SmalltalkNamespace);
-			canonicalArrayClass.setEnvironment(SmalltalkNamespace);
-			canonicalByteArrayClass.setEnvironment(SmalltalkNamespace);
-			canonicalStringClass.setEnvironment(SmalltalkNamespace);
-			canonicalSymbolClass.setEnvironment(SmalltalkNamespace);
-			canonicalHalfWordArrayClass.setEnvironment(SmalltalkNamespace);
-			canonicalWordArrayClass.setEnvironment(SmalltalkNamespace);
-			canonicalLongWordArrayClass.setEnvironment(SmalltalkNamespace);
-			canonicalFloatArrayClass.setEnvironment(SmalltalkNamespace);
-			canonicalDoubleArrayClass.setEnvironment(SmalltalkNamespace);
-			canonicalQuadArrayClass.setEnvironment(SmalltalkNamespace);
-			canonicalPathnameClass.setEnvironment(SmalltalkNamespace);
-
-			canonicalPrimitiveValueClass.setEnvironment(SmalltalkNamespace);
-			canonicalUndefinedObjectClass.setEnvironment(SmalltalkNamespace);
-			canonicalBooleanClass.setEnvironment(SmalltalkNamespace);
-			canonicalFalseClass.setEnvironment(SmalltalkNamespace);
-			canonicalTrueClass.setEnvironment(SmalltalkNamespace);
-			canonicalCharacterClass.setEnvironment(SmalltalkNamespace);
-			canonicalArithmeticValueClass.setEnvironment(SmalltalkNamespace);
-			canonicalNumberClass.setEnvironment(SmalltalkNamespace);
-			canonicalIntegerClass.setEnvironment(SmalltalkNamespace);
-			canonicalSmallIntegerClass.setEnvironment(SmalltalkNamespace);
-			canonicalRationalClass.setEnvironment(SmalltalkNamespace);
-			canonicalInvariantPrecisionRealClass.setEnvironment(SmalltalkNamespace);
-			canonicalFloatClass.setEnvironment(SmalltalkNamespace);
-			canonicalDoubleClass.setEnvironment(SmalltalkNamespace);
-			canonicalQuadClass.setEnvironment(SmalltalkNamespace);
-
-		}
-
-		protected virtual void addCanonicalPrimitiveDomains() {
-			addPrimitiveDomain(new ESObject.Primitives());
-			addPrimitiveDomain(new ESNamespace.Primitives());
-			addPrimitiveDomain(new ESBehavior.Primitives());
-			addPrimitiveDomain(new ESClass.Primitives());
-			addPrimitiveDomain(new ESMetaclass.Primitives());
-			addPrimitiveDomain(new ESCompiledCode.Primitives());
-			addPrimitiveDomain(new ESBlock.Primitives());
-			addPrimitiveDomain(new ESMethod.Primitives());
-			addPrimitiveDomain(new ESAssociation.Primitives());
-			addPrimitiveDomain(new ESBindingReference.Primitives());
-			addPrimitiveDomain(new ESMessage.Primitives());
-			addPrimitiveDomain(new ESIdentityDictionary.Primitives());
-			addPrimitiveDomain(new ESArray.Primitives());
-			addPrimitiveDomain(new ESByteArray.Primitives());
-			addPrimitiveDomain(new ESString.Primitives());
-			addPrimitiveDomain(new ESSymbol.Primitives());
-			addPrimitiveDomain(new ESHalfWordArray.Primitives());
-			addPrimitiveDomain(new ESWordArray.Primitives());
-			addPrimitiveDomain(new ESLongWordArray.Primitives());
-			addPrimitiveDomain(new ESFloatArray.Primitives());
-			addPrimitiveDomain(new ESDoubleArray.Primitives());
-			addPrimitiveDomain(new ESQuadArray.Primitives());
-			addPrimitiveDomain(new ESPathname.Primitives());
-
-			addPrimitiveDomain(new UndefinedObjectPrimitives());
-			addPrimitiveDomain(new FalsePrimitives());
-			addPrimitiveDomain(new TruePrimitives());
-			addPrimitiveDomain(new CharacterPrimitives());
-			addPrimitiveDomain(new SmallIntegerPrimitives());
-			addPrimitiveDomain(new SinglePrecisionPrimitives());
-			addPrimitiveDomain(new DoublePrecisionPrimitives());
-			addPrimitiveDomain(new QuadPrecisionPrimitives());
-		}
-
-		public void registerAdoptedHostSystemClasses() {
-
-			typeToClassMap[TypeGuru.charType] = CharacterClass;
-
-			typeToClassMap[TypeGuru.longType] = SmallIntegerClass;
-			typeToClassMap[TypeGuru.intType] = SmallIntegerClass;
-			typeToClassMap[TypeGuru.uintType] = SmallIntegerClass;
-			typeToClassMap[TypeGuru.shortType] = SmallIntegerClass;
-			typeToClassMap[TypeGuru.ushortType] = SmallIntegerClass;
-			typeToClassMap[TypeGuru.byteType] = SmallIntegerClass;
-			typeToClassMap[TypeGuru.sbyteType] = SmallIntegerClass;
-
-			typeToClassMap[TypeGuru.floatType] = FloatClass;
-			typeToClassMap[TypeGuru.doubleType] = DoubleClass;
-			typeToClassMap[TypeGuru.decimalType] = QuadClass;
-
-		}
-
-		protected void createDynamicBinderRegistries() {
-			dynamicBindingGuru		= new DynamicBindingGuru(this);
-			messageSendBinderRegistry	= new MessageSendBinder.Registry(dynamicBindingGuru);
-			getVariableValueBinderRegistry	= new GetVariableValueBinder.Registry(dynamicBindingGuru);
-			setVariableValueBinderRegistry	= new SetVariableValueBinder.Registry(dynamicBindingGuru);
+			if (scriptPath.Exists) return true;
+			if (mustCheckForExtension) {
+				scriptPath = new FileInfo(Path.Combine(ScriptsPath.FullName, suffixWithExtension));
+				return scriptPath.Exists;
+			}
+			return false;
 		}
 
 		#endregion
@@ -1614,11 +1324,11 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Assembly/Namespace Binding
+		#region Binding Essence# Namespace To CLR Namespace / Assembly
 
 		public void bindNamespaceToAssemblyNamed(String qualifiedNamespaceName, AssemblyName assemblyName) {
 			assemblyNameBindings[qualifiedNamespaceName] = assemblyName;
-			Console.WriteLine("Binding " + qualifiedNamespaceName + " to assembly: " + assemblyName.FullName);
+			if (beVerbose) Console.WriteLine("Binding " + qualifiedNamespaceName + " to assembly: " + assemblyName.FullName);
 		}
 
 		internal void bindNamespaceToAssemblyNamed(ESNamespace esNamespace, AssemblyName assemblyName) {
@@ -1626,7 +1336,7 @@ namespace EssenceSharp.Runtime {
 		}
 	
 		public void bindNamespaceToAssemblyAt(String qualifiedNamespaceName, FileInfo assemblyPath) {
-			Console.WriteLine("Binding " + qualifiedNamespaceName + " to assembly at: " + assemblyPath.FullName);
+			if (beVerbose) Console.WriteLine("Binding " + qualifiedNamespaceName + " to assembly at: " + assemblyPath.FullName);
 			var assemblyName = AssemblyName.GetAssemblyName(assemblyPath.FullName);
 			assemblyPathnameBindings[assemblyName] = assemblyPath;
 			bindNamespaceToAssemblyNamed(qualifiedNamespaceName, assemblyName);
@@ -1661,7 +1371,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public Assembly assemblyNamed(AssemblyName assemblyName, bool raiseExceptionOnError, out Exception caughtException) {
-			Console.WriteLine("Loading assembly: " + assemblyName.FullName);
+			if (beVerbose) Console.WriteLine("Loading assembly: " + assemblyName.FullName);
 			caughtException = null;
 			try {
 				return AppDomain.CurrentDomain.Load(assemblyName);
@@ -1673,7 +1383,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public Assembly assemblyAt(FileInfo assemblyPath, bool raiseExceptionOnError) {
-			Console.WriteLine("Loading assembly from: " + assemblyPath.FullName);
+			if (beVerbose) Console.WriteLine("Loading assembly from: " + assemblyPath.FullName);
 			try {
 				return Assembly.LoadFrom(assemblyPath.FullName);
 			} catch (Exception ex) {
@@ -1687,7 +1397,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		private Assembly basicAssemblyFor(String qualifiedNamespaceName, bool raiseExceptionOnError) {
-			Console.WriteLine("Loading assembly for " + qualifiedNamespaceName);
+			if (beVerbose) Console.WriteLine("Loading assembly for " + qualifiedNamespaceName);
 			FileInfo assemblyPath;
 			Assembly assembly;
 			Exception caughtException;
@@ -1706,7 +1416,7 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Class Binding
+		#region Namespace & Class Binding
 
 		public ESBehavior classOf(Object value) {
 			var esValue = value as ESObject;
@@ -1755,7 +1465,7 @@ namespace EssenceSharp.Runtime {
 
 		public ESBehavior classForHostSystemType(TypeName typeName) {
 
-			var environment = clrNamespace;
+			var environment = ClrNamespace;
 			ESBindingReference binding;
 			var assembly = typeName.getAssembly(false);
 
@@ -1827,6 +1537,44 @@ namespace EssenceSharp.Runtime {
 
 		internal void bindHostSystemTypeTo(Type hostSystemType, ESClass esClass) {
 			typeToClassMap[hostSystemType] = esClass;
+		}
+
+		public ESNamespace getNamespace(String qualifiedNamespaceName, AccessPrivilegeLevel requestorPrivilege) {
+			var pathname = pathnameFromString(qualifiedNamespaceName);
+			var value = pathname.valueInNamespaceIfAbsent(RootNamespace, requestorPrivilege, ImportTransitivity.Intransitive, null);
+			return value as ESNamespace;
+		}
+
+		public ESNamespace findOrCreateNamespace(String qualifiedNsName) {
+			return findOrCreateNamespace(ESLexicalUtility.elementsFromString(qualifiedNsName, '.', null));
+		}
+
+		public ESNamespace findOrCreateNamespace(String[] qualifiedNsName) {
+
+			var environment = RootNamespace;
+			ESBindingReference binding;
+
+			for (var i = 0; i < qualifiedNsName.Length; i++) { 
+				var nsName = qualifiedNsName[i];
+				ESNamespace childNs = null;
+				binding = environment.localBindingAt(nsName, AccessPrivilegeLevel.Local);
+				if (binding == null) {
+					childNs = newNamespace(environment, symbolFor(nsName));
+					childNs.setEnvironment(environment);
+				} else {
+					var thisValue = binding.Value.Value;
+					childNs = thisValue as ESNamespace;
+					if (childNs == null) {
+						environment.removeKey(nsName);
+						childNs = newNamespace(environment, symbolFor(nsName));
+						childNs.setEnvironment(environment);
+					}
+				}
+				environment = childNs;
+			}
+
+			return environment;
+
 		}
 
 		#endregion
@@ -2068,53 +1816,6 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Bootstrap Load
-
-		public bool ensureStartUp() {
-
-			return ensureStartUp(new HashSet<String>());
-
-		}
-
-		public bool ensureStartUp(HashSet<String> libraryNames) {
-
-			var stopwatch = new Stopwatch();
-			stopwatch.Start();
-
-			List<ESNamespace> initialRootNamespaces;
-			if (!isStandardLibraryLoaded) {
-				Console.WriteLine("Loading standard library...");
-				if (!ESLibraryLoader.load(this, rootNamespace, StandardLibraryPath, true, out initialRootNamespaces)) {
-					Console.WriteLine("Bootstrap load of the Standard Library failed from " + StandardLibraryPath.FullName);
-					return false;
-				}
-				isStandardLibraryLoaded = true;
-				loadedLibraries.Add("Standard");
-			}
-
-			foreach (var name in libraryNames) {
-				if (loadedLibraries.Contains(name)) continue;
-				var libraryPath = libraryPathFor(name);
-				Console.WriteLine("Loading library " + name + " from path " + libraryPath + " ...");
-				if (!ESLibraryLoader.load(this, rootNamespace, libraryPath, true, out initialRootNamespaces)) {
-					Console.WriteLine("Bootstrap load of library " + name + " failed from " + libraryPath.FullName);
-					return false;
-				}
-				loadedLibraries.Add(name);
-			}
-
-			stopwatch.Stop();
-			var loadTime = stopwatch.Elapsed;
-			Console.WriteLine("");
-			Console.WriteLine("Library load time = " + loadTime.ToString());
-			Console.WriteLine("");
-
-			return true;
-
-		}
-
-		#endregion
-
 		#region Error handling and exceptions
 		
 		public static Object throwMessageNotUnderstood(ESBehavior esClass, ESMessage message) {
@@ -2153,6 +1854,372 @@ namespace EssenceSharp.Runtime {
 			throw new PrimIndexBoundsExcessionException("Index = " + index.ToString() + " minValidIndex = " + minIndex + " maxValidIndex = " + maxIndex.ToString(), index, minIndex, maxIndex);
 		}
 		
+		#endregion
+
+		#region System Initialization
+
+		protected virtual void intialize() {
+			assignMetaclassToCanonicalClasses();
+			createCanonicalNamespaces();
+			establishCanonicalNamespaceStructure();
+			assignCanonicalNamesToCanonicalClasses();
+			establishCanonicalClassInheritanceStructure();
+			assignCanonicalClassesToCanonicalNamspaces();
+			addCanonicalPrimitiveDomains();
+			publishCanonicalPrimitives();
+			installCanonicalPrimitivesInCanonicalClasses(SymbolRegistry.symbolFor("system primitives"));
+			registerAdoptedHostSystemClasses();
+			createDynamicBinderRegistries();
+			bindToFileSystem();
+		}
+
+		protected virtual void assignMetaclassToCanonicalClasses() {
+
+			canonicalObjectClass.setClass(newMetaclass());
+			canonicalNamespaceClass.setClass(newMetaclass());
+			canonicalBehaviorClass.setClass(newMetaclass());
+			canonicalClassClass.setClass(newMetaclass());
+			canonicalMetaclassClass.setClass(newMetaclass());
+			canonicalCompiledCodeClass.setClass(newMetaclass());
+			canonicalBlockClass.setClass(newMetaclass());
+			canonicalMethodClass.setClass(newMetaclass());
+			canonicalAssociationClass.setClass(newMetaclass());
+			canonicalBindingReferenceClass.setClass(newMetaclass());
+			canonicalMessageClass.setClass(newMetaclass());
+			canonicalMagnitudeClass.setClass(newMetaclass());
+
+			canonicalCollectionClass.setClass(newMetaclass());
+			canonicalKeyedCollectionClass.setClass(newMetaclass());
+			canonicalIdentityDictionaryClass.setClass(newMetaclass());
+			canonicalDictionaryClass.setClass(newMetaclass());
+			canonicalSequenceableCollectionClass.setClass(newMetaclass());
+			canonicalArrayedCollectionClass.setClass(newMetaclass());
+			canonicalArrayClass.setClass(newMetaclass());
+			canonicalByteArrayClass.setClass(newMetaclass());
+			canonicalStringClass.setClass(newMetaclass());
+			canonicalSymbolClass.setClass(newMetaclass());
+			canonicalHalfWordArrayClass.setClass(newMetaclass());
+			canonicalWordArrayClass.setClass(newMetaclass());
+			canonicalLongWordArrayClass.setClass(newMetaclass());
+			canonicalFloatArrayClass.setClass(newMetaclass());
+			canonicalDoubleArrayClass.setClass(newMetaclass());
+			canonicalQuadArrayClass.setClass(newMetaclass());
+			canonicalPathnameClass.setClass(newMetaclass());
+
+			canonicalPrimitiveValueClass.setClass(newMetaclass());
+			canonicalUndefinedObjectClass.setClass(newMetaclass());
+			canonicalBooleanClass.setClass(newMetaclass());
+			canonicalFalseClass.setClass(newMetaclass());
+			canonicalTrueClass.setClass(newMetaclass());
+			canonicalCharacterClass.setClass(newMetaclass());
+			canonicalArithmeticValueClass.setClass(newMetaclass());
+			canonicalNumberClass.setClass(newMetaclass());
+			canonicalIntegerClass.setClass(newMetaclass());
+			canonicalSmallIntegerClass.setClass(newMetaclass());
+			canonicalRationalClass.setClass(newMetaclass());
+			canonicalInvariantPrecisionRealClass.setClass(newMetaclass());
+			canonicalFloatClass.setClass(newMetaclass());
+			canonicalDoubleClass.setClass(newMetaclass());
+			canonicalQuadClass.setClass(newMetaclass());
+
+		}
+
+		protected virtual void createCanonicalNamespaces() {
+			rootNamespace		= newNamespace(null, SymbolRegistry.symbolFor("Root"));
+			smalltalkNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Smalltalk"));
+			undeclaredNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Undeclared"));
+			clrNamespace		= newNamespace(rootNamespace, SymbolRegistry.symbolFor("CLR"), true);
+			clrNamespace.Assembly	= TypeGuru.objectType.Assembly;
+		}
+
+		public virtual void establishCanonicalNamespaceStructure() {
+			rootNamespace.declareInSelf(true);
+			rootNamespace.declareInSelfAs(SymbolRegistry.symbolFor("EssenceSharp"), true);
+			clrNamespace.declareInSelfAs(SymbolRegistry.symbolFor("HostSystem"), true);
+			rootNamespace.addImport(new ESImportSpec(smalltalkNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
+			rootNamespace.addImport(new ESImportSpec(undeclaredNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
+			rootNamespace.addImport(new ESImportSpec(clrNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
+		}
+
+		protected virtual void assignCanonicalNamesToCanonicalClasses() {
+
+			canonicalObjectClass.setName(SymbolRegistry.symbolFor("Object"));
+			canonicalNamespaceClass.setName(SymbolRegistry.symbolFor("Namespace"));
+			canonicalBehaviorClass.setName(SymbolRegistry.symbolFor("Behavior"));
+			canonicalClassClass.setName(SymbolRegistry.symbolFor("Class"));
+			canonicalMetaclassClass.setName(SymbolRegistry.symbolFor("Metaclass"));
+			canonicalCompiledCodeClass.setName(SymbolRegistry.symbolFor("CompiledCode"));
+			canonicalBlockClass.setName(SymbolRegistry.symbolFor("Block"));
+			canonicalMethodClass.setName(SymbolRegistry.symbolFor("Method"));
+			canonicalAssociationClass.setName(SymbolRegistry.symbolFor("Association"));
+			canonicalBindingReferenceClass.setName(SymbolRegistry.symbolFor("BindingReference"));
+			canonicalMessageClass.setName(SymbolRegistry.symbolFor("Message"));
+			canonicalMagnitudeClass.setName(SymbolRegistry.symbolFor("Magnitude"));
+
+			canonicalCollectionClass.setName(SymbolRegistry.symbolFor("Collection"));
+			canonicalKeyedCollectionClass.setName(SymbolRegistry.symbolFor("KeyedCollection"));
+			canonicalIdentityDictionaryClass.setName(SymbolRegistry.symbolFor("IdentityDictionary"));
+			canonicalDictionaryClass.setName(SymbolRegistry.symbolFor("Dictionary"));
+			canonicalSequenceableCollectionClass.setName(SymbolRegistry.symbolFor("SequenceableCollection"));
+			canonicalArrayedCollectionClass.setName(SymbolRegistry.symbolFor("ArrayedCollection"));
+			canonicalArrayClass.setName(SymbolRegistry.symbolFor("Array"));
+			canonicalByteArrayClass.setName(SymbolRegistry.symbolFor("ByteArray"));
+			canonicalStringClass.setName(SymbolRegistry.symbolFor("String"));
+			canonicalSymbolClass.setName(SymbolRegistry.symbolFor("Symbol"));
+			canonicalHalfWordArrayClass.setName(SymbolRegistry.symbolFor("HalfWordArray"));
+			canonicalWordArrayClass.setName(SymbolRegistry.symbolFor("WordArray"));
+			canonicalLongWordArrayClass.setName(SymbolRegistry.symbolFor("LongWordArray"));
+			canonicalFloatArrayClass.setName(SymbolRegistry.symbolFor("FloatArray"));
+			canonicalDoubleArrayClass.setName(SymbolRegistry.symbolFor("DoubleArray"));
+			canonicalQuadArrayClass.setName(SymbolRegistry.symbolFor("QuadArray"));
+			canonicalPathnameClass.setName(SymbolRegistry.symbolFor("Pathname"));
+
+			canonicalPrimitiveValueClass.setName(SymbolRegistry.symbolFor("PrimitiveValue"));
+			canonicalUndefinedObjectClass.setName(SymbolRegistry.symbolFor("UndefinedObject"));
+			canonicalBooleanClass.setName(SymbolRegistry.symbolFor("Boolean"));
+			canonicalFalseClass.setName(SymbolRegistry.symbolFor("False"));
+			canonicalTrueClass.setName(SymbolRegistry.symbolFor("True"));
+			canonicalCharacterClass.setName(SymbolRegistry.symbolFor("Character"));
+			canonicalArithmeticValueClass.setName(SymbolRegistry.symbolFor("ArithmeticValue"));
+			canonicalNumberClass.setName(SymbolRegistry.symbolFor("Number"));
+			canonicalIntegerClass.setName(SymbolRegistry.symbolFor("Integer"));
+			canonicalSmallIntegerClass.setName(SymbolRegistry.symbolFor("SmallInteger"));
+			canonicalRationalClass.setName(SymbolRegistry.symbolFor("Rational"));
+			canonicalInvariantPrecisionRealClass.setName(SymbolRegistry.symbolFor("InvariantPrecisionReal"));
+			canonicalFloatClass.setName(SymbolRegistry.symbolFor("Float"));
+			canonicalDoubleClass.setName(SymbolRegistry.symbolFor("Double"));
+			canonicalQuadClass.setName(SymbolRegistry.symbolFor("Quad"));
+
+		}
+
+		protected virtual void establishCanonicalClassInheritanceStructure() {
+
+			canonicalObjectClass.Superclass = null;
+			canonicalNamespaceClass.Superclass = canonicalKeyedCollectionClass;
+			canonicalBehaviorClass.Superclass = canonicalNamespaceClass;
+			canonicalClassClass.Superclass = canonicalBehaviorClass;
+			canonicalMetaclassClass.Superclass = canonicalBehaviorClass;
+			canonicalCompiledCodeClass.Superclass = canonicalObjectClass;
+			canonicalBlockClass.Superclass = canonicalCompiledCodeClass;
+			canonicalMethodClass.Superclass = canonicalCompiledCodeClass;
+			canonicalAssociationClass.Superclass = canonicalObjectClass;
+			canonicalBindingReferenceClass.Superclass = canonicalObjectClass;
+			canonicalMessageClass.Superclass = canonicalObjectClass;
+			canonicalMagnitudeClass.Superclass = canonicalObjectClass;
+
+			canonicalCollectionClass.Superclass = canonicalObjectClass;
+			canonicalKeyedCollectionClass.Superclass = canonicalCollectionClass;
+			canonicalIdentityDictionaryClass.Superclass = canonicalKeyedCollectionClass;
+			canonicalDictionaryClass.Superclass = canonicalIdentityDictionaryClass;
+			canonicalSequenceableCollectionClass.Superclass = canonicalCollectionClass;
+			canonicalArrayedCollectionClass.Superclass = canonicalSequenceableCollectionClass;
+			canonicalArrayClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalByteArrayClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalStringClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalSymbolClass.Superclass = canonicalStringClass;
+			canonicalHalfWordArrayClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalWordArrayClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalLongWordArrayClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalFloatArrayClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalDoubleArrayClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalQuadArrayClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalPathnameClass.Superclass = canonicalArrayedCollectionClass;
+
+			canonicalPrimitiveValueClass.Superclass = null;
+			canonicalUndefinedObjectClass.Superclass = canonicalPrimitiveValueClass;
+			canonicalBooleanClass.Superclass = canonicalPrimitiveValueClass;
+			canonicalFalseClass.Superclass = canonicalBooleanClass;
+			canonicalTrueClass.Superclass = canonicalBooleanClass;
+			canonicalCharacterClass.Superclass = canonicalPrimitiveValueClass;
+			canonicalArithmeticValueClass.Superclass = canonicalPrimitiveValueClass;
+			canonicalNumberClass.Superclass = canonicalArithmeticValueClass;
+			canonicalIntegerClass.Superclass = canonicalNumberClass;
+			canonicalSmallIntegerClass.Superclass = canonicalIntegerClass;
+			canonicalRationalClass.Superclass = canonicalNumberClass;
+			canonicalInvariantPrecisionRealClass.Superclass = canonicalRationalClass;
+			canonicalFloatClass.Superclass = canonicalInvariantPrecisionRealClass;
+			canonicalDoubleClass.Superclass = canonicalInvariantPrecisionRealClass;
+			canonicalQuadClass.Superclass = canonicalInvariantPrecisionRealClass;
+
+		}
+
+		protected virtual void assignCanonicalClassesToCanonicalNamspaces() {
+
+			canonicalObjectClass.setEnvironment(SmalltalkNamespace);
+			canonicalNamespaceClass.setEnvironment(SmalltalkNamespace);
+			canonicalBehaviorClass.setEnvironment(SmalltalkNamespace);
+			canonicalClassClass.setEnvironment(SmalltalkNamespace);
+			canonicalMetaclassClass.setEnvironment(SmalltalkNamespace);
+			canonicalCompiledCodeClass.setEnvironment(SmalltalkNamespace);
+			canonicalBlockClass.setEnvironment(SmalltalkNamespace);
+			canonicalMethodClass.setEnvironment(SmalltalkNamespace);
+			canonicalAssociationClass.setEnvironment(SmalltalkNamespace);
+			canonicalBindingReferenceClass.setEnvironment(SmalltalkNamespace);
+			canonicalMessageClass.setEnvironment(SmalltalkNamespace);
+			canonicalMagnitudeClass.setEnvironment(SmalltalkNamespace);
+
+			canonicalCollectionClass.setEnvironment(SmalltalkNamespace);
+			canonicalKeyedCollectionClass.setEnvironment(SmalltalkNamespace);
+			canonicalIdentityDictionaryClass.setEnvironment(SmalltalkNamespace);
+			canonicalDictionaryClass.setEnvironment(SmalltalkNamespace);
+			canonicalSequenceableCollectionClass.setEnvironment(SmalltalkNamespace);
+			canonicalArrayedCollectionClass.setEnvironment(SmalltalkNamespace);
+			canonicalArrayClass.setEnvironment(SmalltalkNamespace);
+			canonicalByteArrayClass.setEnvironment(SmalltalkNamespace);
+			canonicalStringClass.setEnvironment(SmalltalkNamespace);
+			canonicalSymbolClass.setEnvironment(SmalltalkNamespace);
+			canonicalHalfWordArrayClass.setEnvironment(SmalltalkNamespace);
+			canonicalWordArrayClass.setEnvironment(SmalltalkNamespace);
+			canonicalLongWordArrayClass.setEnvironment(SmalltalkNamespace);
+			canonicalFloatArrayClass.setEnvironment(SmalltalkNamespace);
+			canonicalDoubleArrayClass.setEnvironment(SmalltalkNamespace);
+			canonicalQuadArrayClass.setEnvironment(SmalltalkNamespace);
+			canonicalPathnameClass.setEnvironment(SmalltalkNamespace);
+
+			canonicalPrimitiveValueClass.setEnvironment(SmalltalkNamespace);
+			canonicalUndefinedObjectClass.setEnvironment(SmalltalkNamespace);
+			canonicalBooleanClass.setEnvironment(SmalltalkNamespace);
+			canonicalFalseClass.setEnvironment(SmalltalkNamespace);
+			canonicalTrueClass.setEnvironment(SmalltalkNamespace);
+			canonicalCharacterClass.setEnvironment(SmalltalkNamespace);
+			canonicalArithmeticValueClass.setEnvironment(SmalltalkNamespace);
+			canonicalNumberClass.setEnvironment(SmalltalkNamespace);
+			canonicalIntegerClass.setEnvironment(SmalltalkNamespace);
+			canonicalSmallIntegerClass.setEnvironment(SmalltalkNamespace);
+			canonicalRationalClass.setEnvironment(SmalltalkNamespace);
+			canonicalInvariantPrecisionRealClass.setEnvironment(SmalltalkNamespace);
+			canonicalFloatClass.setEnvironment(SmalltalkNamespace);
+			canonicalDoubleClass.setEnvironment(SmalltalkNamespace);
+			canonicalQuadClass.setEnvironment(SmalltalkNamespace);
+
+		}
+
+		protected virtual void addCanonicalPrimitiveDomains() {
+			addPrimitiveDomain(new ESObject.Primitives());
+			addPrimitiveDomain(new ESNamespace.Primitives());
+			addPrimitiveDomain(new ESBehavior.Primitives());
+			addPrimitiveDomain(new ESClass.Primitives());
+			addPrimitiveDomain(new ESMetaclass.Primitives());
+			addPrimitiveDomain(new ESCompiledCode.Primitives());
+			addPrimitiveDomain(new ESBlock.Primitives());
+			addPrimitiveDomain(new ESMethod.Primitives());
+			addPrimitiveDomain(new ESAssociation.Primitives());
+			addPrimitiveDomain(new ESBindingReference.Primitives());
+			addPrimitiveDomain(new ESMessage.Primitives());
+			addPrimitiveDomain(new ESIdentityDictionary.Primitives());
+			addPrimitiveDomain(new ESArray.Primitives());
+			addPrimitiveDomain(new ESByteArray.Primitives());
+			addPrimitiveDomain(new ESString.Primitives());
+			addPrimitiveDomain(new ESSymbol.Primitives());
+			addPrimitiveDomain(new ESHalfWordArray.Primitives());
+			addPrimitiveDomain(new ESWordArray.Primitives());
+			addPrimitiveDomain(new ESLongWordArray.Primitives());
+			addPrimitiveDomain(new ESFloatArray.Primitives());
+			addPrimitiveDomain(new ESDoubleArray.Primitives());
+			addPrimitiveDomain(new ESQuadArray.Primitives());
+			addPrimitiveDomain(new ESPathname.Primitives());
+
+			addPrimitiveDomain(new UndefinedObjectPrimitives());
+			addPrimitiveDomain(new FalsePrimitives());
+			addPrimitiveDomain(new TruePrimitives());
+			addPrimitiveDomain(new CharacterPrimitives());
+			addPrimitiveDomain(new SmallIntegerPrimitives());
+			addPrimitiveDomain(new SinglePrecisionPrimitives());
+			addPrimitiveDomain(new DoublePrecisionPrimitives());
+			addPrimitiveDomain(new QuadPrecisionPrimitives());
+		}
+
+		public void registerAdoptedHostSystemClasses() {
+
+			typeToClassMap[TypeGuru.charType] = CharacterClass;
+
+			typeToClassMap[TypeGuru.longType] = SmallIntegerClass;
+			typeToClassMap[TypeGuru.intType] = SmallIntegerClass;
+			typeToClassMap[TypeGuru.uintType] = SmallIntegerClass;
+			typeToClassMap[TypeGuru.shortType] = SmallIntegerClass;
+			typeToClassMap[TypeGuru.ushortType] = SmallIntegerClass;
+			typeToClassMap[TypeGuru.byteType] = SmallIntegerClass;
+			typeToClassMap[TypeGuru.sbyteType] = SmallIntegerClass;
+
+			typeToClassMap[TypeGuru.floatType] = FloatClass;
+			typeToClassMap[TypeGuru.doubleType] = DoubleClass;
+			typeToClassMap[TypeGuru.decimalType] = QuadClass;
+
+		}
+
+		protected void createDynamicBinderRegistries() {
+			dynamicBindingGuru		= new DynamicBindingGuru(this);
+			messageSendBinderRegistry	= new MessageSendBinder.Registry(dynamicBindingGuru);
+			getVariableValueBinderRegistry	= new GetVariableValueBinder.Registry(dynamicBindingGuru);
+			setVariableValueBinderRegistry	= new SetVariableValueBinder.Registry(dynamicBindingGuru);
+		}
+
+		protected virtual void bindToFileSystem() {
+			EssenceSharpPath = ESFileUtility.defaultEssenceSharpPath();
+			var userSearchPathsFile = new FileInfo(Path.Combine(ScriptsPath.FullName, "searchPaths"));
+			if (!userSearchPathsFile.Exists) return;
+			using (var stream = userSearchPathsFile.OpenText()) {
+				String searchPath = "";
+				do {
+					EssenceLaunchPad.scriptSearchPathAddLastIfAbsent(searchPath);
+					searchPath = stream.ReadLine();
+				} while (searchPath != null);
+			}
+		}
+
+		#endregion
+
+		#region Bootstrap Load
+
+		public bool ensureStartUp() {
+			return ensureStartUp(false, false);
+		}
+
+		public bool ensureStartUp(bool startupVerbosely, bool reportLibraryLoadTime) {
+			return ensureStartUp(new HashSet<String>(), startupVerbosely, reportLibraryLoadTime);
+		}
+
+		public bool ensureStartUp(HashSet<String> libraryNames, bool startupVerbosely, bool reportLibraryLoadTime) {
+
+			beVerbose = startupVerbosely;
+
+			var stopwatch = new Stopwatch();
+			stopwatch.Start();
+
+			List<ESNamespace> initialRootNamespaces;
+			if (!isStandardLibraryLoaded) {
+				if (beVerbose) Console.WriteLine("Loading standard library...");
+				if (!ESLibraryLoader.load(this, rootNamespace, StandardLibraryPath, startupVerbosely, true, out initialRootNamespaces)) {
+					Console.WriteLine("Bootstrap load of the Standard Library failed from " + StandardLibraryPath.FullName);
+					return false;
+				}
+				isStandardLibraryLoaded = true;
+				loadedLibraries.Add("Standard");
+			}
+
+			foreach (var name in libraryNames) {
+				if (loadedLibraries.Contains(name)) continue;
+				var libraryPath = libraryPathFor(name);
+				if (beVerbose) Console.WriteLine("Loading library " + name + " from path " + libraryPath + " ...");
+				if (!ESLibraryLoader.load(this, rootNamespace, libraryPath, startupVerbosely, true, out initialRootNamespaces)) {
+					Console.WriteLine("Bootstrap load of library " + name + " failed from " + libraryPath.FullName);
+					return false;
+				}
+				loadedLibraries.Add(name);
+			}
+
+			stopwatch.Stop();
+			var loadTime = stopwatch.Elapsed;
+			if (reportLibraryLoadTime) { 
+				Console.WriteLine("");
+				Console.WriteLine("Library load time = " + loadTime.ToString());
+				Console.WriteLine("");
+			}
+
+			return true;
+
+		}
+
 		#endregion
 
 	}

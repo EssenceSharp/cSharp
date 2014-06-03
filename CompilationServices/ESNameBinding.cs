@@ -102,7 +102,7 @@ namespace EssenceSharp.CompilationServices {
 				if (instVarNames == null || !instVarNames.Contains(nonLocalName)) {
 					var nsResidentVar = declareNamespaceVariable(nonLocalName, null);
 					nonLocalVar.occurrencesDo(occurrence => occurrence.Declaration = nsResidentVar);
-					var binding = nonLocalName.bindingInNamespaceIfAbsent(environment, AccessPrivilegeLevel.Local, ImportTransitivity.Intransitive, null);
+					var binding = nonLocalName.bindingInNamespaceIfAbsent(environment, AccessPrivilegeLevel.Local, ImportTransitivity.Transitive, null);
 					if (binding == null) {
 						if (undeclared == null) undeclared = new System.Collections.Generic.HashSet<ESSymbol>();
 						var nameInContext = Context.symbolFor(nameContext + nonLocalName);

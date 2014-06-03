@@ -63,7 +63,7 @@ namespace EssenceSharp.ClientServices {
 		public EssenceSharpContext(ScriptDomainManager manager, Dictionary<String,  Object> optionsDictionary) : base(manager) {
 			kernel = new ESKernel();
 			bindToLanguageOptions(optionsDictionary ?? new  Dictionary<String,  Object>());
-			librariesLoaded = Kernel.ensureStartUp(options.LibraryNames);
+			librariesLoaded = Kernel.ensureStartUp(options.LibraryNames, options.LoadLibrariesVerbosely, options.ReportLibraryLoadTime);
 		}
  
 		protected void bindToLanguageOptions(Dictionary<String,  Object> protoOptions) {
@@ -71,7 +71,7 @@ namespace EssenceSharp.ClientServices {
 			var userPathnames = LanguageOptions.GetSearchPathsOption(protoOptions);
 			if (userPathnames != null) {
 				foreach (var pathname in userPathnames) {
-					searchPathBuilder.Append(pathname);
+					searchPathBuilder.Append(Environment.ExpandEnvironmentVariables(pathname));
 					searchPathBuilder.Append(Path.PathSeparator);
 				}
 			}
@@ -107,11 +107,28 @@ namespace EssenceSharp.ClientServices {
 		}
 
 		public bool findFullScriptPathnameFor(String scriptPathameSuffix, out FileInfo scriptPath) {
+			bool mustCheckForExtension = false;
+			String suffixWithExtension;
+			var extension = Path.GetExtension(scriptPathameSuffix);
+			if (extension == ".es") {
+				suffixWithExtension = scriptPathameSuffix;
+			} else {
+				mustCheckForExtension = true;
+				suffixWithExtension = scriptPathameSuffix + ".es";
+			}
 			scriptPath = new FileInfo(scriptPathameSuffix);
 			if (scriptPath.Exists) return true;
+			if (mustCheckForExtension) {
+				scriptPath = new FileInfo(suffixWithExtension);
+				if (scriptPath.Exists) return true;
+			}
 			foreach (var pathnamePrefix in options.SearchPaths) {
 				scriptPath = new FileInfo(Path.Combine(pathnamePrefix, scriptPathameSuffix));
 				if (scriptPath.Exists) return true;
+				if (mustCheckForExtension) {
+					scriptPath = new FileInfo(Path.Combine(pathnamePrefix, suffixWithExtension));
+					if (scriptPath.Exists) return true;
+				}
 			}
 			return false;
 		}
