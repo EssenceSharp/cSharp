@@ -262,6 +262,13 @@ namespace EssenceSharp.ParsingServices {
 			errorCount = 0;
 			var block = parseBlockDeclaration();
 
+			if (peekLexicalType() != ParseNodeType.EndOfSource) {
+				return handledUnexpectedToken(
+						ParseNodeType.BlockDeclaration, 
+						new ParseNodeType[]{ParseNodeType.EndOfSource}, 
+						nextToken);
+			}
+
 			return block.IsBlockDeclaration ?
 				makeVirtualOuterBlockLiteral((BlockDeclaration)block) :
 				block;
@@ -300,7 +307,17 @@ namespace EssenceSharp.ParsingServices {
 			// MethodDeclaration
 
 			errorCount = 0;
-			return parseMethodDeclaration();
+			var node = parseMethodDeclaration();
+
+			var nodeType = peekLexicalType();
+			if (nodeType != ParseNodeType.EndOfSource || nodeType != ParseNodeType.MethodHeaderBegin) {
+				return handledUnexpectedToken(
+						ParseNodeType.MethodDeclaration, 
+						new ParseNodeType[]{ParseNodeType.MethodHeaderBegin, ParseNodeType.EndOfSource}, 
+						nextToken);
+			}
+
+			return node;
 
 		}
 	
@@ -565,6 +582,7 @@ namespace EssenceSharp.ParsingServices {
 						methodHeader);
 			}
 			LexicalToken leftEnclosingToken;
+			ExecutableCode executableCode;
 			if (nextMatches(ParseNodeType.BinaryMessageSelector, out leftEnclosingToken)) {
 				ParseTreeNode primitiveOrExternalCallSpec = parseKeywordMessage(false);
 				if (primitiveOrExternalCallSpec == null || primitiveOrExternalCallSpec.IsEndOfSource) {
@@ -575,12 +593,13 @@ namespace EssenceSharp.ParsingServices {
 				}
 				LexicalToken rightEnclosingToken;
 				if (nextMatches(ParseNodeType.BinaryMessageSelector, out rightEnclosingToken)) {
+					executableCode = (ExecutableCode)parseExecutableCode();
 					return newPrimitiveMethodDeclaration(
 									(MethodHeader)methodHeader, 
 									(BinaryMessageSelectorToken)leftEnclosingToken, 
 									(KeywordMessage)primitiveOrExternalCallSpec, 
 									(BinaryMessageSelectorToken)rightEnclosingToken, 
-									(ExecutableCode)parseExecutableCode());
+									executableCode);
 				} else {
 					return handledUnexpectedToken(
 							ParseNodeType.PrimitiveMethodDeclaration, 
@@ -588,7 +607,8 @@ namespace EssenceSharp.ParsingServices {
 							rightEnclosingToken);
 				}
 			} else {
-				return newMethodDeclaration((MethodHeader)methodHeader, (ExecutableCode)parseExecutableCode());
+				executableCode = (ExecutableCode)parseExecutableCode();
+				return newMethodDeclaration((MethodHeader)methodHeader, executableCode);
 			}
 
 		}

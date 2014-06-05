@@ -328,7 +328,7 @@ namespace Microsoft.Scripting.Hosting {
 		public static ScriptSource CreateScriptSourceFromPathSuffix(this ScriptEngine engine, String scriptPathameSuffix) {
 			var context = engine.essenceSharpContext();
 			FileInfo scriptPath;
-			if (context.findFullScriptPathnameFor(scriptPathameSuffix, out scriptPath)) {
+			if (context.scriptPathnameFor(scriptPathameSuffix, out scriptPath)) {
 				return engine.CreateScriptSourceFromFile(scriptPath.FullName);
 			}
 			return engine.CreateScriptSourceFromFile(scriptPathameSuffix);

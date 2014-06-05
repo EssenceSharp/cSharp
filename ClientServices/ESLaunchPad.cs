@@ -28,8 +28,10 @@
 */
 #region Using declarations
 using System;
+using System.IO;
 using System.Collections.Generic;
 using Microsoft.Scripting.Hosting;
+using EssenceSharp.UtilityServices;
 using EssenceSharp.Runtime;
 #endregion
 
@@ -37,63 +39,11 @@ namespace EssenceSharp.ClientServices {
 
 	public static class EssenceLaunchPad {
 
-		private static readonly IList<String>	scriptSearchPaths	= new List<String>();
-		private static ESKernel			defaultKernel		= new ESKernel();
+		private static ESKernel				defaultKernel			= new ESKernel();
 
 		public static ESKernel DefaultKernel {
 			get {return defaultKernel;}
 		}
-
-		#region Script Paths
-
-		public static int indexOfSearchPath(String pathname) {
-			return scriptSearchPaths.IndexOf(pathname);
-		}
-
-		public static void scriptSearchPathAddLast(String pathname) {
-			if (String.IsNullOrEmpty(pathname)) return;
-			pathname = Environment.ExpandEnvironmentVariables(pathname);
-			var index = scriptSearchPaths.IndexOf(pathname);
-			if (index >= 0) scriptSearchPaths.RemoveAt(index);
-			scriptSearchPaths.Add(pathname);
-		}
-
-		public static void scriptSearchPathAddLastIfAbsent(String pathname) {
-			if (String.IsNullOrEmpty(pathname)) return;
-			pathname = Environment.ExpandEnvironmentVariables(pathname);
-			var index = scriptSearchPaths.IndexOf(pathname);
-			if (index >= 0) return;
-			scriptSearchPaths.Add(pathname);
-		}
-
-		public static void scriptSearchPathAddFirst(String pathname) {
-			scriptSearchPathInsert(0, pathname);
-		}
-
-		public static void scriptSearchPathInsert(int insertionIndex, String pathname) {
-			if (String.IsNullOrEmpty(pathname)) return;
-			pathname = Environment.ExpandEnvironmentVariables(pathname);
-			var index = scriptSearchPaths.IndexOf(pathname);
-			if (index >= 0) {
-				scriptSearchPaths.RemoveAt(index);
-				if (index < insertionIndex) insertionIndex--;
-			}
-			scriptSearchPaths.Insert(insertionIndex, pathname);
-		}
-
-		public static bool scriptSearchPathRemove(String pathname) {
-			return scriptSearchPaths.Remove(pathname);
-		}
-
-		public static void scriptSearchPathsDo(Action<String> enumerator1) {
-			foreach (var pathname in scriptSearchPaths) enumerator1(pathname);
-		}
-
-		public static void scriptSearchPathsDoUntil(Func<String , bool> enumerator1) {
-			foreach (var pathname in scriptSearchPaths) if (enumerator1(pathname)) return;
-		}
-
-		#endregion
 
 		#region DLR Hosting Configuration
 

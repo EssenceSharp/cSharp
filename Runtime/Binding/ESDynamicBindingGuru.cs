@@ -83,8 +83,8 @@ namespace EssenceSharp.Runtime.Binding {
 			var rightType = rightInput.LimitType;
 			var typeWithHighestGenerality = leftType.typeWithHighestNumericGenerality(rightType);
 			if (typeWithHighestGenerality == null) return false;
-			leftOutput = Expression.Convert(Expression.Convert(leftInput.Expression, leftType), typeWithHighestGenerality);
-			rightOutput = Expression.Convert(Expression.Convert(rightInput.Expression, rightType), typeWithHighestGenerality);
+			leftOutput = leftType == typeWithHighestGenerality ? Expression.Convert(leftInput.Expression, leftType) : Expression.Convert(Expression.Convert(leftInput.Expression, leftType), typeWithHighestGenerality);
+			rightOutput = rightType == typeWithHighestGenerality ? Expression.Convert(rightInput.Expression, rightType) : Expression.Convert(Expression.Convert(rightInput.Expression, rightType), typeWithHighestGenerality);
 			return true;
 		}
 
@@ -2854,193 +2854,193 @@ namespace EssenceSharp.Runtime.Binding {
 				get {return selector;}
 			}
 
-			public override DynamicMetaObject FallbackBinaryOperation(DynamicMetaObject target, DynamicMetaObject arg, DynamicMetaObject errorSuggestion) {
-				if (!target.HasValue || !arg.HasValue) return Defer(target, arg);
+			public override DynamicMetaObject FallbackBinaryOperation(DynamicMetaObject leftOperandMO, DynamicMetaObject rightOperandMO, DynamicMetaObject errorSuggestion) {
+				if (!leftOperandMO.HasValue || !rightOperandMO.HasValue) return Defer(leftOperandMO, rightOperandMO);
 
-				Expression receiver;
-				Expression operand;
-				ParameterExpression receiverParameter = Expression.Parameter(TypeGuru.objectType, "$receiver");
-				ParameterExpression operandParameter = Expression.Parameter(TypeGuru.objectType, "$operand");
+				Expression leftOperand;
+				Expression rightOperand;
+				ParameterExpression leftParameter = Expression.Parameter(TypeGuru.objectType, "$leftOperand");
+				ParameterExpression rightParameter = Expression.Parameter(TypeGuru.objectType, "$rightOperand");
 				Expression binaryOperatorExpression = null;
 				BindingRestrictions bindingRestrictions = null;;
 
 				switch (Selector.CanonicalSemantics) {
 					case CanonicalSelectorSemantics.IsEqualTo:
 					case CanonicalSelectorSemantics.IsZero:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.Equal(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.Equal(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.Equal(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.Equal(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.IsNotEqualTo:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.NotEqual(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.NotEqual(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.NotEqual(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.NotEqual(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.LogicalAnd:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.And(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.And(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.And(Expression.Convert(target.asExpressionWithFormalType(), TypeGuru.boolType), Expression.Convert(arg.asExpressionWithFormalType(), TypeGuru.boolType));
+							binaryOperatorExpression = Expression.And(Expression.Convert(leftOperandMO.asExpressionWithFormalType(), TypeGuru.boolType), Expression.Convert(rightOperandMO.asExpressionWithFormalType(), TypeGuru.boolType));
 						}
 						break;
 					case CanonicalSelectorSemantics.LogicalOr:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.Or(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.Or(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.Or(Expression.Convert(target.asExpressionWithFormalType(), TypeGuru.boolType), Expression.Convert(arg.asExpressionWithFormalType(), TypeGuru.boolType));
+							binaryOperatorExpression = Expression.Or(Expression.Convert(leftOperandMO.asExpressionWithFormalType(), TypeGuru.boolType), Expression.Convert(rightOperandMO.asExpressionWithFormalType(), TypeGuru.boolType));
 						}
 						break;
 					case CanonicalSelectorSemantics.LogicalXor:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.ExclusiveOr(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.ExclusiveOr(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.ExclusiveOr(Expression.Convert(target.asExpressionWithFormalType(), TypeGuru.boolType), Expression.Convert(arg.asExpressionWithFormalType(), TypeGuru.boolType));
+							binaryOperatorExpression = Expression.ExclusiveOr(Expression.Convert(leftOperandMO.asExpressionWithFormalType(), TypeGuru.boolType), Expression.Convert(rightOperandMO.asExpressionWithFormalType(), TypeGuru.boolType));
 						}
 						break;
 					case CanonicalSelectorSemantics.IsLessThan:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.LessThan(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.LessThan(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.LessThan(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.LessThan(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.Negative:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.LessThan(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.LessThan(leftOperand, rightOperand);
 						}
 						break;
 					case CanonicalSelectorSemantics.IsGreaterThan:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.GreaterThan(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.GreaterThan(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.GreaterThan(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.GreaterThan(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.StrictlyPositive:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.GreaterThan(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.GreaterThan(leftOperand, rightOperand);
 						}
 						break;
 					case CanonicalSelectorSemantics.IsLessThanOrEqual:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.LessThanOrEqual(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.LessThanOrEqual(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.LessThanOrEqual(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.LessThanOrEqual(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.IsGreaterThanOrEqual:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.GreaterThanOrEqual(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.GreaterThanOrEqual(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.GreaterThanOrEqual(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.GreaterThanOrEqual(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.Positive:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.GreaterThanOrEqual(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.GreaterThanOrEqual(leftOperand, rightOperand);
 						}
 						break;
 					case CanonicalSelectorSemantics.Plus:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.Add(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.Add(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.Add(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.Add(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.Minus:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.Subtract(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.Subtract(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.Subtract(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.Subtract(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.Times:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.Multiply(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.Multiply(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.Multiply(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.Multiply(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.DivideToRational:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.Divide(receiver.asRationalNumberExpression(), operand.asRationalNumberExpression());
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.Divide(leftOperand.asRationalNumberExpression(), rightOperand.asRationalNumberExpression());
 						} else {
-							binaryOperatorExpression = Expression.Divide(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.Divide(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.Reciprocal:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.Divide(oneWithHighestGenerality.Expression, operand.asRationalNumberExpression());
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.Divide(oneWithHighestGenerality.Expression, rightOperand.asRationalNumberExpression());
 						}
 						break;
 					case CanonicalSelectorSemantics.DivisionRemainder:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.Modulo(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.Modulo(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.Modulo(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.Modulo(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.BitAnd:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.And(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.And(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.And(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.And(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.BitOr:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.Or(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.Or(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.Or(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.Or(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.BitXor:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.ExclusiveOr(receiver, operand);
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.ExclusiveOr(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.ExclusiveOr(target.asExpressionWithFormalType(), arg.asExpressionWithFormalType());
+							binaryOperatorExpression = Expression.ExclusiveOr(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType());
 						}
 						break;
 					case CanonicalSelectorSemantics.ShiftLeft:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.LeftShift(receiver, Expression.Convert(operand, TypeGuru.intType));
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.LeftShift(leftOperand, Expression.Convert(rightOperand, TypeGuru.intType));
 						} else {
-							binaryOperatorExpression = Expression.LeftShift(target.asExpressionWithFormalType(), Expression.Convert(arg.asExpressionWithFormalType(), TypeGuru.intType));
+							binaryOperatorExpression = Expression.LeftShift(leftOperandMO.asExpressionWithFormalType(), Expression.Convert(rightOperandMO.asExpressionWithFormalType(), TypeGuru.intType));
 						}
 						break;
 					case CanonicalSelectorSemantics.ShiftRight:
-						if (convertNumericTypesToHighestGenerality(target, arg, out receiver, out operand)) {
-							binaryOperatorExpression = Expression.RightShift(receiver, Expression.Convert(operand, TypeGuru.intType));
+						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
+							binaryOperatorExpression = Expression.RightShift(leftOperand, Expression.Convert(rightOperand, TypeGuru.intType));
 						} else {
-							binaryOperatorExpression = Expression.RightShift(target.asExpressionWithFormalType(), Expression.Convert(arg.asExpressionWithFormalType(), TypeGuru.intType));
+							binaryOperatorExpression = Expression.RightShift(leftOperandMO.asExpressionWithFormalType(), Expression.Convert(rightOperandMO.asExpressionWithFormalType(), TypeGuru.intType));
 						}
 						break;
 
 					default:
-						binaryOperatorExpression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, argArrayFor(arg));
-						bindingRestrictions = target.bindingRestrictionsForForeignObjectReceiver(esClass, arg);
+						binaryOperatorExpression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(leftOperandMO.Expression, esClass, selector, argArrayFor(rightOperandMO));
+						bindingRestrictions = leftOperandMO.bindingRestrictionsForForeignObjectReceiver(esClass, rightOperandMO);
 						break;
 
 				}
 
 				if (binaryOperatorExpression == null) {
-					binaryOperatorExpression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, argArrayFor(arg));
-					bindingRestrictions = target.bindingRestrictionsForForeignObjectReceiver(esClass, arg);
+					binaryOperatorExpression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(leftOperandMO.Expression, esClass, selector, argArrayFor(rightOperandMO));
+					bindingRestrictions = leftOperandMO.bindingRestrictionsForForeignObjectReceiver(esClass, rightOperandMO);
 				} else {
 					binaryOperatorExpression = Expression.Convert(binaryOperatorExpression, TypeGuru.objectType);
 					if (bindingRestrictions == null) {
-						bindingRestrictions = target.addingFormalTypeRestriction().Merge(arg.addingFormalTypeRestriction());
+						bindingRestrictions = leftOperandMO.addingFormalTypeRestriction().Merge(rightOperandMO.addingFormalTypeRestriction());
 					}
 				}
 
 				return new DynamicMetaObject(
 						binaryOperatorExpression, 
 						bindingRestrictions,
-						target.Value);
+						leftOperandMO.Value);
 			}
 
 			public class Registry : BinderRegistry {

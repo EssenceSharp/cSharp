@@ -75,18 +75,22 @@ namespace EssenceSharp.ClientServices {
 					searchPathBuilder.Append(Path.PathSeparator);
 				}
 			}
-			EssenceLaunchPad.scriptSearchPathsDo(
-				pathname => {
-					searchPathBuilder.Append(pathname);
-					searchPathBuilder.Append(Path.PathSeparator);
-				});
 			Kernel.EssenceSharpPath = LanguageOptions.GetOption(protoOptions, EssenceSharpOptions.essenceSharpPathKey, ESFileUtility.defaultEssenceSharpPath());
-			searchPathBuilder.Append(Kernel.ScriptsPath);
-			protoOptions[EssenceSharpOptions.searchPathsKey]		= searchPathBuilder.ToString();
+			searchPathBuilder.Append(Kernel.SharedScriptsPath);
+			protoOptions[EssenceSharpOptions.scriptSearchPathsKey]		= searchPathBuilder.ToString();
 
 			options	= new EssenceSharpOptions(protoOptions);
 			options.assemblyNameBindingsDo((qualifiedNsName, assemblyName) => Kernel.bindNamespaceToAssemblyNamed(qualifiedNsName, new AssemblyName(assemblyName)));
 			options.assemblyPathBindingsDo((qualifiedNsName, assemblyPath) => Kernel.bindNamespaceToAssemblyAt(qualifiedNsName, new FileInfo(assemblyPath)));
+
+			foreach (var pathnamePrefix in options.LibrarySearchPaths) {
+				Kernel.LibraryPathBinder.searchPathAddLastIfAbsent(pathnamePrefix);
+			}
+
+			foreach (var pathnamePrefix in options.SearchPaths) {
+				Kernel.ScriptPathBinder.searchPathAddLastIfAbsent(pathnamePrefix);
+			}
+
 		}
 
 		public override void Shutdown() {
@@ -106,31 +110,8 @@ namespace EssenceSharp.ClientServices {
 			get {return options;}
 		}
 
-		public bool findFullScriptPathnameFor(String scriptPathameSuffix, out FileInfo scriptPath) {
-			bool mustCheckForExtension = false;
-			String suffixWithExtension;
-			var extension = Path.GetExtension(scriptPathameSuffix);
-			if (extension == ".es") {
-				suffixWithExtension = scriptPathameSuffix;
-			} else {
-				mustCheckForExtension = true;
-				suffixWithExtension = scriptPathameSuffix + ".es";
-			}
-			scriptPath = new FileInfo(scriptPathameSuffix);
-			if (scriptPath.Exists) return true;
-			if (mustCheckForExtension) {
-				scriptPath = new FileInfo(suffixWithExtension);
-				if (scriptPath.Exists) return true;
-			}
-			foreach (var pathnamePrefix in options.SearchPaths) {
-				scriptPath = new FileInfo(Path.Combine(pathnamePrefix, scriptPathameSuffix));
-				if (scriptPath.Exists) return true;
-				if (mustCheckForExtension) {
-					scriptPath = new FileInfo(Path.Combine(pathnamePrefix, suffixWithExtension));
-					if (scriptPath.Exists) return true;
-				}
-			}
-			return false;
+		public bool scriptPathnameFor(String scriptPathameSuffix, out FileInfo scriptPath) {
+			return Kernel.pathForScript(scriptPathameSuffix, out scriptPath);
 		}
 
 		public override CompilerOptions GetCompilerOptions() {

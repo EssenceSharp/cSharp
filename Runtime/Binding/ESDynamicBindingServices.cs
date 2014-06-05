@@ -269,7 +269,7 @@ namespace EssenceSharp.Runtime.Binding {
 				if (!(rightType.GetGenericTypeDefinition() == nullableType)) return null;
 				rightType = Nullable.GetUnderlyingType(rightType);
 			}
-			if (!numericTypeGenerality.TryGetValue(leftType, out rightGenerality)) return null;
+			if (!numericTypeGenerality.TryGetValue(rightType, out rightGenerality)) return null;
 			return leftGenerality >= rightGenerality ? leftType : rightType;
 		}
 

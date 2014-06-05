@@ -34,6 +34,7 @@ using System.Collections.ObjectModel;
 using System.Text;
 using System.IO;
 using Microsoft.Scripting;
+using EssenceSharp.Properties;
 using EssenceSharp.UtilityServices;
 #endregion
 
@@ -53,25 +54,30 @@ namespace EssenceSharp.ClientServices {
 		protected int				compilationThreshold		= -1;
 		protected List<String>			scriptSearchPaths;
 		protected DirectoryInfo			essenceSharpPath;
-		protected HashSet<String>		libraryNames			= new HashSet<String>();
+		protected List<String>			librarySearchPaths		= new List<String>();
+		protected List<String>			libraryNames			= new List<String>();
 		protected IDictionary<String, String>	assemblyNameBindings;
 		protected IDictionary<String, String>	assemblyPathBindings;
 		protected bool				loadLibrariesVerbosely		= false;
 		protected bool				reportLibraryLoadTime		= false;
 
 		protected virtual void transferValuesToOptionsDictionary() {
-			options[EssenceSharpOptions.exceptionDetailKey]		= ProvideExceptionDetail;
-			options[EssenceSharpOptions.showClrExceptionsKey]	= ShowClrExceptions;
-			options[EssenceSharpOptions.perfStatsKey]		= ProvidePerformanceStats;
-			options[EssenceSharpOptions.noAdaptiveCompilationKey]	= !AllowAdaptiveCompilation;
-			options[EssenceSharpOptions.compilationThresholdKey]	= CompilationThreshold;
-			options[EssenceSharpOptions.essenceSharpPathKey]	= EssenceSharpPath;
-			options[EssenceSharpOptions.loadLibrariesVerboselyKey]	= loadLibrariesVerbosely;
-			options[EssenceSharpOptions.reportLibraryLoadTimeKey]	= reportLibraryLoadTime;
-			
+			options[EssenceSharpOptions.exceptionDetailKey]			= ProvideExceptionDetail;
+			options[EssenceSharpOptions.showClrExceptionsKey]		= ShowClrExceptions;
+			options[EssenceSharpOptions.perfStatsKey]			= ProvidePerformanceStats;
+			options[EssenceSharpOptions.noAdaptiveCompilationKey]		= !AllowAdaptiveCompilation;
+			options[EssenceSharpOptions.compilationThresholdKey]		= CompilationThreshold;
+			options[EssenceSharpOptions.essenceSharpPathKey]		= EssenceSharpPath;
+			options[EssenceSharpOptions.loadLibrariesVerboselyKey]		= loadLibrariesVerbosely;
+			options[EssenceSharpOptions.reportLibraryLoadTimeKey]		= reportLibraryLoadTime;
+
+			var pathNamesList = new List<String>();
+			foreach (var path in librarySearchPaths)			pathNamesList.Add(path);
+			options[EssenceSharpOptions.librarySearchPathsKey]		= new ReadOnlyCollection<String>(pathNamesList.ToArray());
+
 			var libraryNamesList = new List<String>();
-			foreach (var name in libraryNames)			libraryNamesList.Add(name);
-			options[EssenceSharpOptions.libraryNamesKey]		= new ReadOnlyCollection<String>(libraryNamesList.ToArray());
+			foreach (var name in libraryNames)				libraryNamesList.Add(name);
+			options[EssenceSharpOptions.libraryNamesKey]			= new ReadOnlyCollection<String>(libraryNamesList.ToArray());
 			
 			if (scriptSearchPaths != null) {
 				var searchPathBuilder = new StringBuilder();
@@ -82,7 +88,7 @@ namespace EssenceSharp.ClientServices {
 					searchPathBuilder.Append(Path.PathSeparator);
 				}
 				searchPathBuilder.Append(scriptSearchPaths[limit]);
-				options[EssenceSharpOptions.searchPathsKey]		= searchPathBuilder.ToString();
+				options[EssenceSharpOptions.scriptSearchPathsKey]		= searchPathBuilder.ToString();
 			}
 		}
 
@@ -116,22 +122,31 @@ namespace EssenceSharp.ClientServices {
 			set { compilationThreshold = value;}
 		}
 
+		public String EssenceSharpPathString {
+			get {return EssenceSharpPath.FullName;}
+			set { EssenceSharpPath = new DirectoryInfo(String.IsNullOrEmpty(value) ? Environment.ExpandEnvironmentVariables(value) : Settings.Default.PathEnvironmentVarName);}
+		}
+
 		public DirectoryInfo EssenceSharpPath {
 			get {return essenceSharpPath ?? ESFileUtility.defaultEssenceSharpPath();}
 			set { essenceSharpPath = value;}
 		}
 
-		public bool LoadLibrariesVerbosely {
-			get {return loadLibrariesVerbosely;}
-			set { loadLibrariesVerbosely = value;}
+		public List<String> LibrarySearchPaths {
+			get {return librarySearchPaths;}
 		}
 
-		public bool ReportLibraryLoadTime {
-			get {return reportLibraryLoadTime;}
-			set { reportLibraryLoadTime = value;}
+		public void addLibrarySearchPath(String pathname) {
+			if (String.IsNullOrEmpty(pathname)) return;
+			if (librarySearchPaths == null) librarySearchPaths = new List<String>();
+			librarySearchPaths.Add(pathname);
 		}
 
-		public HashSet<String> Libraries {
+		public void addLibrarySearchPaths(IEnumerable<String> pathnames) {
+			foreach (var pathname in pathnames) addLibrarySearchPath(pathname);
+		}
+
+		public List<String> LibraryNames {
 			get {return libraryNames;}
 		}
 
@@ -170,6 +185,15 @@ namespace EssenceSharp.ClientServices {
 			assemblyPathBindings[qualifiedNamespaceName] = assemblyPath;
 		}
 
+		public bool LoadLibrariesVerbosely {
+			get {return loadLibrariesVerbosely;}
+			set { loadLibrariesVerbosely = value;}
+		}
+
+		public bool ReportLibraryLoadTime {
+			get {return reportLibraryLoadTime;}
+			set { reportLibraryLoadTime = value;}
+		}
 		
 	}
 	
@@ -181,10 +205,11 @@ namespace EssenceSharp.ClientServices {
 		public static readonly String	perfStatsKey			= "PerfStats";
 		public static readonly String	noAdaptiveCompilationKey	= "NoAdaptiveCompilation";
 		public static readonly String	compilationThresholdKey		= "CompilationThreshold";
-		public static readonly String	searchPathsKey			= "SearchPaths";
+		public static readonly String	scriptSearchPathsKey		= "SearchPaths";
 
 		// Essence Sharp Options:
 		public static readonly String	essenceSharpPathKey		= "EssenceSharpPath";
+		public static readonly String	librarySearchPathsKey		= "LibrarySearchPaths";
 		public static readonly String	libraryNamesKey			= "LibraryNames";
 		public static readonly String	assemblyNameBindingsKey		= "AssemblyNameBindings";
 		public static readonly String	assemblyPathBindingsKey		= "AssemblyPathBindings";
@@ -206,7 +231,8 @@ namespace EssenceSharp.ClientServices {
 		}
 
 		protected DirectoryInfo			essenceSharpPath;
-		protected HashSet<String>		libraryNames			= new HashSet<String>();
+		protected List<String>			librarySearchPaths		= new List<String>();
+		protected List<String>			libraryNames			= new List<String>();
 		protected IDictionary<String, String>	assemblyNameBindings;
 		protected IDictionary<String, String>	assemblyPathBindings;
 		protected bool				loadLibrariesVerbosely		= false;
@@ -219,10 +245,14 @@ namespace EssenceSharp.ClientServices {
 			essenceSharpPath		= GetOption(options, essenceSharpPathKey, ESFileUtility.defaultEssenceSharpPath());
 			assemblyNameBindings		= getStringMapOption(options, assemblyNameBindingsKey);
 			assemblyPathBindings		= getStringMapOption(options, assemblyPathBindingsKey);
-			var libraryNamesList		= GetOption(options, libraryNamesKey, new ReadOnlyCollection<String>(new String[0]));
-			foreach (var name in libraryNamesList) libraryNames.Add(name);
 			loadLibrariesVerbosely		= GetOption(options, loadLibrariesVerboselyKey, false);
 			reportLibraryLoadTime		= GetOption(options, reportLibraryLoadTimeKey, false);
+
+			var pathNamesList		= GetOption(options, librarySearchPathsKey, new ReadOnlyCollection<String>(new String[0]));
+			foreach (var name in pathNamesList) librarySearchPaths.Add(name);
+
+			var libraryNamesList		= GetOption(options, libraryNamesKey, new ReadOnlyCollection<String>(new String[0]));
+			foreach (var name in libraryNamesList) libraryNames.Add(name);
 		}
 
 		public EssenceSharpOptions(EssenceSharpOptionsBuilder optionsBuilder) : this(optionsBuilder.Options) {
@@ -232,7 +262,11 @@ namespace EssenceSharp.ClientServices {
 			get {return essenceSharpPath;}
 		}
 
-		public HashSet<String> LibraryNames {
+		public List<String> LibrarySearchPaths {
+			get {return librarySearchPaths;}
+		}
+
+		public List<String> LibraryNames {
 			get {return libraryNames;}
 		}
 

@@ -84,6 +84,7 @@ namespace EssenceSharp.Runtime {
 				base.printElementsUsing(depth, append, newLine);
 				newLine(0);
 			}
+			printNamedInstanceVariablesUsing(depth, append, newLine);
 			append(" size: ");
 			append(size().ToString());
 			append(" |");
@@ -415,6 +416,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
+			printNamedInstanceVariablesUsing(depth, append, newLine);
 			append(asHostString());
 		}
 
@@ -1885,6 +1887,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
+			printNamedInstanceVariablesUsing(depth, append, newLine);
 			append(ToString());
 		}
 

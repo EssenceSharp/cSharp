@@ -163,7 +163,13 @@ namespace EssenceSharp.Runtime {
 		}	
 		
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
-			uint maxPrintSize = (uint)Math.Min(80, namedSlots.Length);
+			printNamedInstanceVariablesUsing(depth, append, newLine);
+		}
+
+		public virtual void printNamedInstanceVariablesUsing(uint depth, Action<String> append, Action<uint> newLine) {
+			var namedSlotCount = namedSlots.Length;
+			if (namedSlotCount < 1) return;
+			uint maxPrintSize = (uint)Math.Min(80, namedSlotCount);
 			for (long i = 0; i < maxPrintSize; i++) {
 				newLine(depth);
 				Object value = namedSlots[i];
@@ -2120,7 +2126,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
-			base.printElementsUsing(depth, append, newLine);
+			printNamedInstanceVariablesUsing(depth, append, newLine);
 			append(" size: ");
 			append(size().ToString());
 			append(" |");

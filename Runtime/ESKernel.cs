@@ -130,7 +130,7 @@ namespace EssenceSharp.Runtime {
 		private readonly SymbolRegistry							symbolRegistry			= null;
 		private readonly Dictionary<PrimitiveDomainType, PrimitiveDomain>		primitiveDomainRegistry		= new Dictionary<PrimitiveDomainType, PrimitiveDomain>();  
 		protected readonly Dictionary<Type, ESClass>					typeToClassMap			= new Dictionary<Type, ESClass>();
-		protected readonly Dictionary<String, AssemblyName>				assemblyNameBindings	= new Dictionary<String, AssemblyName>();
+		protected readonly Dictionary<String, AssemblyName>				assemblyNameBindings		= new Dictionary<String, AssemblyName>();
 		protected readonly Dictionary<AssemblyName, FileInfo>				assemblyPathnameBindings	= new Dictionary<AssemblyName, FileInfo>();
 
 		protected DynamicBindingGuru							dynamicBindingGuru		= null;
@@ -138,11 +138,15 @@ namespace EssenceSharp.Runtime {
 		protected GetVariableValueBinder.Registry					getVariableValueBinderRegistry	= null;
 		protected SetVariableValueBinder.Registry					setVariableValueBinderRegistry	= null;
 
+
 		protected DirectoryInfo								essenceSharpPath		= ESFileUtility.defaultEssenceSharpPath();
-		protected DirectoryInfo								sourcePath			= null;
-		protected DirectoryInfo								scriptsPath			= null;
-		protected DirectoryInfo								librariesPath			= null;
+		protected DirectoryInfo								sharedSourcePath		= null;
+		protected DirectoryInfo								sharedScriptsPath		= null;
+		protected DirectoryInfo								sharedLibrariesPath		= null;
 		protected DirectoryInfo								standardLibraryPath		= null;
+
+		protected ESPathnameBinder							libraryPathBinder		= null;
+		protected ESPathnameBinder							sciptPathBinder			= null;
 
 		public static readonly String							standardLibraryName		= "Standard";
 		protected bool									isStandardLibraryLoaded		= false;
@@ -364,6 +368,14 @@ namespace EssenceSharp.Runtime {
 		}
 
 		#endregion
+
+		public ESPathnameBinder LibraryPathBinder {
+			get { return libraryPathBinder;}
+		}
+
+		public ESPathnameBinder ScriptPathBinder {
+			get { return sciptPathBinder;}
+		}
 
 		public DynamicBindingGuru DynamicBindingGuru {
 			get {return dynamicBindingGuru;} 
@@ -940,80 +952,50 @@ namespace EssenceSharp.Runtime {
 		#region File paths
 
 		protected virtual void setEssenceSharpPath(DirectoryInfo newDefaultEssenceSharpPath) {
+
 			if (Equals(essenceSharpPath, newDefaultEssenceSharpPath)) return;
 			essenceSharpPath = newDefaultEssenceSharpPath;
-			sourcePath = new DirectoryInfo(Path.Combine(essenceSharpPath.FullName,		"Source"));
-			scriptsPath = new DirectoryInfo(Path.Combine(sourcePath.FullName,		"Scripts"));
-			librariesPath = new DirectoryInfo(Path.Combine(sourcePath.FullName,		"Libraries"));
-			standardLibraryPath = libraryPathFor(standardLibraryName);
+
+			sharedSourcePath = new DirectoryInfo(Path.Combine(essenceSharpPath.FullName,		"Source"));
+			sharedScriptsPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Scripts"));
+			sharedLibrariesPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Libraries"));
+
+			libraryPathBinder = new ESPathnameBinder(SharedLibrariesPath, ".lib");
+			sciptPathBinder = new ESPathnameBinder(SharedScriptsPath, ".es");
+
+			if (!pathForSharedLibrary(standardLibraryName, out standardLibraryPath)) standardLibraryPath = new DirectoryInfo(Path.Combine(sharedLibrariesPath.FullName, standardLibraryName));
+
 		}
 
 		public DirectoryInfo EssenceSharpPath {
 			get {return essenceSharpPath;}
-			set {var newDefaultEssenceSharpPath = value ?? ESFileUtility.defaultEssenceSharpPath();
+			set {	var newDefaultEssenceSharpPath = value ?? ESFileUtility.defaultEssenceSharpPath();
 				setEssenceSharpPath(newDefaultEssenceSharpPath);}
 		}
 
-		public DirectoryInfo SourcePath {
-			get {return sourcePath;}
+		public DirectoryInfo SharedSourcePath {
+			get {return sharedSourcePath;}
 		}
 
-		public DirectoryInfo ScriptsPath {
-			get {return scriptsPath;}
+		public DirectoryInfo SharedScriptsPath {
+			get {return sharedScriptsPath;}
 		}
 
-		public DirectoryInfo LibrariesPath {
-			get {return librariesPath;}
+		public DirectoryInfo SharedLibrariesPath {
+			get {return sharedLibrariesPath;}
 		}
 
 		public DirectoryInfo StandardLibraryPath {
 			get {return standardLibraryPath;}
 		}
 
-		public DirectoryInfo libraryPathFor(String userLibraryName) {
+		public bool pathForSharedLibrary(String userLibraryName, out DirectoryInfo libraryPath) {
 			var libraryName = ESLexicalUtility.nextQualifiedIdentifierFrom(new StringReader(userLibraryName));
-			return new DirectoryInfo(Path.Combine(librariesPath.FullName, libraryName));
+			return libraryPathBinder.pathFor(libraryName, out libraryPath);
 		}
-
-		public bool findFullScriptPathnameFor(String scriptPathameSuffix, out FileInfo scriptPath) {
-			bool mustCheckForExtension = false;
-			String suffixWithExtension;
-			var extension = Path.GetExtension(scriptPathameSuffix);
-			if (extension == ".es") {
-				suffixWithExtension = scriptPathameSuffix;
-			} else {
-				mustCheckForExtension = true;
-				suffixWithExtension = scriptPathameSuffix + ".es";
-			}
-			scriptPath = new FileInfo(scriptPathameSuffix);
-			if (scriptPath.Exists) return true;
-			if (mustCheckForExtension) {
-				scriptPath = new FileInfo(suffixWithExtension);
-				if (scriptPath.Exists) return true;
-			}
-			FileInfo innerScriptPath = null;
-			EssenceLaunchPad.scriptSearchPathsDoUntil(
-				pathnamePrefix => {
-					innerScriptPath = new FileInfo(Path.Combine(pathnamePrefix, scriptPathameSuffix));
-					if (innerScriptPath.Exists) return true;
-					if (mustCheckForExtension) {
-						innerScriptPath = new FileInfo(Path.Combine(pathnamePrefix, suffixWithExtension));
-						if (innerScriptPath.Exists) return true;
-					}
-					innerScriptPath = null;
-					return false;
-				});
-			if (innerScriptPath != null) {
-				scriptPath = innerScriptPath;
-				return true;
-			}
-			scriptPath = new FileInfo(Path.Combine(ScriptsPath.FullName, scriptPathameSuffix));
-			if (scriptPath.Exists) return true;
-			if (mustCheckForExtension) {
-				scriptPath = new FileInfo(Path.Combine(ScriptsPath.FullName, suffixWithExtension));
-				return scriptPath.Exists;
-			}
-			return false;
+		
+		public bool pathForScript(String scriptPathameSuffix, out FileInfo scriptPath) {
+			return sciptPathBinder.pathFor(scriptPathameSuffix, out scriptPath);
 		}
 
 		#endregion
@@ -2156,15 +2138,6 @@ namespace EssenceSharp.Runtime {
 
 		protected virtual void bindToFileSystem() {
 			EssenceSharpPath = ESFileUtility.defaultEssenceSharpPath();
-			var userSearchPathsFile = new FileInfo(Path.Combine(ScriptsPath.FullName, "searchPaths"));
-			if (!userSearchPathsFile.Exists) return;
-			using (var stream = userSearchPathsFile.OpenText()) {
-				String searchPath = "";
-				do {
-					EssenceLaunchPad.scriptSearchPathAddLastIfAbsent(searchPath);
-					searchPath = stream.ReadLine();
-				} while (searchPath != null);
-			}
 		}
 
 		#endregion
@@ -2176,10 +2149,10 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public bool ensureStartUp(bool startupVerbosely, bool reportLibraryLoadTime) {
-			return ensureStartUp(new HashSet<String>(), startupVerbosely, reportLibraryLoadTime);
+			return ensureStartUp(new List<String>(), startupVerbosely, reportLibraryLoadTime);
 		}
 
-		public bool ensureStartUp(HashSet<String> libraryNames, bool startupVerbosely, bool reportLibraryLoadTime) {
+		public bool ensureStartUp(List<String> libraryNames, bool startupVerbosely, bool reportLibraryLoadTime) {
 
 			beVerbose = startupVerbosely;
 
@@ -2199,13 +2172,18 @@ namespace EssenceSharp.Runtime {
 
 			foreach (var name in libraryNames) {
 				if (loadedLibraries.Contains(name)) continue;
-				var libraryPath = libraryPathFor(name);
-				if (beVerbose) Console.WriteLine("Loading library " + name + " from path " + libraryPath + " ...");
-				if (!ESLibraryLoader.load(this, rootNamespace, libraryPath, startupVerbosely, true, out initialRootNamespaces)) {
-					Console.WriteLine("Bootstrap load of library " + name + " failed from " + libraryPath.FullName);
-					return false;
+				DirectoryInfo libraryPath;
+				var libraryPathExists = pathForSharedLibrary(name, out libraryPath);
+				if (libraryPathExists) { 
+					if (beVerbose) Console.WriteLine("Loading library " + name + " from path " + libraryPath + " ...");
+					if (!ESLibraryLoader.load(this, rootNamespace, libraryPath, startupVerbosely, true, out initialRootNamespaces)) {
+						Console.WriteLine("Bootstrap load of library " + name + " failed from " + libraryPath.FullName);
+						return false;
+					}
+					loadedLibraries.Add(name);
+				} else {
+					Console.WriteLine("Bootstrap load of library " + name + " failed: no library folder found with that name.");
 				}
-				loadedLibraries.Add(name);
 			}
 
 			stopwatch.Stop();
