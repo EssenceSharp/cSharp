@@ -1379,10 +1379,12 @@ namespace EssenceSharp.ParsingServices {
 					break;
 			}
 
+			bool isZeroCountAcceptable = prefix.Length > 0;
+
 			do {
 				int count = appendOntoWhile(prefix, ESLexicalUtility.isIdentifierChar);
 				if (acceptQualifiedNameSyntax && nextMatches(QualifiedNameSeparatorChar)) {
-					if (count == 0) {
+					if (count == 0 && !isZeroCountAcceptable) {
 						// Two separators in succession
 						advanceChar();
 						switch (QualifiedNameSeparatorChar) {
@@ -1454,6 +1456,7 @@ namespace EssenceSharp.ParsingServices {
 					prevWasKeyword = false;
 					parseAnotherKeywordOrPathElement = false;
 				}
+				isZeroCountAcceptable = false;
 			} while (parseAnotherKeywordOrPathElement);
 
 			if (!prevWasKeyword && keywordCount > 0) {

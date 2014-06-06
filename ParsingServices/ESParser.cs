@@ -572,7 +572,7 @@ namespace EssenceSharp.ParsingServices {
 		#region Syntax Tree Construction
 
 		protected ParseTreeNode parseMethodDeclaration() {
-			// STMethodDeclaration
+			// MethodDeclaration
 			
 			ParseTreeNode methodHeader = parseMethodHeader();
 			if (methodHeader == null || methodHeader.IsEndOfSource) {
@@ -614,7 +614,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseMethodHeader() {
-			// STMethodHeader
+			// MethodHeader
 
 			try {
 				pushContext(ParsingContext.MethodHeader);
@@ -701,7 +701,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseBlockDeclaration() {
-			// STBlockDeclaration
+			// BlockDeclaration
 			var parameters = parseBlockParameterDeclarationList();
 			if (parameters != null) {
 				if (parameters.IsEndOfSource) return newBlockDeclaration(null, null);
@@ -716,7 +716,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 
 		protected ParseTreeNode parseExecutableCode() {
-			// STExecutableCode
+			// ExecutableCode
 			ParseTreeNode localVariables = parseLocalVariableDeclarationList();
 			List<Statement> statements = new List<Statement>();
 
@@ -747,7 +747,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseLocalVariableDeclarationList() {
-			// STLocalVariableDeclarationList
+			// LocalVariableDeclarationList
 			LexicalToken listBegin;
 			if  (nextMatches(ParseNodeType.VerticalBar, out listBegin)) {
 				List<DeclarableIdentifierToken> variables = new List<DeclarableIdentifierToken>();
@@ -775,7 +775,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseBlockParameterDeclarationList() {
-			// STBlockParameterDeclarationList
+			// BlockParameterDeclarationList
 			List<BlockParameterToken> parameters = new List<BlockParameterToken>();
 			LexicalToken blockParameter;
 			pushContext(ParsingContext.VariableDeclaration);
@@ -792,7 +792,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseMethodReturnPrefix() {
-			// STMethodReturnPrefix
+			// MethodReturnPrefix
 			LexicalToken returnOp;
 			if (nextMatches(ParseNodeType.ReturnOp, out returnOp)) {
 				return newMethodReturnPrefix((ReturnOpToken)returnOp);
@@ -801,7 +801,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseAssignmentPrefix(DeclarableIdentifierToken identifier) {
-			// STAssignmentPrefix
+			// AssignmentPrefix
 			LexicalToken assignmentOp;
 			if (nextMatches(ParseNodeType.AssignOp, out assignmentOp)) {
 				return newAssignmentPrefix(newVariableAssignment(identifier), (AssignOpToken)assignmentOp);
@@ -810,7 +810,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseStatement() {
-			// STStatement | STFinalStatement
+			// Statement | FinalStatement
 			ParseTreeNode methodReturnPrefix = parseMethodReturnPrefix();
 			bool isStatementRequired = methodReturnPrefix != null;
 			LexicalToken identifier, initialExpressionToken;
@@ -865,28 +865,28 @@ namespace EssenceSharp.ParsingServices {
 		}
 
 		protected ParseTreeNode parseExpression(ParseTreeNode operand) {
-			// STExpression
+			// Expression
 			if (operand == null) {
 				operand = parseOperand();
 				if (operand == null || operand.IsEndOfSource) return operand;
 			} else {
 				switch (operand.OperandNodeType) {
 					case ParseNodeType.Identifier:
-						// STVariableReference
+						// VariableReference
 						operand = newVariableReference((IdentifierToken)operand);
 						break;
 						
 					case ParseNodeType.False:
 					case ParseNodeType.Nil:
 					case ParseNodeType.True:
-						// STConstantReference
+						// ConstantReference
 						operand = newConstantReference((ConstantReferenceToken)operand);
 						break;
 						
 					case ParseNodeType.Self:
 					case ParseNodeType.Super:
 					case ParseNodeType.ThisContext:
-						// STPseudoVariableReference
+						// PseudoVariableReference
 						operand = newPseudoVariableReference((PseudoVariableReferenceToken)operand);
 						break;
 						
@@ -934,7 +934,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseCascadedMessage() {
-			// STCascadedMessage
+			// CascadedMessage
 			LexicalToken messageCascadeOp;
 			if (nextMatches(ParseNodeType.MessageCascadeOp, out messageCascadeOp)) {
 				ParseTreeNode messageChain = parseMessageChain();
@@ -950,7 +950,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseMessageChain() {
-			// STMessageChain
+			// MessageChain
 			
 			try {
 				pushContext(ParsingContext.MessageSelector);
@@ -981,7 +981,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseKeywordMessageChain() {
-			// STKeywordMessageChain
+			// KeywordMessageChain
 			ParseTreeNode keywordMessage = parseKeywordMessage(true);
 			if (keywordMessage != null && keywordMessage.ParseNodeType != ParseNodeType.EndOfSource) {
 				return newKeywordMessageChain((KeywordMessage)keywordMessage);
@@ -991,7 +991,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseInitiallyBinaryMessageChain() {
-			// STInitiallyBinaryMessageChain
+			// InitiallyBinaryMessageChain
 			ParseTreeNode binaryMessageChain = parseBinaryOnlyMessageChain();
 			if (binaryMessageChain.ParseNodeType != ParseNodeType.BinaryOnlyMessageChain) {
 				return handledUnexpectedToken(ParseNodeType.InitiallyBinaryMessageChain, new ParseNodeType[]{ParseNodeType.BinaryOnlyMessageChain}, binaryMessageChain == null ? nextToken : binaryMessageChain);
@@ -1005,7 +1005,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseInitiallyUnaryMessageChain() {
-			// STInitiallyUnaryMessageChain
+			// InitiallyUnaryMessageChain
 			ParseTreeNode unaryMessageChain = parseUnaryOnlyMessageChain();
 			switch (peekLexicalType()) {
 				case ParseNodeType.Keyword:
@@ -1025,7 +1025,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseBinaryOnlyMessageChain() {
-			// STBinaryOnlyMessageChain
+			// BinaryOnlyMessageChain
 			List<BinaryMessage> messages = new List<BinaryMessage>();
 			ParseTreeNode binaryMessage = parseBinaryMessage();
 			do {
@@ -1046,7 +1046,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseUnaryOnlyMessageChain() {
-			// STUnaryOnlyMessageChain
+			// UnaryOnlyMessageChain
 			List<UnaryMessage> messages = new List<UnaryMessage>();
 			ParseTreeNode unaryMessage = parseUnaryMessage();
 			do {
@@ -1059,7 +1059,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseBinaryMessage() {
-			// STBinaryMessage
+			// BinaryMessage
 			LexicalToken selector;
 			if (next(out selector)) {
 				ParseTreeNode operand = parseBinaryMessageOperand(true);
@@ -1087,7 +1087,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 
 		protected ParseTreeNode parseKeywordMessage(bool acceptExpressionsAsParameters) {
-			// STKeywordMessage
+			// KeywordMessage
 			List<KeywordMessageSegment> segments = new List<KeywordMessageSegment>();
 			ParseTreeNode keywordMessageSegment = parseKeywordMessageSegment(acceptExpressionsAsParameters);
 			do {
@@ -1100,7 +1100,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseKeywordMessageSegment(bool acceptExpressionsAsParameters) {
-			// STKeywordMessageSegment
+			// KeywordMessageSegment
 			LexicalToken selector;
 			if (nextMatches(ParseNodeType.Keyword, out selector)) {
 				ParseTreeNode argument = parseKeywordMessageArgument(acceptExpressionsAsParameters);
@@ -1115,7 +1115,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseKeywordMessageArgument(bool acceptExpressionsAsParameters) {
-			// STKeywordMessageArgument
+			// KeywordMessageArgument
 			ParseTreeNode operand = parseBinaryMessageOperand(acceptExpressionsAsParameters);
 			if (operand == null || operand.IsEndOfSource) 
 				return handledUnexpectedToken(ParseNodeType.KeywordMessageArgument, new ParseNodeType[]{ParseNodeType.BinaryMessageOperand}, operand == null ? nextToken : operand);
@@ -1140,7 +1140,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseBinaryMessageOperand(bool acceptExpressionsAsParameters) {
-			// STBinaryMessageOperand
+			// BinaryMessageOperand
 			ParseTreeNode operand = parseOperand();
 			if (operand == null || operand.IsEndOfSource) 
 				return handledUnexpectedToken(ParseNodeType.BinaryMessageOperand, new ParseNodeType[]{ParseNodeType.Operand}, operand == null ? nextToken : operand);
@@ -1155,7 +1155,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseOperand() {
-			// STOperand
+			// Operand
 			try {
 				pushContext(ParsingContext.General);
 				LexicalToken token;
@@ -1172,46 +1172,46 @@ namespace EssenceSharp.ParsingServices {
 					case ParseNodeType.LiteralBindingReference:
 					case ParseNodeType.ByteArray:
 					case ParseNodeType.Array:
-						// STLexicalLiteralValue
+						// LexicalLiteralValue
 						advanceToken();
 						return newLexicalLiteralValue((LiteralValueToken)token);
 						
 					case ParseNodeType.Identifier:
-						// STVariableReference
+						// VariableReference
 						advanceToken();
 						return newVariableReference((IdentifierToken)token);
 						
 					case ParseNodeType.False:
 					case ParseNodeType.Nil:
 					case ParseNodeType.True:
-						// STConstantReference
+						// ConstantReference
 						advanceToken();
 						return newConstantReference((ConstantReferenceToken)token);
 
 					case ParseNodeType.Self:
 					case ParseNodeType.Super:
 					case ParseNodeType.ThisContext:
-						// STPseudoVariableReference
+						// PseudoVariableReference
 						advanceToken();
 						return newPseudoVariableReference((PseudoVariableReferenceToken)token);
 						
 					case ParseNodeType.ExpressionBegin:
-						// STNestedExpression 
+						// NestedExpression 
 						advanceToken();
 						return parseNestedExpression((ExpressionBeginToken)token);
 						
 					case ParseNodeType.DynamicArrayBegin:
-						// STDynamicArrayLiteral
+						// DynamicArrayLiteral
 						advanceToken();
 						return parseDynamicArrayLiteral((DynamicArrayBeginToken)token);
 						
 					case ParseNodeType.DictionaryLiteralBegin:
-						// STDictionaryLiteral
+						// DictionaryLiteral
 						advanceToken();
 						return parseDictionaryLiteral((DictionaryLiteralBeginToken)token);
 						
 					case ParseNodeType.BlockBegin:
-						// STBlockLiteral (STBlockBeginToken)
+						// BlockLiteral (BlockBeginToken)
 						advanceToken();
 						return parseCodeLiteral((BlockBeginToken)token);
 						
@@ -1299,7 +1299,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseCodeLiteral(BlockBeginToken beginToken) {
-			// STCodeLiteral
+			// CodeLiteral
 			switch (peekLexicalType()) {
 				case ParseNodeType.MethodHeaderBegin:
 					return parseMethodLiteral(beginToken);
@@ -1312,7 +1312,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseBlockLiteral(BlockBeginToken beginToken) {
-			// STBlockLiteral
+			// BlockLiteral
 			ParseTreeNode blockDeclaration = parseBlockDeclaration();
 			if (blockDeclaration == null || blockDeclaration.IsEndOfSource) {
 				return handledUnexpectedToken(ParseNodeType.BlockLiteral, new ParseNodeType[]{ParseNodeType.BlockDeclaration}, blockDeclaration == null ? nextToken : blockDeclaration);
@@ -1326,7 +1326,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		protected ParseTreeNode parseMethodLiteral(BlockBeginToken beginToken) {
-			// STMethodLiteral
+			// MethodLiteral
 			LexicalToken methodHeaderBeginToken;
 			if (!nextMatches(ParseNodeType.MethodHeaderBegin, out methodHeaderBeginToken)) methodHeaderBeginToken = null;
 			ParseTreeNode  methodDeclaration = parseMethodDeclaration();

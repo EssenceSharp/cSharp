@@ -160,14 +160,10 @@ namespace EssenceSharp.Runtime {
 			var name = baseDirectory.Name;
 			String namePrefix;
 			int genericArity;
-			if (!TypeName.parseUnqualifiedName(name, out namePrefix, out genericArity, (prefix, errorDescription) => {})) {
-				Console.WriteLine("The name of the directory '" + name + "' is not a valid namespace name. So no attempt was made to bootstrap load it as a namespace.");
-				return false;
-			}
+			if (!TypeName.parseUnqualifiedName(name, out namePrefix, out genericArity, (prefix, errorDescription) => {})) return true;
 			if (genericArity > 0) {
 				name = namePrefix + "`" + genericArity.ToString();
 			}
-			// Console.WriteLine("");
 			FileSystemInfo[] files = baseDirectory.GetFileSystemInfos();
 			FileSystemInfo namespaceConfigurationFile = null;
 			FileSystemInfo classConfigurationFile = null;

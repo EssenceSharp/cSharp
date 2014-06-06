@@ -2441,7 +2441,7 @@ namespace EssenceSharp.Runtime {
 	public class FalsePrimitives : PrimitiveDomain {
 
 		protected override void bindToKernel() {
-			domainClass = kernel.UndefinedObjectClass;
+			domainClass = kernel.FalseClass;
 		}
 
 		public override PrimitiveDomainType Type {
