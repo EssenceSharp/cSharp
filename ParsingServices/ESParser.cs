@@ -310,7 +310,7 @@ namespace EssenceSharp.ParsingServices {
 			var node = parseMethodDeclaration();
 
 			var nodeType = peekLexicalType();
-			if (nodeType != ParseNodeType.EndOfSource || nodeType != ParseNodeType.MethodHeaderBegin) {
+			if (!(nodeType == ParseNodeType.EndOfSource || nodeType == ParseNodeType.MethodHeaderBegin)) {
 				return handledUnexpectedToken(
 						ParseNodeType.MethodDeclaration, 
 						new ParseNodeType[]{ParseNodeType.MethodHeaderBegin, ParseNodeType.EndOfSource}, 

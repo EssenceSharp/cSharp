@@ -30,12 +30,12 @@
 #region Using declarations
 using System;
 using System.IO;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting.Hosting;
 using EssenceSharp.Properties;
 using EssenceSharp.UtilityServices;
+using EssenceSharp.Exceptions;
 using EssenceSharp.Runtime;
 #endregion
 
@@ -76,7 +76,7 @@ namespace EssenceSharp.ClientServices {
 				} else {
 					try { 
 						options.Add(keyword.asOption());
-					} catch (Exception ex) {
+					} catch {
 						errors.Add("Unknown/unrecognized argument: " + arg);
 					}
 				}

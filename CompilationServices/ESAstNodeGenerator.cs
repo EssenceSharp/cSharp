@@ -39,6 +39,7 @@ using Expression = System.Linq.Expressions.Expression;
 using EssenceSharp.ParsingServices;
 using EssenceSharp.Runtime;
 using EssenceSharp.Runtime.Binding;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
 namespace EssenceSharp.CompilationServices {

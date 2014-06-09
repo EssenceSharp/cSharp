@@ -37,7 +37,8 @@ using FuncNs = Microsoft.Scripting.Utils;
 #else
 using FuncNs = System;
 #endif
-using EssenceSharp.UtilityServices;
+using EssenceSharp.Exceptions.System;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
 namespace EssenceSharp.Runtime {
@@ -106,10 +107,10 @@ namespace EssenceSharp.Runtime {
 		
 		internal override void setClass(ESBehavior esClass) {
 			base.setClass(esClass);
-			bindToClass();
+			invalidateNamedSlots();
 		}
 
-		protected void bindToClass() {
+		internal void invalidateNamedSlots() {
 			long instSize = Class == null ? 0 : Class.InstSize;
 			if (instSize > 0) {
 				if (namedSlots != null && namedSlots.Length > 0) {

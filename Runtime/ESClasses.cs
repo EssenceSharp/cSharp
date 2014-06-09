@@ -40,10 +40,10 @@ using FuncNs = Microsoft.Scripting.Utils;
 using System.Linq.Expressions;
 using FuncNs = System;
 #endif
-
 using EssenceSharp.ClientServices;
 using EssenceSharp.UtilityServices;
 using EssenceSharp.Runtime.Binding;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
 namespace EssenceSharp.Runtime { 
@@ -146,7 +146,6 @@ namespace EssenceSharp.Runtime {
 
 		internal static readonly ESSymbol[]						emptyInstanceVariableNames	 	= new ESSymbol[0];
 		internal static readonly Dictionary<ESSymbol, long>				emptyInstanceVariableIndexes 		= new Dictionary<ESSymbol, long>();
-		private static long								versionIdGenerator			= 0;
 
 		protected static readonly Object[]						emtpyObjArray	 			= new Object[0];
 
@@ -159,9 +158,8 @@ namespace EssenceSharp.Runtime {
 		protected IDictionary<long, IDictionary<String, ESMethod>>			hostSystemMethodDictionary		= null;
 		protected Type									instanceType				= null;
 		protected bool									isInstanceTypeLocked			= false;
-		protected ObjectStateArchitecture 						instanceArchitecture			= ObjectStateArchitecture.Stateless;
+		protected ObjectStateArchitecture 						instanceArchitecture			= ObjectStateArchitecture.NamedSlots;
 		protected bool									isInstanceArchitectureLocked		= false;
-		protected long									versionId				= 0;
 
 		protected ESSymbol[]								instanceVariableNames			= emptyInstanceVariableNames;
 		protected Dictionary<ESSymbol, long>						instanceVariableIndexes			= emptyInstanceVariableIndexes;
@@ -221,7 +219,6 @@ namespace EssenceSharp.Runtime {
 		#region Internal Protocol
 
 		protected void initialize() {
-			versionId = versionIdGenerator++;
 			methodDictionary = newMethodDictionary();
 			hostSystemMethodDictionary = newHostSystemMethodDictionary();
 			subclasses = new System.Collections.Generic.HashSet<ESBehavior>();
@@ -254,12 +251,8 @@ namespace EssenceSharp.Runtime {
 			get {return "AnAnonymousBehavior";}
 		}
 
-		public long VersionId {
-			get { return versionId; }
-		}
-
-		protected void incrementVersion() {
-			versionId = versionIdGenerator++;
+		protected override void incrementVersion() {
+			base.incrementVersion();
 			foreach (var subclass in subclasses) subclass.incrementVersion();
 		}
 
@@ -478,6 +471,143 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
+		#region Named instance variables
+
+		public bool InstancesCanHaveNamedSlots {
+			get {
+				switch (InstanceArchitecture) {
+					case ObjectStateArchitecture.Abstract:
+					case ObjectStateArchitecture.Stateless:
+					case ObjectStateArchitecture.Association:
+					case ObjectStateArchitecture.BindingReference:
+					case ObjectStateArchitecture.Message:
+					case ObjectStateArchitecture.Block:
+					case ObjectStateArchitecture.Method:
+						return false;
+					default:
+						return true;
+				}
+			}
+		}
+
+		public bool SubclassInstancesCanHaveNamedSlots {
+			get {
+				switch (InstanceArchitecture) {
+					case ObjectStateArchitecture.Association:
+					case ObjectStateArchitecture.BindingReference:
+					case ObjectStateArchitecture.Message:
+					case ObjectStateArchitecture.Block:
+					case ObjectStateArchitecture.Method:
+						return false;
+					default:
+						return superclass == null ? true : superclass.SubclassInstancesCanHaveNamedSlots;
+				}
+			}
+		}
+
+		public ESSymbol[] InstanceVariableNames {
+			get {return instanceVariableNames;}
+			set {setInstanceVariableNames(value);}
+		}
+		
+		protected void setInstanceVariableNames(ESSymbol[] instanceVarNames) {
+			ESSymbol[] prevInstVarNames = instanceVariableNames;
+			if (InstancesCanHaveNamedSlots) {
+				instanceVariableNames = (instanceVarNames == null || instanceVarNames.Length < 1) ? emptyInstanceVariableNames : instanceVarNames;
+				if (!elementsAreIdentical(prevInstVarNames, instanceVariableNames)) {
+					invalidateInstanceVariableNames();
+				}
+			} else {
+				if (instanceVarNames == null || instanceVarNames.Length < 1) {
+					instanceVariableNames = emptyInstanceVariableNames;
+					if (prevInstVarNames.Length > 0) {
+						invalidateInstanceVariableNames();
+					}
+				} else if (isInstanceArchitectureLocked) {
+					throw new PrimInvalidOperandException("A Behavior with instance architecture " + instanceArchitecture + " cannot have any instance variables.");
+				} else {
+					InstanceArchitecture = ObjectStateArchitecture.NamedSlots;
+					setInstanceVariableNames(instanceVarNames);
+					return;
+				}
+			}
+			instanceVariableIndexes = null;
+		}
+
+		protected virtual void invalidateInstanceVariableNames() {
+			recompile();
+			base.incrementVersion();
+			foreach (var subclass in subclasses) subclass.invalidateInstanceVariableNames();	
+		}
+
+		public ESSymbol basicInstVarNameAt(long index) {
+			if (index >= instanceVariableNames.Length || index < 0) return null;
+			return instanceVariableNames[index];
+		}
+		
+		public ESSymbol instVarNameAt(long index) {
+			if (index < 0) return null;
+			long superInstSize = SuperInstSize;
+			if (index < superInstSize) return superInstSize > 0 ? superclass.instVarNameAt(index) : null;
+			index -= superInstSize;
+			if (index >= instanceVariableNames.Length) return null;
+			return instanceVariableNames[index];
+		}
+		
+		public Dictionary<ESSymbol, long> InstanceVariableIndexes {
+			get {if (instanceVariableIndexes == null) mapInstanceVariableNamesToIndexes();
+				return instanceVariableIndexes;}
+		}
+		
+		protected void mapInstanceVariableNamesToIndexes() {
+			if (instanceVariableNames.Length > 0) {
+				instanceVariableIndexes = new Dictionary<ESSymbol, long>();
+				for (uint index = 0; index < instanceVariableNames.Length; index++) {
+					instanceVariableIndexes[instanceVariableNames[index]] = index;
+				}
+			} else {
+				instanceVariableIndexes = emptyInstanceVariableIndexes;
+			}
+		}
+		
+		public long instVarIndexFor(ESSymbol instanceVariableName) {
+			if (instanceVariableIndexes == null) mapInstanceVariableNamesToIndexes();
+			if (instanceVariableIndexes.Count < 1) return superclass == null ? -1 : superclass.instVarIndexFor(instanceVariableName);
+			long index;
+			if (instanceVariableIndexes.TryGetValue(instanceVariableName, out index)) {
+				return index + SuperInstSize;
+			} else {
+				return superclass == null ? -1 : superclass.instVarIndexFor(instanceVariableName);
+			}
+		}
+		
+		public long BasicInstSize {
+			get {return instanceVariableNames.Length;}
+		}
+		
+		public long SuperInstSize {
+			get {return superclass == null ? 0 : superclass.InstSize;}
+		}
+		
+		public long InstSize {
+			get {return SuperInstSize + BasicInstSize;}
+		}
+		
+		public void allInstVarNamesAndIndexesDo(System.Action<ESSymbol, long> enumerator2) {
+			long baseIndex = 0;
+			if (superclass != null) {
+				superclass.allInstVarNamesAndIndexesDo(enumerator2);
+				baseIndex = SuperInstSize;
+			}
+			if (instanceVariableNames.Length < 1) return;
+			for (var i = 0; i < instanceVariableNames.Length; i++) {
+				var name = instanceVariableNames[i];
+				enumerator2(name, baseIndex + i);
+			}
+		}
+
+		#endregion
+
 		#region Inheritance hierarchy
 
 		public bool HasSuperclass {
@@ -486,7 +616,18 @@ namespace EssenceSharp.Runtime {
 		
 		public ESBehavior Superclass {
 			get {return superclass;}
-			set {	if (value != null) {
+			set {	if (superclass == value) return;
+				if (value != null) {
+					if (InstanceArchitecture != ObjectStateArchitecture.Abstract && InstanceArchitecture != ObjectStateArchitecture.Stateless) {
+						var myInstancesCanHaveInstanceVars = InstancesCanHaveNamedSlots;
+						var superInstancesCanHaveInstanceVars = value.SubclassInstancesCanHaveNamedSlots;
+						if (myInstancesCanHaveInstanceVars != superInstancesCanHaveInstanceVars) {
+							if (isInstanceArchitectureLocked) {
+								throw new PrimInvalidOperandException("A class whose instance architecture is " + InstanceArchitecture + " cannot have a superclass whose instances can" + (superInstancesCanHaveInstanceVars ? " " :" not ") + "have instance variables.");
+							}
+							InstanceArchitecture = superInstancesCanHaveInstanceVars ? ObjectStateArchitecture.NamedSlots : value.InstanceArchitecture;
+						}
+					}
 					var wouldCreateCycle = value.includesBehavior(this);
 					if (wouldCreateCycle) {
 						throw new PrimInvalidOperandException("A superclass must not also inherit from a subclass");
@@ -495,19 +636,19 @@ namespace EssenceSharp.Runtime {
 				unbindFromSuperclass();
 				superclass = value;
 				bindToSuperclass();
-				}
+			}
 		}
 
-		protected ESBehavior BasicSuperclass {
-			set {superclass = value;}
-		}
-
-		protected void unbindFromSuperclass() {
+		protected virtual void unbindFromSuperclass() {
 			if (superclass != null) superclass.basicRemoveSubclass(this);
 		}
 
 		protected virtual void bindToSuperclass() {
 			if (superclass != null) superclass.basicAddSubclass(this);
+			invalidateSuperclass();
+		}
+
+		protected virtual void invalidateSuperclass() {
 			incrementVersion();
 		}
 
@@ -529,12 +670,12 @@ namespace EssenceSharp.Runtime {
 			}
 			int prevSize = subclasses.Count;
 			subclasses.Add(subclass);
-			subclass.BasicSuperclass = this;
+			subclass.Superclass = this;
 		}
 
 		public void removeSubclass(ESBehavior subclass) {
 			if (subclass == null) return;
-			if (subclasses.Remove(subclass)) subclass.BasicSuperclass = null;
+			if (subclasses.Remove(subclass)) subclass.Superclass = null;
 		}
 
 		internal void bindToHostSystemSuperclasses() {
@@ -781,116 +922,6 @@ namespace EssenceSharp.Runtime {
 		public void recompileAll() {
 			recompile();
 			foreach (var subclass in subclasses) subclass.recompileAll();			
-		}
-
-		#endregion
-
-		#region Named instance variables
-		
-		public ESSymbol[] InstanceVariableNames {
-			get {return instanceVariableNames;}
-			set {setInstanceVariableNames(value);}
-		}
-		
-		protected void setInstanceVariableNames(ESSymbol[] instanceVarNames) {
-			ESSymbol[] prevInstVarNames = instanceVariableNames;
-			switch (InstanceArchitecture) {
-				case ObjectStateArchitecture.Abstract:
-				case ObjectStateArchitecture.Stateless:
-				case ObjectStateArchitecture.Association:
-				case ObjectStateArchitecture.BindingReference:
-				case ObjectStateArchitecture.Message:
-				case ObjectStateArchitecture.Block:
-				case ObjectStateArchitecture.Method:
-					if (instanceVarNames == null || instanceVarNames.Length < 1) {
-						instanceVariableNames = emptyInstanceVariableNames;
-						if (prevInstVarNames.Length > 0) {
-							recompileAll();
-							incrementVersion();
-						}
-					} else if (isInstanceArchitectureLocked) {
-						throw new PrimInvalidOperandException("A Behavior with instance architecture " + instanceArchitecture + " cannot have any instance variables.");
-					} else {
-						InstanceArchitecture = ObjectStateArchitecture.NamedSlots;
-						setInstanceVariableNames(instanceVarNames);
-						return;
-					}
-					break;
-				default:
-					instanceVariableNames = (instanceVarNames == null || instanceVarNames.Length < 1) ? emptyInstanceVariableNames : instanceVarNames;
-					if (!elementsAreIdentical(prevInstVarNames, instanceVariableNames)) {
-						recompileAll();
-						incrementVersion();
-					}
-					break;
-			}
-			instanceVariableIndexes = null;
-		}
-		
-		public ESSymbol basicInstVarNameAt(long index) {
-			if (index >= instanceVariableNames.Length || index < 0) return null;
-			return instanceVariableNames[index];
-		}
-		
-		public ESSymbol instVarNameAt(long index) {
-			if (index < 0) return null;
-			long superInstSize = SuperInstSize;
-			if (index < superInstSize) return superInstSize > 0 ? superclass.instVarNameAt(index) : null;
-			index -= superInstSize;
-			if (index >= instanceVariableNames.Length) return null;
-			return instanceVariableNames[index];
-		}
-		
-		public Dictionary<ESSymbol, long> InstanceVariableIndexes {
-			get {if (instanceVariableIndexes == null) mapInstanceVariableNamesToIndexes();
-				return instanceVariableIndexes;}
-		}
-		
-		protected void mapInstanceVariableNamesToIndexes() {
-			if (instanceVariableNames.Length > 0) {
-				instanceVariableIndexes = new Dictionary<ESSymbol, long>();
-				for (uint index = 0; index < instanceVariableNames.Length; index++) {
-					instanceVariableIndexes[instanceVariableNames[index]] = index;
-				}
-			} else {
-				instanceVariableIndexes = emptyInstanceVariableIndexes;
-			}
-		}
-		
-		public long instVarIndexFor(ESSymbol instanceVariableName) {
-			if (instanceVariableIndexes == null) mapInstanceVariableNamesToIndexes();
-			if (instanceVariableIndexes.Count < 1) return superclass == null ? -1 : superclass.instVarIndexFor(instanceVariableName);
-			long index;
-			if (instanceVariableIndexes.TryGetValue(instanceVariableName, out index)) {
-				return index + SuperInstSize;
-			} else {
-				return superclass == null ? -1 : superclass.instVarIndexFor(instanceVariableName);
-			}
-		}
-		
-		public long BasicInstSize {
-			get {return instanceVariableNames.Length;}
-		}
-		
-		public long SuperInstSize {
-			get {return superclass == null ? 0 : superclass.InstSize;}
-		}
-		
-		public long InstSize {
-			get {return SuperInstSize + BasicInstSize;}
-		}
-		
-		public void allInstVarNamesAndIndexesDo(System.Action<ESSymbol, long> enumerator2) {
-			long baseIndex = 0;
-			if (superclass != null) {
-				superclass.allInstVarNamesAndIndexesDo(enumerator2);
-				baseIndex = SuperInstSize;
-			}
-			if (instanceVariableNames.Length < 1) return;
-			for (var i = 0; i < instanceVariableNames.Length; i++) {
-				var name = instanceVariableNames[i];
-				enumerator2(name, baseIndex + i);
-			}
 		}
 
 		#endregion
@@ -1582,7 +1613,7 @@ namespace EssenceSharp.Runtime {
 		protected override void bindToSuperclass() {
 			base.bindToSuperclass();
 			var metaClass = Metaclass;
-			if (metaClass != null) metaClass.invalidateSuperclass();			
+			if (metaClass != null) metaClass.bindToCanonicalInstance();			
 		}
 
 		protected override void bindToInstanceType() {
@@ -1656,19 +1687,23 @@ namespace EssenceSharp.Runtime {
 			get {return environment != null;}
 		}
 		
-		public ESObject adopt(ESClass canonicalInstance) {
+		internal ESObject adopt(ESClass canonicalInstance) {
 			if (canonicalInstance != null && ReferenceEquals(canonicalInstance.Class, this)) {
 				environment = (ESClass)canonicalInstance;
-				Superclass = CanonicalInstance.HasSuperclass ? CanonicalInstance.Superclass.Class : kernel.ClassClass;
-				name = null;
+				bindToCanonicalInstance();
 			} else {
 				throw new PrimInvalidOperandException("The class of the canonical instance of a Metaclass must be identical to the Metaclass.");
 			}
 			return CanonicalInstance;
 		}
 		
-		internal void invalidateSuperclass() {
+		internal void bindToCanonicalInstance() {
 			Superclass = CanonicalInstance.HasSuperclass ? CanonicalInstance.Superclass.Class : kernel.ClassClass;
+			name = null;
+		}
+
+		protected override void invalidateSuperclass() {
+			invalidateInstanceVariableNames();
 		}
 		
 		protected override String AnonymousName {
@@ -1716,6 +1751,12 @@ namespace EssenceSharp.Runtime {
 
 		protected override void bindToEnvironment() {
 			// Should not implement
+		}
+
+		protected override void invalidateInstanceVariableNames() {
+			var soleInstance = CanonicalInstance;
+			if (soleInstance != null) soleInstance.invalidateNamedSlots();
+			base.invalidateInstanceVariableNames();
 		}
 
 		protected override Type ReflectionType {

@@ -40,10 +40,12 @@ using FuncNs = Microsoft.Scripting.Utils;
 using FuncNs = System;
 #endif
 using Microsoft.Scripting;
-using EssenceSharp.ClientServices;
 using EssenceSharp.UtilityServices;
 using EssenceSharp.ParsingServices;
 using EssenceSharp.CompilationServices;
+using EssenceSharp.Exceptions;
+using EssenceSharp.Exceptions.System;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 using EssenceSharp.Runtime.Binding;
 #endregion
 
@@ -915,7 +917,7 @@ namespace EssenceSharp.Runtime {
 					case PrimitiveDomainType.Behavior:					
 					case PrimitiveDomainType.Class:						
 					case PrimitiveDomainType.Metaclass:					
-					case PrimitiveDomainType.HostSystemObject:	
+					case PrimitiveDomainType.CLR_System_Exception:	
 						domain.installPublishedPrimitivesInDomainClass(protocol);
 						break;
 					default:
@@ -1800,8 +1802,8 @@ namespace EssenceSharp.Runtime {
 
 		#region Error handling and exceptions
 		
-		public static Object throwMessageNotUnderstood(ESBehavior esClass, ESMessage message) {
-			throw new MissingMemberException("Message not understood: " + esClass.Name + " instances do not know how to respond to the message '" + message.Selector.PrimitiveValue + "'");
+		public static Object throwMessageNotUnderstood(Object receiver, ESMessage message) {
+			throw new MessageNotUnderstood(receiver, message);
 		}
 
 		public Object performDoesNotUnderstand(Object receiver, ESBehavior esClass, ESMessage a1) {
@@ -2077,6 +2079,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected virtual void addCanonicalPrimitiveDomains() {
+
 			addPrimitiveDomain(new ESObject.Primitives());
 			addPrimitiveDomain(new ESNamespace.Primitives());
 			addPrimitiveDomain(new ESBehavior.Primitives());
@@ -2109,6 +2112,9 @@ namespace EssenceSharp.Runtime {
 			addPrimitiveDomain(new SinglePrecisionPrimitives());
 			addPrimitiveDomain(new DoublePrecisionPrimitives());
 			addPrimitiveDomain(new QuadPrecisionPrimitives());
+
+			addPrimitiveDomain(new CLRSystemExceptionPrimitives());
+
 		}
 
 		public void registerAdoptedHostSystemClasses() {
@@ -3897,6 +3903,31 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public override void publishCanonicalPrimitives() {
+		}
+
+	}
+
+	public class CLRSystemExceptionPrimitives : PrimitiveDomain {
+
+		protected override void bindToKernel() {
+			var typeName = new TypeName(typeof(System.Exception));
+			domainClass = kernel.classForHostSystemType(typeName);
+		}
+
+		public override PrimitiveDomainType Type {
+			get {return PrimitiveDomainType.CLR_System_Exception;}
+		}
+
+		#region Primitive Definitions
+
+		public Object _signal_(Object receiver) {
+			throw ((Exception)receiver);
+		}
+
+		#endregion
+
+		public override void publishCanonicalPrimitives() {
+			publishPrimitive("signal",					new FuncNs.Func<Object, Object>(_signal_));
 		}
 
 	}

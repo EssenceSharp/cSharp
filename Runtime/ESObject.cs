@@ -39,8 +39,8 @@ using FuncNs = Microsoft.Scripting.Utils;
 using System.Linq.Expressions;
 using FuncNs = System;
 #endif
-using EssenceSharp.UtilityServices;
 using EssenceSharp.Runtime.Binding;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
 namespace EssenceSharp.Runtime {

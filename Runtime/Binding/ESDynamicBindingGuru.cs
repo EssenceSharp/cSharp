@@ -333,6 +333,8 @@ namespace EssenceSharp.Runtime.Binding {
 
 		protected ESKernel							kernel							= null;
 		protected SymbolRegistry						symbolRegistry						= null;
+		protected ESSymbol							selectorValue0						= null;
+		protected ESSymbol							selectorValue1						= null;
 		protected GetPropertyOrFieldOfForeignObjectBinder.Registry		getPropertyOrFieldOfForeignObjectBinderRegistry		= null;
 		protected SetPropertyOrFieldOfForeignObjectBinder.Registry		setPropertyOrFieldOfForeignObjectBinderRegistry		= null;
 		protected GetValueAtIndexOrKeyInForeignObjectBinder.Registry		getValueAtIndexOrKeyInForeignObjectBinderRegistry	= null;
@@ -352,6 +354,8 @@ namespace EssenceSharp.Runtime.Binding {
 
 		protected virtual void initialize() {
 			symbolRegistry							= kernel.SymbolRegistry;
+			selectorValue0							= symbolFor("value");
+			selectorValue1							= symbolFor("value:");
 			getPropertyOrFieldOfForeignObjectBinderRegistry			= new GetPropertyOrFieldOfForeignObjectBinder.Registry(this);
 			setPropertyOrFieldOfForeignObjectBinderRegistry			= new SetPropertyOrFieldOfForeignObjectBinder.Registry(this);
 			getValueAtIndexOrKeyInForeignObjectBinderRegistry		= new GetValueAtIndexOrKeyInForeignObjectBinder.Registry(this);
@@ -587,11 +591,20 @@ namespace EssenceSharp.Runtime.Binding {
 		#region Special-purpose DynamicMetaObjects
 
 		public DynamicMetaObject metaObjectForInvariantOperation(Expression invariantRestrictionOperation, Object value) {
-			return new DynamicMetaObject(Expression.Convert(invariantRestrictionOperation, TypeGuru.objectType), BindingRestrictionsGuru.invariantRestriction, value);
+			return new DynamicMetaObject(invariantRestrictionOperation.withType(TypeGuru.objectType), BindingRestrictionsGuru.invariantRestriction, value);
+		}
+
+		public DynamicMetaObject metaObjectForInstanceRestrictedOperation(Expression instanceRestrictedOperation, Object value) {
+			return new DynamicMetaObject(instanceRestrictedOperation.withType(TypeGuru.objectType), BindingRestrictionsGuru.restrictionFor(instanceRestrictedOperation, value), value);
+		}
+
+		public DynamicMetaObject metaObjectForTypeRestrictedOperation(Expression typeRestrictedOperation, Type restrictionType, Object value) {
+			return new DynamicMetaObject(typeRestrictedOperation.withType(TypeGuru.objectType), BindingRestrictionsGuru.restrictionFor(typeRestrictedOperation, restrictionType), value);
 		}
 
 		public DynamicMetaObject metaObjectForForeignObjectOperation(DynamicMetaObject receiver, ESBehavior esClass, Expression invariantOperationExpression) {
-			return new DynamicMetaObject(Expression.Convert(invariantOperationExpression, TypeGuru.objectType), receiver.bindingRestrictionsForForeignObjectReceiver(esClass), receiver.Value);
+			
+			return new DynamicMetaObject(invariantOperationExpression.withType(TypeGuru.objectType), receiver.bindingRestrictionsForForeignObjectReceiver(esClass), receiver.Value);
 		}
 
 		public DynamicMetaObject metaObjectToCreateAssociation(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject valueMO) {
@@ -605,7 +618,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectForConditionalAnd(DynamicMetaObject receiver, ESBehavior esClass, DynamicMetaObject operandMO) {
 			var model = receiver.Value;
 			var self = Expression.Convert(receiver.Expression, TypeGuru.boolType);
-			operandMO = operandMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(operandMO.Value), symbolFor("value")), emptyArgArray);
+			operandMO = operandMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(operandMO.Value), selectorValue0), emptyArgArray);
 			var operand = Expression.Convert(operandMO.Expression, TypeGuru.boolType);
 			return new DynamicMetaObject(
 				Expression.Convert(Expression.AndAlso(self, operand), TypeGuru.objectType), 
@@ -616,7 +629,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectForConditionalOr(DynamicMetaObject receiver, ESBehavior esClass, DynamicMetaObject operandMO) {
 			var model = receiver.Value;
 			var self = Expression.Convert(receiver.Expression, TypeGuru.boolType);
-			operandMO = operandMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(operandMO.Value), symbolFor("value")), emptyArgArray);
+			operandMO = operandMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(operandMO.Value), selectorValue0), emptyArgArray);
 			var operand = Expression.Convert(operandMO.Expression, TypeGuru.boolType);
 			return new DynamicMetaObject(
 				Expression.Convert(Expression.OrElse(self, operand), TypeGuru.objectType), 
@@ -627,7 +640,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectToInvokeArgIfTrue(DynamicMetaObject receiver, ESBehavior esClass, Expression testExpression, DynamicMetaObject actionToInvoke, Expression testFailResult) {
 			var model = receiver.Value;
 			var self = receiver.Expression;
-			var actionFunction = actionToInvoke.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvoke.Value), symbolFor("value")), emptyArgArray);
+			var actionFunction = actionToInvoke.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvoke.Value), selectorValue0), emptyArgArray);
 			return new DynamicMetaObject(
 				Expression.Condition(
 					Expression.Convert(testExpression, TypeGuru.boolType), 
@@ -642,7 +655,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectToInvokeArgIfFalse(DynamicMetaObject receiver, ESBehavior esClass, Expression testExpression, DynamicMetaObject actionToInvoke, Expression testFailResult) {
 			var model = receiver.Value;
 			var self = receiver.Expression;
-			var actionFunction = actionToInvoke.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvoke.Value), symbolFor("value")), emptyArgArray);
+			var actionFunction = actionToInvoke.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvoke.Value), selectorValue0), emptyArgArray);
 			return new DynamicMetaObject(
 				Expression.Condition(
 					Expression.Convert(testExpression, TypeGuru.boolType), 
@@ -657,8 +670,8 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectToInvokeArgIfTrueAndArgIfFalse(DynamicMetaObject receiver, ESBehavior esClass, Expression testExpression, DynamicMetaObject actionToInvokeIfTrue, DynamicMetaObject actionToInvokeIfFalse) {
 			var model = receiver.Value;
 			var self = receiver.Expression;
-			var ifTrueAction = actionToInvokeIfTrue.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvokeIfTrue.Value), symbolFor("value")), emptyArgArray);
-			var ifFalseAction = actionToInvokeIfFalse.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvokeIfFalse.Value), symbolFor("value")), emptyArgArray);
+			var ifTrueAction = actionToInvokeIfTrue.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvokeIfTrue.Value), selectorValue0), emptyArgArray);
+			var ifFalseAction = actionToInvokeIfFalse.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvokeIfFalse.Value), selectorValue0), emptyArgArray);
 			return new DynamicMetaObject(
 				Expression.Condition(
 					Expression.Convert(testExpression, TypeGuru.boolType), 
@@ -935,7 +948,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var receiverType = receiver.LimitType;
 
 			if (receiverType.isInteger()) {
-				var actionFunction = actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), symbolFor("value")), emptyArgArray);
+				var actionFunction = actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), selectorValue0), emptyArgArray);
 				var induction = Expression.Parameter(TypeGuru.longType, "$induction");
 				var step = Expression.Constant(1L);
 				var limit = Expression.Convert(self, TypeGuru.longType);
@@ -1038,7 +1051,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var startingValue = startingValueMO.Expression;
 			var inductionVariable = Expression.Parameter(TypeGuru.objectType, "$inductionVariable");
 			var inductionVariableMO = inductionVariable.asDynamicMetaObject();
-			var enumerator = enumeratorMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorMO.Value), symbolFor("value:")), argArrayFor(inductionVariableMO));
+			var enumerator = enumeratorMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorMO.Value), selectorValue1), argArrayFor(inductionVariableMO));
 			var expression = 
 				expressionForToByDo(
 					false,
@@ -1066,14 +1079,89 @@ namespace EssenceSharp.Runtime.Binding {
 
 		}
 
+		public DynamicMetaObject metaObjectToInvokeWithEnsureBlock(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject ensureBlockMO) {
+			var invokeProtectedBlockMO = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selectorValue0), emptyArgArray);
+			var invokeEnsureBlockMO = ensureBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(ensureBlockMO.Value), selectorValue0), emptyArgArray);
+			Expression expression = Expression.TryFinally(invokeProtectedBlockMO.Expression, invokeEnsureBlockMO.Expression);
+			expression = Expression.Block(TypeGuru.objectType, Expression.Convert(expression, TypeGuru.objectType));
+			return new DynamicMetaObject(
+				expression, 
+				(esClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
+					receiver.bindingRestrictionsForForeignObjectReceiver(esClass) :
+					receiver.bindingRestrictionsForESObjectReceiver(esClass)).Merge(ensureBlockMO.addingInstanceRestriction()), 
+				receiver.Value);
+		}
+
+		public DynamicMetaObject metaObjectToInvokeWithIfCurtailedBlock(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject ifCurtailedBlockMO) {
+			var invokeProtectedBlockMO = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selectorValue0), emptyArgArray);
+			var invokeIfCurtailedBlockMO = ifCurtailedBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(ifCurtailedBlockMO.Value), selectorValue0), emptyArgArray);
+			Expression expression = Expression.TryFault(invokeProtectedBlockMO.Expression, invokeIfCurtailedBlockMO.Expression);
+			expression = Expression.Block(TypeGuru.objectType, Expression.Convert(expression, TypeGuru.objectType));
+			return new DynamicMetaObject(
+				expression, 
+				(esClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
+					receiver.bindingRestrictionsForForeignObjectReceiver(esClass) :
+					receiver.bindingRestrictionsForESObjectReceiver(esClass)).Merge(ifCurtailedBlockMO.addingInstanceRestriction()), 
+				receiver.Value);
+		}
+
+		public DynamicMetaObject metaObjectToInvokeWithExceptionHandler(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject exceptionSelectorMO, DynamicMetaObject handleExceptionBlockMO) {
+			var invokeProtectedBlockMO = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selectorValue0), emptyArgArray);
+			ParameterExpression exception;
+			DynamicMetaObject exceptionMO;
+			DynamicMetaObject [] exceptionArgArray;
+			DynamicMetaObject invokeIfCurtailedBlockMO;
+			CatchBlock catchBlock;
+			var exceptionSelectorClasss = kernel.classOf(exceptionSelectorMO.Value);
+			if (false && exceptionSelectorClasss.IsHostSystemMetaclass) {
+				var exceptionClass = ((ESMetaclass)exceptionSelectorClasss).CanonicalInstance;
+				var exceptionType = exceptionClass.InstanceType;
+				exception = Expression.Parameter(exceptionType, "ex");
+				exceptionMO = exception.asDynamicMetaObject();
+				exceptionArgArray = argArrayFor(exceptionMO);
+				invokeIfCurtailedBlockMO = handleExceptionBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(handleExceptionBlockMO.Value), selectorValue1), exceptionArgArray);
+				catchBlock = Expression.Catch(exception, invokeIfCurtailedBlockMO.Expression);
+			} else { 
+				exception = Expression.Parameter(TypeGuru.exceptionType, "ex");
+				exceptionMO = exception.asDynamicMetaObject();
+				exceptionArgArray = argArrayFor(exceptionMO);
+				invokeIfCurtailedBlockMO = handleExceptionBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(handleExceptionBlockMO.Value), selectorValue1), exceptionArgArray);
+				var exceptionSelectionPredicateMO = exceptionSelectorMO.BindInvokeMember(
+									canonicalInvokeMemberBinderFor(
+										exceptionSelectorClasss, 
+										kernel.symbolFor("handles:"), 
+										"Handles"), 
+									exceptionArgArray);
+				var exceptionSelectionPredicate = Expression.Convert(Expression.Convert(exceptionSelectionPredicateMO.Expression, TypeGuru.objectType), TypeGuru.boolType);
+				var conditionalExceptionHandler = Expression.Condition(
+										exceptionSelectionPredicate,
+											Expression.Convert(invokeIfCurtailedBlockMO.Expression, TypeGuru.objectType),
+											Expression.Block(TypeGuru.objectType, Expression.Rethrow(), Expression.Constant(new Object())));
+				catchBlock = Expression.Catch(exception, conditionalExceptionHandler);
+			}
+			Expression expression = Expression.TryCatch(invokeProtectedBlockMO.Expression, catchBlock);
+			expression = Expression.Block(TypeGuru.objectType, Expression.Convert(expression, TypeGuru.objectType));
+			return new DynamicMetaObject(
+				expression, 
+				(esClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
+					receiver.bindingRestrictionsForForeignObjectReceiver(esClass) :
+					receiver.bindingRestrictionsForESObjectReceiver(esClass))
+							.Merge(handleExceptionBlockMO.addingInstanceRestriction())
+							.Merge(exceptionSelectorMO.addingInstanceRestriction())
+							.Merge(handleExceptionBlockMO.addingInstanceRestriction()), 
+				receiver.Value);
+
+
+		}
+
 		public DynamicMetaObject metaObjectForWhileNil(DynamicMetaObject receiver, ESBehavior esClass, DynamicMetaObject actionToRepeat) {
 			var model = receiver.Value;
 			var self = receiver.Expression;
 
-			var testFunction = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, symbolFor("value")), emptyArgArray);
+			var testFunction = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selectorValue0), emptyArgArray);
 			var actionFunction = actionToRepeat == null ?
 				doNothing :
-				actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), symbolFor("value")), emptyArgArray);
+				actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), selectorValue0), emptyArgArray);
 			var exit = Expression.Label(TypeGuru.objectType);
 			var loop = Expression.Loop(
 					Expression.IfThenElse(
@@ -1092,10 +1180,10 @@ namespace EssenceSharp.Runtime.Binding {
 			var model = receiver.Value;
 			var self = receiver.Expression;
 
-			var testFunction = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, symbolFor("value")), emptyArgArray);
+			var testFunction = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selectorValue0), emptyArgArray);
 			var actionFunction = actionToRepeat == null ?
 				doNothing :
-				actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), symbolFor("value")), emptyArgArray);
+				actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), selectorValue0), emptyArgArray);
 			var exit = Expression.Label(TypeGuru.objectType);
 			var loop = Expression.Loop(
 					Expression.IfThenElse(
@@ -1114,10 +1202,10 @@ namespace EssenceSharp.Runtime.Binding {
 			var model = receiver.Value;
 			var self = receiver.Expression;
 
-			var testFunction = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, symbolFor("value")), emptyArgArray);
+			var testFunction = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selectorValue0), emptyArgArray);
 			var actionFunction = actionToRepeat == null ?
 				doNothing :
-				actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), symbolFor("value")), emptyArgArray);
+				actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), selectorValue0), emptyArgArray);
 			var exit = Expression.Label(TypeGuru.objectType);
 			var loop = Expression.Loop(
 					Expression.IfThenElse(
@@ -1136,10 +1224,10 @@ namespace EssenceSharp.Runtime.Binding {
 			var model = receiver.Value;
 			var self = receiver.Expression;
 
-			var testFunction = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, symbolFor("value")), emptyArgArray);
+			var testFunction = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selectorValue0), emptyArgArray);
 			var actionFunction = actionToRepeat == null ?
 				doNothing :
-				actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), symbolFor("value")), emptyArgArray);
+				actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), selectorValue0), emptyArgArray);
 			var exit = Expression.Label(TypeGuru.objectType);
 			var loop = Expression.Loop(
 					Expression.IfThenElse(
@@ -1169,7 +1257,7 @@ namespace EssenceSharp.Runtime.Binding {
 				elementType = receiverType.GetElementType();
 				element = Expression.Parameter(elementType, "$element");
 				elementMO = element.asDynamicMetaObject();
-				invokeEnumeratorBlock = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), symbolFor("value:")), argArrayFor(elementMO)).Expression;
+				invokeEnumeratorBlock = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), selectorValue1), argArrayFor(elementMO)).Expression;
 				var induction = Expression.Parameter(TypeGuru.intType, "$induction");
 				var getElement = Expression.ArrayAccess(self, induction);
 				var assignEelement = Expression.Assign(element, getElement);
@@ -1196,7 +1284,7 @@ namespace EssenceSharp.Runtime.Binding {
 				var valueType = TypeGuru.objectType;
 				var value = Expression.Parameter(valueType, "$value");
 				var valueMO = value.asDynamicMetaObject();
-				invokeEnumeratorBlock = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), symbolFor("value:")), argArrayFor(valueMO)).Expression;
+				invokeEnumeratorBlock = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), selectorValue1), argArrayFor(valueMO)).Expression;
 
 				var currentProperty = enumeratorType.GetProperty("Current", BindingFlags.Instance | BindingFlags.GetProperty | BindingFlags.Public);
 				var keyValuePairType = currentProperty.PropertyType;
@@ -1231,7 +1319,7 @@ namespace EssenceSharp.Runtime.Binding {
 				elementType = TypeGuru.objectType;
 				element = Expression.Parameter(elementType, "$element");
 				elementMO = element.asDynamicMetaObject();
-				invokeEnumeratorBlock = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), symbolFor("value:")), argArrayFor(elementMO)).Expression;
+				invokeEnumeratorBlock = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), selectorValue1), argArrayFor(elementMO)).Expression;
 
 				var enumerator = Expression.Parameter(enumeratorType, "$enumerator");
 				var assignEnumerator = Expression.Assign(enumerator, Expression.Call(self, getEnumeratorMethod));
@@ -1308,7 +1396,7 @@ namespace EssenceSharp.Runtime.Binding {
 			elementMO = element.asDynamicMetaObject();
 
 			var assignEelement = Expression.Assign(element, getElement);
-			var enumerator = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), symbolFor("value:")), argArrayFor(elementMO));
+			var enumerator = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), selectorValue1), argArrayFor(elementMO));
 			expression = 
 				expressionForToByDo(
 					true,
@@ -1359,7 +1447,7 @@ namespace EssenceSharp.Runtime.Binding {
 				elementType = TypeGuru.objectType;
 				element = Expression.Parameter(elementType, "$element");
 				elementMO = element.asDynamicMetaObject();
-				invokeEnumeratorBlock = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), symbolFor("value:")), argArrayFor(elementMO)).Expression;
+				invokeEnumeratorBlock = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), selectorValue1), argArrayFor(elementMO)).Expression;
 
 				var enumerator = Expression.Parameter(enumeratorType, "$enumerator");
 				var assignEnumerator = Expression.Assign(enumerator, Expression.Call(self, getEnumeratorMethod));
@@ -1408,7 +1496,7 @@ namespace EssenceSharp.Runtime.Binding {
 				keyType = TypeGuru.objectType;
 				key = Expression.Parameter(keyType, "$key");
 				keyMo = key.asDynamicMetaObject();
-				invokeEnumeratorBlock = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), symbolFor("value:")), argArrayFor(keyMo)).Expression;
+				invokeEnumeratorBlock = enumeratorBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(enumeratorBlockMO.Value), selectorValue1), argArrayFor(keyMo)).Expression;
 
 				var currentProperty = enumeratorType.GetProperty("Current", BindingFlags.Instance | BindingFlags.GetProperty | BindingFlags.Public);
 				var keyValuePairType = currentProperty.PropertyType;
@@ -1688,9 +1776,19 @@ namespace EssenceSharp.Runtime.Binding {
 				method = null;
 			} else {
 				method = esClass.compiledMethodAt(selector);
-				if (method == null && esClass.IsHostSystemMetaclass) {
-					var name = selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital);
-					return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, name), metaObjectArgs);
+				if (method == null) { 
+					if (esClass.IsHostSystemMetaclass) {
+						var name = selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital);
+						return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, name), metaObjectArgs);
+					}
+					switch (selector.CanonicalSemantics) {
+						case CanonicalSelectorSemantics.Ensure:
+							return metaObjectToInvokeWithEnsureBlock(receiver, esClass, selector, metaObjectArgs[0]);
+						case CanonicalSelectorSemantics.IfCurtailed:
+							return metaObjectToInvokeWithIfCurtailedBlock(receiver, esClass, selector, metaObjectArgs[0]);
+						case CanonicalSelectorSemantics.OnDo:
+							return metaObjectToInvokeWithExceptionHandler(receiver, esClass, selector, metaObjectArgs[0], metaObjectArgs[1]);
+					}
 				}
 			}
 
@@ -1920,12 +2018,28 @@ namespace EssenceSharp.Runtime.Binding {
 				case CanonicalSelectorSemantics.IsMemberOf:
 					return metaObjectForForeignObjectOperation(receiver, esClass, ExpressionTreeGuru.expressionToSendReferenceEquals(Expression.Constant(esClass), args[0].Expression));
 				case CanonicalSelectorSemantics.IsKindOf:
-					var classMetaObject = esClass.GetMetaObject(Expression.Constant(esClass));
-					var metaClass = esClass.Class;
-					return metaObjectForForeignObjectOperation(
-							classMetaObject,
-							metaClass, 
-							metaObjectToSendMessageToESObject(classMetaObject, kernel, metaClass, symbolFor("includesBehavior:"), args).Expression);
+					var classExpression = Expression.Constant(esClass);
+					var messageSendMO = metaObjectToSendMessageToESObject(classExpression.asDynamicMetaObject(), kernel, esClass.Class, symbolFor("includesBehavior:"), args);
+					return messageSendMO.Expression.asDynamicMetaObject(receiver.restrictionThatForeignObjectHasSameClassVersion(esClass), receiver.Value);
+
+				case CanonicalSelectorSemantics.AsBehavior:
+				case CanonicalSelectorSemantics.AsClass:
+					if (TypeGuru.typeType.IsAssignableFrom(receiver.LimitType)) { 
+						return Expression.Constant(kernel.classForHostSystemType((Type)receiver.Value)).asDynamicMetaObject(receiver.addingInstanceRestriction().Merge(receiver.restrictionThatForeignObjectHasSameClassVersion(esClass)), receiver.Value);
+					}
+					break;
+				case CanonicalSelectorSemantics.AsMetaclass:
+					if (TypeGuru.typeType.IsAssignableFrom(receiver.LimitType)) { 
+						return Expression.Constant(kernel.classForHostSystemType((Type)receiver.Value).Class).asDynamicMetaObject(receiver.addingInstanceRestriction().Merge(receiver.restrictionThatForeignObjectHasSameClassVersion(esClass)), receiver.Value);
+					}
+					break;
+
+				case CanonicalSelectorSemantics.Ensure:
+					return metaObjectToInvokeWithEnsureBlock(receiver, esClass, selector, args[0]);
+				case CanonicalSelectorSemantics.IfCurtailed:
+					return metaObjectToInvokeWithIfCurtailedBlock(receiver, esClass, selector, args[0]);
+				case CanonicalSelectorSemantics.OnDo:
+					return metaObjectToInvokeWithExceptionHandler(receiver, esClass, selector, args[0], args[1]);
 
 				// GetIndexBinder:
 				case CanonicalSelectorSemantics.At:

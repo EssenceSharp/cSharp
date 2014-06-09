@@ -36,12 +36,12 @@ using System.Runtime.CompilerServices;
 using Microsoft.Scripting.Generation;
 #if CLR2
 using Microsoft.Scripting.Ast;
-using FuncNs = Microsoft.Scripting.Utils;
 #else
 using System.Linq.Expressions;
 using FuncNs = System;
 #endif
 using EssenceSharp.CompilationServices;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
 namespace EssenceSharp.Runtime.Binding {
@@ -132,6 +132,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public static readonly Type			dictionaryObjectKeyObjectValueType		= typeof(Dictionary<Object,Object>);
 		public static readonly Type			dictionaryStringKeyBindingHandleValueType	= typeof(Dictionary<String,BindingHandle>);
 
+		public static readonly Type			exceptionType			= typeof(Exception);
 		public static readonly Type			invalidCastExceptionType	= typeof(InvalidCastException);
 
 		public static readonly Type			delegateType			= typeof(Delegate);
@@ -554,6 +555,18 @@ namespace EssenceSharp.Runtime.Binding {
 		#endregion
 
 		#region Type Conversion Expressions 
+
+		public static Expression withType(this Expression expression, Type targetType) {
+			var expressionType = expression.Type; 
+			if (expressionType == targetType) return expression;
+			return Expression.Convert(expression, targetType);
+		}
+
+		public static Expression withType(this Expression expression, Type targetType, MethodInfo conversionOperator) {
+			var expressionType = expression.Type; 
+			if (expressionType == targetType) return expression;
+			return Expression.Convert(expression, targetType, conversionOperator);
+		}
 		
 		public static Expression expressionToInvoke_ToString(Expression value) {
 			return Expression.Call(
@@ -727,7 +740,12 @@ namespace EssenceSharp.Runtime.Binding {
 		}
 
 		public static Expression expressionThatMustBeBoolean(Expression expressionWhoseTypeMustBeBoolean, String errorMessage) {
-			var catchBlock = Expression.Catch(TypeGuru.invalidCastExceptionType, Expression.Block(TypeGuru.boolType, Expression.Throw(expressionToCreateMustBeBooleanException(errorMessage)), ExpressionTreeGuru.trueConstant));
+			var catchBlock = Expression.Catch(
+						TypeGuru.invalidCastExceptionType, 
+						Expression.Block(
+							TypeGuru.boolType, 
+							Expression.Throw(expressionToCreateMustBeBooleanException(errorMessage)), 
+							ExpressionTreeGuru.trueConstant));
 			return Expression.TryCatch(Expression.Convert(expressionWhoseTypeMustBeBoolean, TypeGuru.boolType), catchBlock);
 		}
 
@@ -1057,8 +1075,8 @@ namespace EssenceSharp.Runtime.Binding {
 				return
 					Expression.Call(
 							null,
-							TypeGuru.esKernelType.GetMethod("throwMessageNotUnderstood", new Type[]{TypeGuru.esBehaviorType, TypeGuru.esMessageType}),
-							Expression.Constant(esClass),
+							TypeGuru.esKernelType.GetMethod("throwMessageNotUnderstood", new Type[]{TypeGuru.objectType, TypeGuru.esMessageType}),
+							self,
 							createMessageAction);
 			} else {
 				return			
@@ -1178,22 +1196,20 @@ namespace EssenceSharp.Runtime.Binding {
 			var expression = metaObject.Expression;
 			var expressionType = expression.Type; 
 			if (expressionType == targetType) return expression;
-			return Expression.Convert(metaObject.asExpressionWithFormalType(), targetType);
+			return metaObject.asExpressionWithFormalType().withType(targetType);
 		}
 
 		public static Expression asExpressionWithType(this DynamicMetaObject metaObject, Type targetType, MethodInfo conversionOperator) {
 			var expression = metaObject.Expression;
 			var expressionType = expression.Type; 
 			if (expressionType == targetType) return expression;
-			return Expression.Convert(metaObject.asExpressionWithFormalType(), targetType, conversionOperator);
+			return metaObject.asExpressionWithFormalType().withType(targetType, conversionOperator);
 		}
 
 		public static Expression asExpressionWithFormalType(this DynamicMetaObject metaObject) {
 			var expression = metaObject.Expression;
-			var expressionType = expression.Type; 
 			var targetType = metaObject.LimitType;
-			if (expressionType == targetType) return expression;
-			return Expression.Convert(expression, targetType);
+			return expression.withType(targetType);
 		}
 
 		public static BindingRestrictions addingRestrictions(this DynamicMetaObject metaObject, BindingRestrictions restrictions) {

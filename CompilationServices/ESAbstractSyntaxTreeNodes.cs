@@ -41,6 +41,8 @@ using Expression = System.Linq.Expressions.Expression;
 using EssenceSharp.ParsingServices;
 using EssenceSharp.Runtime;
 using EssenceSharp.Runtime.Binding;
+using EssenceSharp.Exceptions;
+using InvalidOperationException = EssenceSharp.Exceptions.InvalidOperationException;
 #endregion
 
 namespace EssenceSharp.CompilationServices { 
@@ -580,6 +582,11 @@ namespace EssenceSharp.CompilationServices {
 					arg1 = message.argumentAt(0);
 					return Expression.Convert(Expression.ReferenceNotEqual(receiverExpression, arg1.asCLRExpression()), TypeGuru.objectType);
 
+				case CanonicalSelectorSemantics.LogicalNot:
+					return Expression.Convert(
+							Expression.Not(ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #not must be a Boolean value")),
+							TypeGuru.objectType);
+
 				case CanonicalSelectorSemantics.ConditionalAnd:
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
@@ -1033,6 +1040,7 @@ namespace EssenceSharp.CompilationServices {
 							clrVarDeclarations,
 							statementExpressions);
 				return mainBlock;
+
 				/*
 				var exception = Expression.Parameter(typeof(Exception), "ex");
 				var reportExceptionExpression = 
@@ -1046,7 +1054,6 @@ namespace EssenceSharp.CompilationServices {
 				var catchBlock = Expression.Catch(exception, reportExceptionExpression);
 				return Expression.TryCatch(mainBlock, catchBlock);
 				*/
-
 
 			}
 		}
