@@ -1095,7 +1095,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectToInvokeWithIfCurtailedBlock(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject ifCurtailedBlockMO) {
 			var invokeProtectedBlockMO = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selectorValue0), emptyArgArray);
 			var invokeIfCurtailedBlockMO = ifCurtailedBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(ifCurtailedBlockMO.Value), selectorValue0), emptyArgArray);
-			var catchBlock = Expression.Catch(TypeGuru.exceptionType, invokeIfCurtailedBlockMO.Expression);
+			var catchBlock = Expression.Catch(TypeGuru.exceptionType, Expression.Block(invokeIfCurtailedBlockMO.Expression, Expression.Rethrow(), Expression.Constant(new Object())));
 			Expression expression = Expression.TryCatch(invokeProtectedBlockMO.Expression, catchBlock);
 			expression = Expression.Block(TypeGuru.objectType, Expression.Convert(expression, TypeGuru.objectType));
 			return new DynamicMetaObject(
