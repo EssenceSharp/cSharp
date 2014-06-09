@@ -588,7 +588,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#endregion
 
-		#region Special-purpose DynamicMetaObjects
+		#region DynamicMetaObject Construction
 
 		public DynamicMetaObject metaObjectForInvariantOperation(Expression invariantRestrictionOperation, Object value) {
 			return new DynamicMetaObject(invariantRestrictionOperation.withType(TypeGuru.objectType), BindingRestrictionsGuru.invariantRestriction, value);
