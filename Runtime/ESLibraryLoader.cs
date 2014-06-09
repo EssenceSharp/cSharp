@@ -137,12 +137,20 @@ namespace EssenceSharp.Runtime {
 				rootNamespaces.Add(rootNamespace);
 			}
 
-			foreach (var factory in behaviorFactories) if (!factory.declareAll()) return false;
-			foreach (var factory in namespaceFactories) if (!factory.declareAll()) return false;
-			foreach (var factory in behaviorFactories) if (!factory.configureAll()) return false;
-			foreach (var factory in namespaceFactories) if (!factory.configureAll()) return false;
-			foreach (var factory in behaviorFactories) if (!factory.compileAll()) return false;
-			foreach (var factory in behaviorFactories) if (!factory.initializeAll()) return false;
+			foreach (var factory in behaviorFactories) 
+				if (!factory.declareAll()) return false;
+			foreach (var factory in namespaceFactories) 
+				if (!factory.declareAll()) return false;
+			foreach (var factory in behaviorFactories) 
+				if (!factory.configureAll()) return false;
+			foreach (var factory in namespaceFactories) 
+				if (!factory.configureAll()) return false;
+			foreach (var factory in behaviorFactories) 
+				if (!factory.compileAll()) return false;
+			foreach (var factory in behaviorFactories) 
+				if (!factory.initializeAll()) return false;
+			foreach (var factory in namespaceFactories) 
+				if (!factory.initializeAll()) return false;
 			return true;
 
 		}
@@ -255,7 +263,7 @@ namespace EssenceSharp.Runtime {
 			if (recurseIntoNestedNamespaces) {
 				ESNamespace childNamespace;
 				foreach (var nsFile in nestedNamespaces) {
-					success = loadNamespace(loadedNamespace, nsFile, out childNamespace);
+					if (!loadNamespace(loadedNamespace, nsFile, out childNamespace)) return false;
 				}
 			}
 			return success;

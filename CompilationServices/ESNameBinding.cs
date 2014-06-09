@@ -39,6 +39,9 @@ using Expression = System.Linq.Expressions.Expression;
 #endif
 using EssenceSharp.Runtime;
 using EssenceSharp.Runtime.Binding;
+using EssenceSharp.Exceptions;
+using EssenceSharp.Exceptions.System;
+using InvalidOperationException = EssenceSharp.Exceptions.InvalidOperationException;
 #endregion
 
 namespace EssenceSharp.CompilationServices {

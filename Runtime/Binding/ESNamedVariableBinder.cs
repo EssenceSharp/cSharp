@@ -89,7 +89,7 @@ namespace EssenceSharp.Runtime.Binding {
 			if (name !=null)	nameString = name.PrimitiveValue;
 			addToUndeclared = 
 				delegate () 
-					{ESBindingReference bindingRef  = kernel.newBindingReference(NameString, new DirectBindingHandle((Object)null));
+					{ESBindingReference bindingRef = kernel.newBindingReference(NameString, new DirectBindingHandle((Object)null));
 					kernel.UndeclaredNamespace.add(bindingRef);
 					return bindingRef;};
 		}
@@ -118,10 +118,9 @@ namespace EssenceSharp.Runtime.Binding {
 			set {nameString = value;}
 		}
 
-		protected void doAllButFinalBinding(Object[] args, System.Action<ESObject, long, Object[], long> bindInstVar, System.Action<BindingHandle, long> bindNSResidentVariable) {
+		protected void doAllButFinalBinding(Object[] args, System.Action<ESObject, long, Object[], long> bindInstVar, System.Action<BindingHandle> bindNSResidentVariable) {
 			ESBindingReference bindingRef = null;
 
-			long expectedVersionId = -1;
 			if (HasSelector) {
 				ESBehavior esClass;
 				Object model = args[0];
@@ -138,17 +137,15 @@ namespace EssenceSharp.Runtime.Binding {
 				}
 				ESMethod method = esClass.compiledMethodAt(Selector);
 				if (method == null) {
-					if (environment == esClass) expectedVersionId = esClass.VersionId;
 					bindingRef = Name.bindingInNamespaceIfAbsent(environment, accessPrivilege, ImportTransitivity.Transitive, addToUndeclared);;
 				} else {
-					expectedVersionId = esClass.VersionId;
 					bindingRef = Name.bindingInNamespaceIfAbsent(method.HomeClass, accessPrivilege, ImportTransitivity.Transitive, addToUndeclared);;
 				}
 			} else {
 				bindingRef = Name.bindingInNamespaceIfAbsent(environment, accessPrivilege, ImportTransitivity.Transitive, addToUndeclared);;
 			}
 			if (bindingRef == null) kernel.UndeclaredNamespace.add(bindingRef = kernel.newBindingReference(NameString, new DirectBindingHandle(null)));
-			bindNSResidentVariable(bindingRef.Value, expectedVersionId);
+			bindNSResidentVariable(bindingRef.Value);
 
 		}
 
@@ -160,6 +157,14 @@ namespace EssenceSharp.Runtime.Binding {
 			protected Registry(DynamicBindingGuru dynamicBindingGuru) : base(dynamicBindingGuru) {
 				defaultNamespace	= kernel.RootNamespace;
 				noSelector		= kernel.SymbolRegistry.symbolFor("$NoSelector");
+			}
+
+			public ESNamespace DefaultNamespace {
+				get { return defaultNamespace;}
+			}
+
+			public ESSymbol NoSelector {
+				get { return noSelector;}
 			}
 
 		}

@@ -40,7 +40,8 @@ using FuncNs = System;
 #endif
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
-using EssenceSharp.UtilityServices;
+using EssenceSharp.Exceptions.System;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
 namespace EssenceSharp.Runtime {
@@ -477,10 +478,12 @@ namespace EssenceSharp.Runtime {
 		#region Static variables and functions
 
 		private static long										identityGenerator			= 0;
+		private static long										versionIdGenerator			= 0;
 
 		#endregion
 
 		protected long											identity				= identityGenerator++;
+		protected long											versionId				= versionIdGenerator++;
 		protected ESSymbol										name					= null;
 		protected bool											isBoundToHostSystemNamespace		= false;
 		protected String										hostSystemNamespace			= null;
@@ -554,6 +557,14 @@ namespace EssenceSharp.Runtime {
 
 		public long Identity {
 			get {return identity;}
+		}
+
+		public long VersionId {
+			get { return versionId; }
+		}
+
+		protected virtual void incrementVersion() {
+			versionId = versionIdGenerator++;
 		}
 
 		public bool IsClrNamespace {

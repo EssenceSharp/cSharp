@@ -38,6 +38,7 @@ using Expression = Microsoft.Scripting.Ast.Expression;
 using System.Linq.Expressions;
 using Expression = System.Linq.Expressions.Expression;
 #endif
+using EssenceSharp.Exceptions.System;
 #endregion
 
 namespace EssenceSharp.Runtime.Binding {
@@ -84,13 +85,8 @@ namespace EssenceSharp.Runtime.Binding {
 									value);
 					}
 				}, 
-				(BindingHandle handle, long classVersionId) => {
-					if (classVersionId >= 0) {
-						ParameterExpression self = parameters[0];
-						testRuleValidityExpression = ExpressionTreeGuru.expressionToTestThatESObjectHasSameClassVersion(self, Expression.Constant(classVersionId));
-					} else {
-						testRuleValidityExpression = Expression.Constant(true);
-					}
+				(BindingHandle handle) => {
+					testRuleValidityExpression = Expression.Constant(true);
 					setVariableValueExpression = 
 						Expression.Assign(
 							Expression.Property(Expression.Constant(handle), "Value"),
@@ -115,8 +111,9 @@ namespace EssenceSharp.Runtime.Binding {
 			}
 
 			public SetVariableValueBinder canonicalBinderFor(ESSymbol name, ESSymbol selector, ESNamespace environment) {
+				ESSymbol selectorKey = selector; 
 				if (environment == null) environment = defaultNamespace;
-				if (selector == null) selector = noSelector;
+				if (selector == null) selectorKey = noSelector;
 				Dictionary<ESSymbol, Dictionary<ESSymbol, SetVariableValueBinder>> selectorRegistry;
 				Dictionary<ESSymbol, SetVariableValueBinder> nameRegistry;
 				SetVariableValueBinder binder;
@@ -124,14 +121,14 @@ namespace EssenceSharp.Runtime.Binding {
 					selectorRegistry = new Dictionary<ESSymbol, Dictionary<ESSymbol, SetVariableValueBinder>>();
 					registry[environment] = selectorRegistry;
 					nameRegistry = new Dictionary<ESSymbol, SetVariableValueBinder>();
-					selectorRegistry[selector] = nameRegistry;
+					selectorRegistry[selectorKey] = nameRegistry;
 					binder = new SetVariableValueBinder(DynamicBindingGuru, name, selector, environment);
 					nameRegistry[name] = binder;
 					return binder;
 				}
-				if (!selectorRegistry.TryGetValue(selector, out nameRegistry)) {
+				if (!selectorRegistry.TryGetValue(selectorKey, out nameRegistry)) {
 					nameRegistry = new Dictionary<ESSymbol, SetVariableValueBinder>();
-					selectorRegistry[selector] = nameRegistry;
+					selectorRegistry[selectorKey] = nameRegistry;
 					binder = new SetVariableValueBinder(DynamicBindingGuru, name, selector, environment);
 					nameRegistry[name] = binder;
 					return binder;

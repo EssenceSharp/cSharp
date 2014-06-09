@@ -26,6 +26,7 @@
  * of the authors and should not be interpreted as representing official policies, 
  * either expressed or implied, of the Essence Sharp Project.
 */
+
 #region Using declarations
 using System;
 using System.Reflection;
@@ -37,8 +38,9 @@ using FuncNs = Microsoft.Scripting.Utils;
 using System.Linq.Expressions;
 using FuncNs = System;
 #endif
-using EssenceSharp.UtilityServices;
 using EssenceSharp.CompilationServices;
+using EssenceSharp.Exceptions.System;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 using EssenceSharp.Runtime.Binding;
 #endregion
 
@@ -531,9 +533,9 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		#endregion
-	
+
 		#region Invoking
-		
+
 		public Object valueWithArguments(Object[] a) {
 			if (a.Length != numArgs) throw new PrimInvalidOperandException("Number of parameters specified does not match the expected number");
 			switch (numArgs) {

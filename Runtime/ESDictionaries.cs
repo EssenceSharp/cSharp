@@ -38,7 +38,8 @@ using FuncNs = Microsoft.Scripting.Utils;
 #else
 using FuncNs = System;
 #endif
-using EssenceSharp.UtilityServices;
+using EssenceSharp.Exceptions.System;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
 namespace EssenceSharp.Runtime {

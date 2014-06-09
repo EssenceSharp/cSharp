@@ -200,7 +200,7 @@ namespace EssenceSharp.Runtime {
 		Behavior,					
 		Class,						
 		Metaclass,					
-		HostSystemObject				
+		CLR_System_Exception				
 	}	
 
 	public enum CanonicalSelectorSemantics {
@@ -214,6 +214,9 @@ namespace EssenceSharp.Runtime {
 		Class,
 		IsMemberOf,
 		IsKindOf,
+		AsBehavior,
+		AsClass,
+		AsMetaclass,
 		IsNil,
 		IsNotNil,
 		IsBoolean,
@@ -252,6 +255,9 @@ namespace EssenceSharp.Runtime {
 		RemoveKey,
 		RemoveKeyIfAbsent,
 		InvokeBlock,
+		OnDo,
+		Ensure,
+		IfCurtailed,
 		IfNil,
 		IfNotNil,
 		IfNilIfNotNil,

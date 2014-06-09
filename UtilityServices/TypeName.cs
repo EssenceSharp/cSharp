@@ -34,6 +34,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Globalization;
 using System.Reflection;
+using EssenceSharp.Exceptions.System;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
 namespace EssenceSharp.UtilityServices {

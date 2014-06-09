@@ -30,13 +30,9 @@
 #region Using declarations
 using System;
 using System.IO;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using Microsoft.Scripting.Hosting;
-using EssenceSharp.Properties;
 using EssenceSharp.UtilityServices;
-using EssenceSharp.Runtime;
+using EssenceSharp.Exceptions;
 #endregion
 
 namespace EssenceSharp.ClientServices {
@@ -506,7 +502,7 @@ namespace EssenceSharp.ClientServices {
 				case OptionSemantics.FlagSet:
 					return new FlagSet(reportTimings, beVerbose, provideHelp);
 				default:
-					throw new InternalSystemException("Internal error in command line option processing");
+					throw new InvalidArgumentException("Internal error in command line option processing");
 			}
 		}
  
@@ -549,7 +545,7 @@ namespace EssenceSharp.ClientServices {
 						throw new InvalidArgumentException("The " + OptionKeyword + " option requires a syntactically-valid pathname as its operand.");
 					return new ScriptPathArg(operand.Operands[0]);
 				default:
-					throw new InternalSystemException("Internal error in command line option processing");
+					throw new InvalidArgumentException("Internal error in command line option processing");
 			}
 		}
        

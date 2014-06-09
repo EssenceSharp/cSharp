@@ -40,6 +40,7 @@ using FuncNs = System;
 #endif
 using EssenceSharp.ClientServices;
 using EssenceSharp.UtilityServices;
+using EssenceSharp.Exceptions.System;
 #endregion
 
 namespace EssenceSharp.Runtime { 
@@ -453,7 +454,7 @@ namespace EssenceSharp.Runtime {
 			// Note: Generally, nothing enforces the "canonical" semantics of a Smalltalk message. Message semantics are all based on convention, and programmers are mostly free to use message selectors to mean whatever they wish.
 			// HOWEVER, some Smalltalk implementations do enforce message selector semantics for a few special selectors. The most common ones are #==, #~~, #ifTrue:, #ifFalse:, #ifTrue:ifFalse, #isNil and #notNil.
 			//
-			// Essence# forces the semantics of #==, #~~, #isNil, #isNotNil, #and:, #or: (in that those 'message sends' are ALWAYS inlined.) In the case of #and: and #or:, the receivers must be Booleans at runtime.
+			// Essence# forces the semantics of #==, #~~, #isNil, #isNotNil, #not, #and: and #or: (in that those 'message sends' are ALWAYS inlined.) In the case of #not, #and: and #or:, the receivers must be Booleans at runtime.
 			// Additionally, Essence# will inline (and thus force the semantics of) the following 'message sends,' provided the message arguments, and sometimes also the message receiver, are lexically block literals: 
 			//
 			//	#ifNil:, #ifNotNil:, #ifNil:ifNotNil:, #ifNotNil:ifNil:,	(the message receiver can be of any type or class)
@@ -472,11 +473,14 @@ namespace EssenceSharp.Runtime {
 			symbolFor("~~").CanonicalSemantics				= CanonicalSelectorSemantics.IsNotIdenticalTo;		// (x, y) => !ReferenceEquals(x, y)
 			symbolFor("identityHash").CanonicalSemantics			= CanonicalSelectorSemantics.IdentityHash;		// (x)    => x.GetHashCode() -- but the hash code is based solely on the object's identity, and not based on its logical value
 			symbolFor("=").CanonicalSemantics				= CanonicalSelectorSemantics.IsEqualTo;			// (x, y) => x.Equals(y)
-			symbolFor("~=").CanonicalSemantics				= CanonicalSelectorSemantics.IsNotEqualTo;		// !x.Equals(y)
+			symbolFor("~=").CanonicalSemantics				= CanonicalSelectorSemantics.IsNotEqualTo;		// (x, y) => !x.Equals(y)
 			symbolFor("hash").CanonicalSemantics				= CanonicalSelectorSemantics.Hash;			// (x)    => x.GetHashCode()
-			symbolFor("class").CanonicalSemantics				= CanonicalSelectorSemantics.Class;			// (x)    => x.SmalltalkClass -- All CLR objects have a Smalltalk class :-)
-			symbolFor("isMemberOf:").CanonicalSemantics			= CanonicalSelectorSemantics.IsMemberOf;		// (object, class) => object.SmalltalkClass == class
+			symbolFor("class").CanonicalSemantics				= CanonicalSelectorSemantics.Class;			// (x)    => x.Class -- All CLR objects have an Essence# class (which will be created dynamically when and as necessary)
+			symbolFor("isMemberOf:").CanonicalSemantics			= CanonicalSelectorSemantics.IsMemberOf;		// (object, class) => object.Class == class
 			symbolFor("isKindOf:").CanonicalSemantics			= CanonicalSelectorSemantics.IsKindOf;			// (object, class) => object is class
+			symbolFor("asBehavior").CanonicalSemantics			= CanonicalSelectorSemantics.AsBehavior;		// (x)    => x is ESBehavior ? x : (x is Type ? esKernel.classForHostSystemType(x): Type.GetType(x).Class)
+			symbolFor("asClass").CanonicalSemantics				= CanonicalSelectorSemantics.AsClass;			// (x)    => x.asBehavior.IsMetaclass ? (x.CanonicalInstance : x) -- an Essence# Metaclass has but one instance
+			symbolFor("asMetaclass").CanonicalSemantics			= CanonicalSelectorSemantics.AsClass;			// (x)    => x.asBehavior.IsMetaclass ? (x : x.Class)
 			symbolFor("isNil").CanonicalSemantics				= CanonicalSelectorSemantics.IsNil;			// (x)    => ReferenceEquals(x, null)
 			symbolFor("notNil").CanonicalSemantics				= CanonicalSelectorSemantics.IsNotNil;			// (x)    => !ReferenceEquals(x, null)
 			symbolFor("isBoolean").CanonicalSemantics			= CanonicalSelectorSemantics.IsBoolean;			// (x)    => x is bool
@@ -584,6 +588,10 @@ namespace EssenceSharp.Runtime {
 			symbolFor("associationsDo:").CanonicalSemantics			= CanonicalSelectorSemantics.AssociationsDo;		// (x, y) => foreach (var keyValuePair in x) y(keyValuePair); x;
 			symbolFor("keysAndValuesDo:").CanonicalSemantics		= CanonicalSelectorSemantics.KeysAndValuesDo;		// (x, y) => foreach (var keyValuePair in x) y(keyValuePair.Key, keyValuePair.Value); x;
 			symbolFor(",").CanonicalSemantics				= CanonicalSelectorSemantics.Concat;			// (x, y) => Concat(x, y)
+
+			symbolFor("on:do:").CanonicalSemantics				= CanonicalSelectorSemantics.OnDo;			// (x, y, z) => try {x()} catch(y) {z();}
+			symbolFor("ensure:").CanonicalSemantics				= CanonicalSelectorSemantics.Ensure;			// (x, y) => try {x()} finally {y();}
+			symbolFor("ifCurtailed:").CanonicalSemantics			= CanonicalSelectorSemantics.IfCurtailed;		// (x, y) => try {x()} catch {y();}
 
 			symbolFor("value").CanonicalSemantics				= CanonicalSelectorSemantics.InvokeBlock;		// (x) => x()
 			symbolFor("value:").CanonicalSemantics				= CanonicalSelectorSemantics.InvokeBlock;		// (x, a1) => x(a1)
