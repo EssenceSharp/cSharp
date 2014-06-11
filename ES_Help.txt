@@ -1,0 +1,90 @@
+Executes scripts written in Essence#
+	
+Syntax [using ISO EBNF (which you can and should look up)]: 
+
+Invocation 		:= "es", {Spaces, Option}, {Spaces, ScriptSpec, 
+				{Spaces, Option}};
+Spaces 			:= " ", {" "};
+Option			:= ScriptArg | LibrarySearchPath | ScriptSearchPath
+			      | Namespace | ImportList | LibraryList | FlagSet
+			      | EssenceSharpPath;
+ScriptArg		:= ScriptLiteralArg | ScriptFileArg;
+ScriptLiteralArg	:= ("-a" | "/a"), Spaces, EssenceSharpExpression;
+ScriptFileArg		:= ("-A" | "/A"), Spaces, Pathname;
+LibrarySearchPath	:= ("-L" | "/L"), Spaces, Pathname;
+ScriptSearchPath	:= ("-s" | "/s"), Spaces, Pathname;
+EssenceSharpPath	:= ("-p" | "/p"), Spaces, AbsolutePathname;
+Namespace		:= ("-n" | "/n"), Spaces, QualifiedIdentifier;
+ImportList		:= ("-i" | "/i"), Spaces,  QualifiedIdentifier, 
+			      {("," | ";"), QualifiedIdentifier};
+LibraryList		:= ("-l" | "/l"), Spaces, QualifiedIdentifier,
+			      {("," | ";"), QualifiedIdentifier};
+FlagSet			:= ("-" | "/"), Flag, {Flag};
+Flag			:= "h" | "?" | "t" | "v";
+QualifiedIdentifier	:= Identifier,{".", Identifier};
+Identifier		:= InitialIdentifierChar,{IdentifierChar};
+IdentifierChar		:= "_" | ..Any letter or decimal digit..
+InitialIdentifierChar	:= "_" | ..Any letter..
+EssenceSharpExpression	:= QualifiedIdentifier | ('"', Code, '"');
+Code			:= ..Syntactically-valid Essence# code..
+ScriptSpec		:= ScriptLiteral | Pathname;
+ScriptLiteral		:= ("-d" | "/d"), Spaces, EssenceSharpExpression;
+Pathname		:= ..a valid file pathname, relative or absolute..
+AbsolutePathname	:= ..a valid ABSOLUTE pathname..
+
+Semantics:
+
+ES will compile and execute the script source code referenced by each 
+ScriptSpec. If the ScriptSpec is a Pathname, the file containing the script
+source code will be resolved using the current list of script search paths.
+
+If a script requires arguments, those must be provided using the 
+ScriptArgOption. Each script requires a specific number of arguments, and
+an error will occur if it does not receive precisely that number of arguments.
+
+A script argument may either be a literal code snippet or else a pathname of a
+script file containing syntactically-valid Essence# code. 
+
+The LibrarySearchPath option can be used (repeatedly) to add a search path for 
+code libraries. Library search paths will be added in the order listed on the 
+command line, and will be used before any library search paths defined by the
+system or in the %EssenceSharpPath%\Source\Libraries\searchPaths file.
+
+The ScriptSearchPath option can be used (repeatedly) to add a search path for 
+scripts. Script search paths will be added in the order listed on the command 
+line, and will be used before any script search paths defined by the system or 
+in the %EssenceSharpPath%\Source\Scripts\searchPaths file.
+
+The EssenceSharpPath option can be used to change the pathname prefix that will
+be used to find standard system files, such as the Standard Library, other 
+shared libraries, and shared scripts. If this option is not specified, then the 
+default EssenceSharpPath (which is defined using an environment variable) will 
+be used. Use of this option does not change the value of the environment 
+variable (which is named EssenceSharpPath).
+
+The LibraryList option can be used in order to load any number of class 
+libraries by name (the Standard Library will always be loaded.) Library names
+will be resolved using the current list of library search paths.
+
+The Namespace option can be used to set the default namespace. The default 
+namespace is the "name binding context" or "environment" the compiler will use
+to bind names to global variables or constants, whenever a name is used that is
+not fully qualified. If not specified, the Essence# system namespace will be 
+used as the default.
+
+The ImportList option can be used to have the listed namespaces imported into 
+whatever default namespace is specified for the script (or into the Essence# 
+system namespace, if no default namespace was explicitly set.)
+
+The flags can be used to enable timing reports ("-t" or "/t"), verbose system 
+startup reporting ("-v" or "/v") or in order to request help ("-h", "/h", "-?" 
+or "/?"). All of those options are disabled, unless the corresponding flag has 
+been specified. If the "help" option is specified, then no libraries will be 
+loaded and no scripts will be executed.
+
+Examples:
+
+es -n CLR.System -d "Console writeLine: Random new next printString" -t
+es -vt -l BenchmarkLib Bench1 -n Benchmark Bench2 -n Benchmark.Graphics
+es -i Benchmark,Benchmark.Reporting IterationsCount -a "Duration minutes: 1"
+

@@ -1,0 +1,258 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6614B93B-D6CA-4AF3-B3AD-BE65AF64F506}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <NoStandardLibraries>false</NoStandardLibraries>
+    <AssemblyName>EssenceSharp</AssemblyName>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+    <TargetFrameworkVersion Condition=" '$(Configuration)' == 'x86.35.Debug'">v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion Condition=" '$(Configuration)' == 'x86.35.Release'">v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion Condition=" '$(Configuration)' == 'x64.35.Debug'">v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion Condition=" '$(Configuration)' == 'x64.35.Release'">v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace>EssenceSharp</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.35.Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\35\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;CLR2</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <Prefer32Bit>false</Prefer32Bit>
+    <LangVersion>default</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.35.Release|AnyCPU'">
+    <OutputPath>bin\x86\35\Release\</OutputPath>
+    <DefineConstants>TRACE;CLR2</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x64.35.Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\35\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;CLR2</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x64.35.Release|AnyCPU'">
+    <OutputPath>bin\x64\35\Release\</OutputPath>
+    <DefineConstants>TRACE;CLR2</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.40.Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\40\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x64.40.Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\40\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x64.40.Release|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\40\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.40.Release|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\40\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.Dynamic, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'!='v3.5'">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Codeplex-DLR-1.0\bin\40\Microsoft.Dynamic.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Scripting, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'!='v3.5'">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Codeplex-DLR-1.0\bin\40\Microsoft.Scripting.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Scripting.Debugging, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'!='v3.5'">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Codeplex-DLR-1.0\bin\40\Microsoft.Scripting.Debugging.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Scripting.Core" Condition="'$(TargetFrameworkVersion)'=='v3.5'">
+      <HintPath>..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Scripting.ExtensionAttribute" Condition="'$(TargetFrameworkVersion)'=='v3.5'">
+      <HintPath>..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.ExtensionAttribute.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Dynamic, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'=='v3.5'">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Dynamic.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Scripting, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'=='v3.5'">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Source\ClientServices\ESCommandLineArguments.cs" />
+    <Compile Include="Source\ClientServices\ESCompilerOptions.cs" />
+    <Compile Include="Source\ClientServices\ESLanguageContext.cs" />
+    <Compile Include="Source\ClientServices\ESLanguageOptions.cs" />
+    <Compile Include="Source\ClientServices\ESScriptCode.cs" />
+    <Compile Include="Source\ClientServices\ESExtensionMethods.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Include="Source\ClientServices\ESScriptExecution.cs" />
+    <Compile Include="Source\CompilationServices\ESNonLocalReturn.cs" />
+    <Compile Include="Source\Exceptions\Error.cs" />
+    <Compile Include="Source\Exceptions\ESException.cs" />
+    <Compile Include="Source\Exceptions\EssenceSharpException.cs" />
+    <Compile Include="Source\Exceptions\InvalidArgumentException.cs" />
+    <Compile Include="Source\Exceptions\InvalidOperationException.cs" />
+    <Compile Include="Source\Exceptions\MessageNotUnderstood.cs" />
+    <Compile Include="Source\Exceptions\Notification.cs" />
+    <Compile Include="Source\Exceptions\System\AssemblyBindingFailure.cs" />
+    <Compile Include="Source\Exceptions\System\ImmutableBindingException.cs" />
+    <Compile Include="Source\Exceptions\System\ImmutableObjectException.cs" />
+    <Compile Include="Source\Exceptions\System\InvalidFunctionCallException.cs" />
+    <Compile Include="Source\Exceptions\System\NullReceiverException.cs" />
+    <Compile Include="Source\Exceptions\System\PrimitiveFailures\MustBeBoolean.cs" />
+    <Compile Include="Source\Exceptions\System\PrimitiveFailures\NamespaceEntryNameConflictException.cs" />
+    <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimIllegalOperationException.cs" />
+    <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimIndexBoundsExcessionException.cs" />
+    <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimInvalidKeyException.cs" />
+    <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimInvalidOperandException.cs" />
+    <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimitiveFailException.cs" />
+    <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimNonDeletableKeyException.cs" />
+    <Compile Include="Source\Exceptions\System\PrimitiveFailures\UnimplementedPrimitiveException.cs" />
+    <Compile Include="Source\Exceptions\System\SystemException.cs" />
+    <Compile Include="Source\Exceptions\UnsupportedOperationException.cs" />
+    <Compile Include="Source\Exceptions\Warning.cs" />
+    <Compile Include="Source\Runtime\Binding\ESDynamicBindingGuru.cs" />
+    <Compile Include="Source\Runtime\Binding\ESDynamicMetaObjects.cs" />
+    <Compile Include="Source\Runtime\Binding\ESDynamicBindingServices.cs" />
+    <Compile Include="Source\Runtime\Binding\ESGetVariableValueBinder.cs" />
+    <Compile Include="Source\Runtime\Binding\ESNamedVariableBinder.cs" />
+    <Compile Include="Source\Runtime\Binding\ESetVariableValueBinder.cs" />
+    <Compile Include="Source\Runtime\EnumerationTypes.cs" />
+    <Compile Include="Source\Runtime\ESDictionaries.cs" />
+    <Compile Include="Source\Runtime\ESKernel.cs" />
+    <Compile Include="Source\UtilityServices\ESFileUtility.cs" />
+    <Compile Include="Source\UtilityServices\ESLexicalUtility.cs" />
+    <Compile Include="Source\CompilationServices\ESAstNodeGenerator.cs" />
+    <Compile Include="Source\CompilationServices\ESAbstractSyntaxTreeNodes.cs" />
+    <Compile Include="Source\CompilationServices\ESCodeGenerationContext.cs" />
+    <Compile Include="Source\CompilationServices\ESNameBinding.cs" />
+    <Compile Include="Source\ESFoundation.cs" />
+    <Compile Include="Source\CompilationServices\ESCompiler.cs" />
+    <Compile Include="Source\ParsingServices\ESLexicalTokens.cs" />
+    <Compile Include="Source\ParsingServices\ESParseTreeNodes.cs" />
+    <Compile Include="Source\ParsingServices\ESParsingFoundation.cs" />
+    <Compile Include="Source\ParsingServices\ESLexicalAnalyzer.cs" />
+    <Compile Include="Source\Runtime\Binding\ESMessageSendBinder.cs" />
+    <Compile Include="Source\ParsingServices\ESParser.cs" />
+    <Compile Include="Source\Runtime\ESClasses.cs" />
+    <Compile Include="Source\Runtime\ESCompiledCode.cs" />
+    <Compile Include="Source\Runtime\ESMessage.cs" />
+    <Compile Include="Source\Runtime\ESNamespaces.cs" />
+    <Compile Include="Source\Runtime\ESPrimitiveElementArrays.cs" />
+    <Compile Include="Source\Runtime\ESLibraryLoader.cs" />
+    <Compile Include="Source\Runtime\ESGeneralObjects.cs" />
+    <Compile Include="Source\Runtime\ESSymbol.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Source\Runtime\ESObject.cs" />
+    <Compile Include="Source\ClientServices\ESLaunchPad.cs" />
+    <Compile Include="Source\Runtime\ESObjectVisitor.cs" />
+    <Compile Include="Source\UtilityServices\ESPathnameBinder.cs" />
+    <Compile Include="Source\UtilityServices\TypeName.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>PublicSettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ES Users%27 Guide.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ES_Help.txt" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSHARP.Targets" />
+  <ProjectExtensions>
+    <VisualStudio AllowExistingFolder="true" />
+  </ProjectExtensions>
+</Project>

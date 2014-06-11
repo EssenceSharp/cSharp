@@ -1,0 +1,18 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="EssenceSharp.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="EssenceSharpPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">EssenceSharp</Value>
+    </Setting>
+    <Setting Name="CodeDevelopmentPathString" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Developer</Value>
+    </Setting>
+    <Setting Name="UserDocumentsPathString" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">My Documents</Value>
+    </Setting>
+    <Setting Name="PathEnvironmentVarName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">%EssenceSharpPath%</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
