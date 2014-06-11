@@ -1,0 +1,2 @@
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x86\Net.35.Debug\es.exe.config
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x86\35.Debug\es.exe.config
