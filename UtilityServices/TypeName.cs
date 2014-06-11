@@ -860,7 +860,11 @@ namespace EssenceSharp.UtilityServices {
 			if (type != null) return type;
 			var name = FullName;
 			var assembly = getAssembly(false);
-			if (assembly != null) {
+			if (assembly == null) {
+				assembly = typeof(System.Object).Assembly;
+				type = assembly.GetType(name, false);
+				if (type != null) return type;
+			} else { 
 				type = assembly.GetType(name, raiseExceptionOnErrorOrNotFound);
 				if (type != null) return type;
 			}

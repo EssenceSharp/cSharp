@@ -160,7 +160,7 @@ namespace EssenceSharp.ClientServices {
 			get { return reportTimings;}
 			set {	if (currentExecutive == null) {
 					reportTimings = value;
-					optionsBuilder.ReportLibraryLoadTime = value;
+					optionsBuilder.ReportTimings = value;
 				} else {
 					currentExecutive.ReportTimings = value;
 				}}
@@ -215,7 +215,6 @@ namespace EssenceSharp.ClientServices {
 		protected bool				beVerbose			= false;
 		protected List<Scalar>			scriptArguments			= new List<Scalar>();
 		protected Object[]			scriptArgs;
-		protected Stopwatch			stopwatch;
 		protected TimeSpan			durationToRun			= TimeSpan.Zero;
 
 		protected ScriptExecutive(String environmentName, List<String> imports) {
@@ -310,15 +309,13 @@ namespace EssenceSharp.ClientServices {
 				var compilationOptions = (ESCompilerOptions)engine.GetCompilerOptions();
 				compilationOptions.EnvironmentName = EnvironmentName;
  				value = runScript(engine, compilationOptions, environment);
-				stopwatch.Stop();
-				durationToRun = stopwatch.Elapsed;
 				Console.WriteLine("");
 				Console.Write(Identity);
 				Console.WriteLine(" => " + value);
 			} finally {
 				if (ReportTimings) { 
 					Console.WriteLine("________________________________________");
-					Console.WriteLine("Script run time = " + durationToRun.ToString() + " (includes setup and compilation time)");
+					Console.WriteLine("Script run time = " + durationToRun.ToString());
 					Console.WriteLine("");
 				}
 			}
@@ -340,9 +337,7 @@ namespace EssenceSharp.ClientServices {
  
 		protected override Object runScript(ScriptEngine engine, ESCompilerOptions compilationOptions, ESNamespace environment) {
  			var script = engine.CreateScriptSourceFromString(text);
-			stopwatch = new Stopwatch();
-			stopwatch.Start();
-			return script.Execute(compilationOptions, scriptArgs);
+			return script.Execute(compilationOptions, scriptArgs, out durationToRun);
 		}	
 
 	}
@@ -361,9 +356,7 @@ namespace EssenceSharp.ClientServices {
 
 		protected override Object runScript(ScriptEngine engine, ESCompilerOptions compilationOptions, ESNamespace environment) {
 			var script = engine.CreateScriptSourceFromPathSuffix(pathnameSuffix);
-			stopwatch = new Stopwatch();
-			stopwatch.Start();
-			return script.Execute(compilationOptions, scriptArgs);
+			return script.Execute(compilationOptions, scriptArgs, out durationToRun);
 		}	
 
 	}

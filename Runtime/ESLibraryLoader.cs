@@ -589,12 +589,14 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected virtual bool initializeClass() {
+			ThisClass.validate();
 			if (ClassInitializationFile == null) return true;
 			if (IsVerbose) Console.WriteLine("Initializing class : " + ThisClass.PathnameString);
 			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassInitializationFile);
 		}
 
 		protected virtual bool initializeMetaclass() {
+			ThisMetaclass.validate();
 			if (MetaclassInitializationFile == null) return true;
 			if (IsVerbose) Console.WriteLine("Initializing metaclass: " + ThisMetaclass.PathnameString);
 			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassInitializationFile);

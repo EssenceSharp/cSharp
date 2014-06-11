@@ -83,8 +83,8 @@ namespace EssenceSharp.Runtime.Binding {
 			var rightType = rightInput.LimitType;
 			var typeWithHighestGenerality = leftType.typeWithHighestNumericGenerality(rightType);
 			if (typeWithHighestGenerality == null) return false;
-			leftOutput = leftType == typeWithHighestGenerality ? Expression.Convert(leftInput.Expression, leftType) : Expression.Convert(Expression.Convert(leftInput.Expression, leftType), typeWithHighestGenerality);
-			rightOutput = rightType == typeWithHighestGenerality ? Expression.Convert(rightInput.Expression, rightType) : Expression.Convert(Expression.Convert(rightInput.Expression, rightType), typeWithHighestGenerality);
+			leftOutput = leftType == typeWithHighestGenerality ? leftInput.asExpressionWithType(leftType) : leftInput.asExpressionWithType(leftType).withType(typeWithHighestGenerality);
+			rightOutput = rightType == typeWithHighestGenerality ? rightInput.asExpressionWithType(rightType) : rightInput.asExpressionWithType(rightType).withType(typeWithHighestGenerality);
 			return true;
 		}
 
@@ -156,12 +156,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var expressionArray = new Expression[metaObjects.Length];
 			int i = 0;
 			foreach (var metaObject in metaObjects) {
-				var formalType = metaObject.LimitType;
-				if (formalType == conversionType) {
-					expressionArray[i++] = metaObject.Expression;
-				} else {
-					expressionArray[i++] = Expression.Convert(metaObject.Expression, conversionType);
-				}
+				expressionArray[i++] = metaObject.asExpressionWithType(conversionType);
 			}
 			return expressionArray;
 		}
@@ -231,7 +226,7 @@ namespace EssenceSharp.Runtime.Binding {
 				switch (operation.Type) {
 					case MethodOperationType.Convert:
 						Type targetType = ESBehavior.typeFromAssemblyQualifiedName(operation.Operand, true);
-						expression = Expression.Convert(receiver.asExpressionWithFormalType(), targetType);
+						expression = receiver.asExpressionWithFormalType().withType(targetType);
 						break;
 					case MethodOperationType.GetField:
 						field = esClass.getField(operation.Operand);
@@ -295,7 +290,7 @@ namespace EssenceSharp.Runtime.Binding {
 										expressionArrayFor(typedArguments.ToArray()));
 							} else { 
 								self = receiver.asExpressionWithFormalType();
-								if (!methodInfo.DeclaringType.IsAssignableFrom(self.Type)) self = Expression.Convert(self, methodInfo.DeclaringType);
+								if (!methodInfo.DeclaringType.IsAssignableFrom(self.Type)) self = self.withType(methodInfo.DeclaringType);
 								expression = Expression.Call(
 										self, 
 										methodInfo, 
@@ -320,7 +315,7 @@ namespace EssenceSharp.Runtime.Binding {
 				if (expression == null) {
 					expression = operation.OnFailExpression;
 				} else if (Type.GetTypeCode(expression.Type) != TypeCode.Object) {
-					expression = Expression.Convert(expression, TypeGuru.objectType);
+					expression = expression.withType(TypeGuru.objectType);
 				}
 			}
 			return new DynamicMetaObject(expression, bindingRestrictions, receiver.Value);
@@ -610,29 +605,29 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectToCreateAssociation(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject valueMO) {
 			Expression expression = ExpressionTreeGuru.expressionToCreateESAssociation(kernel.AssociationClass, receiver.Expression, valueMO.Expression);
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
 
 		public DynamicMetaObject metaObjectForConditionalAnd(DynamicMetaObject receiver, ESBehavior esClass, DynamicMetaObject operandMO) {
 			var model = receiver.Value;
-			var self = Expression.Convert(receiver.Expression, TypeGuru.boolType);
+			var self = receiver.asExpressionWithType(TypeGuru.boolType);
 			operandMO = operandMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(operandMO.Value), selectorValue0), emptyArgArray);
-			var operand = Expression.Convert(operandMO.Expression, TypeGuru.boolType);
+			var operand = operandMO.asExpressionWithType(TypeGuru.boolType);
 			return new DynamicMetaObject(
-				Expression.Convert(Expression.AndAlso(self, operand), TypeGuru.objectType), 
+				Expression.AndAlso(self, operand).withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(operandMO.addingInstanceRestriction()), 
 				model);
 		}
 
 		public DynamicMetaObject metaObjectForConditionalOr(DynamicMetaObject receiver, ESBehavior esClass, DynamicMetaObject operandMO) {
 			var model = receiver.Value;
-			var self = Expression.Convert(receiver.Expression, TypeGuru.boolType);
+			var self = receiver.asExpressionWithType(TypeGuru.boolType);
 			operandMO = operandMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(operandMO.Value), selectorValue0), emptyArgArray);
-			var operand = Expression.Convert(operandMO.Expression, TypeGuru.boolType);
+			var operand = operandMO.asExpressionWithType(TypeGuru.boolType);
 			return new DynamicMetaObject(
-				Expression.Convert(Expression.OrElse(self, operand), TypeGuru.objectType), 
+				Expression.OrElse(self, operand).withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(operandMO.addingInstanceRestriction()), 
 				model);
 		}
@@ -643,7 +638,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var actionFunction = actionToInvoke.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvoke.Value), selectorValue0), emptyArgArray);
 			return new DynamicMetaObject(
 				Expression.Condition(
-					Expression.Convert(testExpression, TypeGuru.boolType), 
+					testExpression.withType(TypeGuru.boolType), 
 					actionFunction.Expression, 
 					testFailResult), 
 				(model == null ?
@@ -658,7 +653,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var actionFunction = actionToInvoke.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvoke.Value), selectorValue0), emptyArgArray);
 			return new DynamicMetaObject(
 				Expression.Condition(
-					Expression.Convert(testExpression, TypeGuru.boolType), 
+					testExpression.withType(TypeGuru.boolType), 
 					testFailResult, 
 					actionFunction.Expression), 
 				(model == null ?
@@ -674,7 +669,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var ifFalseAction = actionToInvokeIfFalse.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToInvokeIfFalse.Value), selectorValue0), emptyArgArray);
 			return new DynamicMetaObject(
 				Expression.Condition(
-					Expression.Convert(testExpression, TypeGuru.boolType), 
+					testExpression.withType(TypeGuru.boolType), 
 					ifTrueAction.Expression, 
 					ifFalseAction.Expression), 
 				(model == null ?
@@ -692,7 +687,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, emptyArgArray);
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -706,7 +701,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, emptyArgArray);
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -716,7 +711,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var receiverType = receiver.LimitType;
 			if (receiverType.isNumeric()) {
 				if (receiverType.isRational()) {
-					expression = Expression.Convert(ExpressionTreeGuru.expressionToInvoke_Math_Ceiling(receiver.asExpressionWithFormalType(), receiverType), TypeGuru.longType);
+					expression = ExpressionTreeGuru.expressionToInvoke_Math_Ceiling(receiver.asExpressionWithFormalType(), receiverType).withType(TypeGuru.longType);
 				} else {
 					expression = receiver.asExpressionWithFormalType();
 				}
@@ -724,7 +719,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, emptyArgArray);
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -734,7 +729,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var receiverType = receiver.LimitType;
 			if (receiverType.isNumeric()) {
 				if (receiverType.isRational()) {
-					expression = Expression.Convert(ExpressionTreeGuru.expressionToInvoke_Math_Floor(receiver.asExpressionWithFormalType(), receiverType), TypeGuru.longType);
+					expression = ExpressionTreeGuru.expressionToInvoke_Math_Floor(receiver.asExpressionWithFormalType(), receiverType).withType(TypeGuru.longType);
 				} else {
 					expression = receiver.asExpressionWithFormalType();
 				}
@@ -742,7 +737,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, emptyArgArray);
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -752,7 +747,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var receiverType = receiver.LimitType;
 			if (receiverType.isNumeric()) {
 				if (receiverType.isRational()) {
-					expression = Expression.Convert(ExpressionTreeGuru.expressionToInvoke_Math_Round(receiver.asExpressionWithFormalType(), receiverType), TypeGuru.longType);
+					expression = ExpressionTreeGuru.expressionToInvoke_Math_Round(receiver.asExpressionWithFormalType(), receiverType).withType(TypeGuru.longType);
 				} else {
 					expression = receiver.asExpressionWithFormalType();
 				}
@@ -760,7 +755,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, emptyArgArray);
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -778,7 +773,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, emptyArgArray);
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -789,16 +784,14 @@ namespace EssenceSharp.Runtime.Binding {
 			var modulusType = modulusMO.LimitType;
 			var operationType = receiverType.typeWithHighestNumericGenerality(modulusType);	
 			if (operationType != null) {
-				expression = Expression.Convert(
-						ExpressionTreeGuru.expressionToRoundANumberTo(
-							receiver.asExpressionWithFormalType(), 
-							modulusMO.asExpressionWithFormalType()),
-						operationType);
+				expression = ExpressionTreeGuru.expressionToRoundANumberTo(
+						receiver.asExpressionWithFormalType(), 
+						modulusMO.asExpressionWithFormalType()).withType(operationType);
 			} else {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, argArrayFor(modulusMO));
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -814,7 +807,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, argArrayFor(modulusMO));
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -832,7 +825,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, argArrayFor(exponent));
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -846,7 +839,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, emptyArgArray);
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -864,7 +857,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, argArrayFor(logBase));
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass), 
 				receiver.Value);
 		}
@@ -876,17 +869,17 @@ namespace EssenceSharp.Runtime.Binding {
 			var divisorType = divisorMO.LimitType;
 			var operationType = receiverType.typeWithHighestNumericGenerality(divisorType);	
 			if (operationType != null) {
-				var self = Expression.Convert(receiver.asExpressionWithFormalType(), operationType);
-				var divisor = Expression.Convert(divisorMO.asExpressionWithFormalType(), operationType);
+				var self = receiver.asExpressionWithFormalType().withType(operationType);
+				var divisor = divisorMO.asExpressionWithFormalType().withType(operationType);
 				expression = Expression.Divide(self, divisor);
 				if (!operationType.isInteger()) {
-					expression = Expression.Convert(expression, TypeGuru.longType);
+					expression = expression.withType(TypeGuru.longType);
 				}
 			} else {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, argArrayFor(divisorMO));
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass, divisorMO), 
 				receiver.Value);
 		}
@@ -899,16 +892,16 @@ namespace EssenceSharp.Runtime.Binding {
 			var operationType = receiverType.typeWithHighestNumericGenerality(divisorType);	
 			if (operationType != null) {
 				if (!operationType.isInteger()) operationType = TypeGuru.doubleType;
-				var self = Expression.Convert(receiver.asExpressionWithFormalType(), operationType);
-				var divisor = Expression.Convert(divisorMO.asExpressionWithFormalType(), operationType);
+				var self = receiver.asExpressionWithFormalType().withType(operationType);
+				var divisor = divisorMO.asExpressionWithFormalType().withType(operationType);
 				expression = Expression.Divide(self, divisor);
 				expression = ExpressionTreeGuru.expressionToInvoke_Math_Floor(expression, operationType);
-				expression = Expression.Convert(expression, TypeGuru.longType);
+				expression = expression.withType(TypeGuru.longType);
 			} else {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, argArrayFor(divisorMO));
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass, divisorMO), 
 				receiver.Value);
 		}
@@ -923,19 +916,19 @@ namespace EssenceSharp.Runtime.Binding {
 			var nominalOperationType = receiverType.typeWithHighestNumericGenerality(modulusType);	
 			if (nominalOperationType != null) {
 				var operationType = nominalOperationType.isInteger() ? TypeGuru.doubleType : nominalOperationType;
-				var self = Expression.Convert(receiver.asExpressionWithFormalType(), TypeGuru.doubleType);
-				var modulus = Expression.Convert(modulusMO.asExpressionWithFormalType(), TypeGuru.doubleType);
+				var self = receiver.asExpressionWithFormalType().withType(TypeGuru.doubleType);
+				var modulus = modulusMO.asExpressionWithFormalType().withType(TypeGuru.doubleType);
 				expression = Expression.Divide(self, modulus);
 				expression = ExpressionTreeGuru.expressionToInvoke_Math_Floor(expression, TypeGuru.doubleType);
-				expression = Expression.Convert(expression, TypeGuru.longType);
-				expression = Expression.Multiply(Expression.Convert(expression, TypeGuru.doubleType), modulus);
+				expression = expression.withType(TypeGuru.longType);
+				expression = Expression.Multiply(expression.withType(TypeGuru.doubleType), modulus);
 				expression = Expression.Subtract(self, expression);
-				expression = Expression.Convert(expression, nominalOperationType);
+				expression = expression.withType(nominalOperationType);
 			} else {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, argArrayFor(modulusMO));
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass, modulusMO), 
 				receiver.Value);
 		}
@@ -951,7 +944,7 @@ namespace EssenceSharp.Runtime.Binding {
 				var actionFunction = actionToRepeat.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(actionToRepeat.Value), selectorValue0), emptyArgArray);
 				var induction = Expression.Parameter(TypeGuru.longType, "$induction");
 				var step = Expression.Constant(1L);
-				var limit = Expression.Convert(self, TypeGuru.longType);
+				var limit =self.withType(TypeGuru.longType);
 				var exit = Expression.Label(TypeGuru.objectType);
 				expression = Expression.Block(
 						TypeGuru.objectType,
@@ -997,21 +990,21 @@ namespace EssenceSharp.Runtime.Binding {
 			if (candidateType == null) return null;
 
 			if (convertOneBasedIndicesToZeroBased) {
-				startingValue = Expression.Subtract(startingValue, Expression.Convert(Expression.Constant(1), startingValueType));
-				endingValue = Expression.Subtract(endingValue, Expression.Convert(Expression.Constant(1), endingValueType));
+				startingValue = Expression.Subtract(startingValue, Expression.Constant(1).withType(startingValueType));
+				endingValue = Expression.Subtract(endingValue, Expression.Constant(1).withType(endingValueType));
 			}
 
 			typeWithHighestGenerality = candidateType;
 			var induction = Expression.Parameter(typeWithHighestGenerality, "$induction");
 			Expression inductionVariable;
 			if (inductionParameter.Type != typeWithHighestGenerality) {
-				inductionVariable = Expression.Convert(induction, inductionParameter.Type);
+				inductionVariable = induction.withType(inductionParameter.Type);
 			} else {
 				inductionVariable = induction;
 			}
-			var generalStartingValue = Expression.Convert(startingValue, typeWithHighestGenerality);
-			var generalEndingValue = Expression.Convert(endingValue, typeWithHighestGenerality);
-			var generalStepValue = Expression.Convert(stepValue, typeWithHighestGenerality);
+			var generalStartingValue = startingValue.withType(typeWithHighestGenerality);
+			var generalEndingValue = endingValue.withType(typeWithHighestGenerality);
+			var generalStepValue = stepValue.withType(typeWithHighestGenerality);
 			var upwardLoopExit = Expression.Label(typeWithHighestGenerality);
 			var downwardLoopExit = Expression.Label(typeWithHighestGenerality);
 			expression = Expression.Block(
@@ -1019,7 +1012,7 @@ namespace EssenceSharp.Runtime.Binding {
 				new[] {induction, inductionParameter},
 				Expression.Assign(induction, generalStartingValue),
 				Expression.IfThenElse(
-					Expression.GreaterThanOrEqual(generalStepValue, Expression.Convert(ExpressionTreeGuru.zeroConstant, typeWithHighestGenerality)),
+					Expression.GreaterThanOrEqual(generalStepValue, ExpressionTreeGuru.zeroConstant.withType(typeWithHighestGenerality)),
 						Expression.Loop(
 							Expression.Condition(
 								Expression.LessThanOrEqual(induction, generalEndingValue),
@@ -1083,7 +1076,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var invokeProtectedBlockMO = receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selectorValue0), emptyArgArray);
 			var invokeEnsureBlockMO = ensureBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(ensureBlockMO.Value), selectorValue0), emptyArgArray);
 			Expression expression = Expression.TryFinally(invokeProtectedBlockMO.Expression, invokeEnsureBlockMO.Expression);
-			expression = Expression.Block(TypeGuru.objectType, Expression.Convert(expression, TypeGuru.objectType));
+			expression = Expression.Block(TypeGuru.objectType, expression.withType(TypeGuru.objectType));
 			return new DynamicMetaObject(
 				expression, 
 				(esClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
@@ -1097,7 +1090,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var invokeIfCurtailedBlockMO = ifCurtailedBlockMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(ifCurtailedBlockMO.Value), selectorValue0), emptyArgArray);
 			var catchBlock = Expression.Catch(TypeGuru.exceptionType, Expression.Block(invokeIfCurtailedBlockMO.Expression, Expression.Rethrow(), Expression.Constant(new Object())));
 			Expression expression = Expression.TryCatch(invokeProtectedBlockMO.Expression, catchBlock);
-			expression = Expression.Block(TypeGuru.objectType, Expression.Convert(expression, TypeGuru.objectType));
+			expression = Expression.Block(TypeGuru.objectType, expression.withType(TypeGuru.objectType));
 			return new DynamicMetaObject(
 				expression, 
 				(esClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
@@ -1133,15 +1126,15 @@ namespace EssenceSharp.Runtime.Binding {
 										kernel.symbolFor("handles:"), 
 										"Handles"), 
 									exceptionArgArray);
-				var exceptionSelectionPredicate = Expression.Convert(Expression.Convert(exceptionSelectionPredicateMO.Expression, TypeGuru.objectType), TypeGuru.boolType);
+				var exceptionSelectionPredicate = exceptionSelectionPredicateMO.asExpressionWithType(TypeGuru.objectType).withType(TypeGuru.boolType);
 				var conditionalExceptionHandler = Expression.Condition(
 										exceptionSelectionPredicate,
-											Expression.Convert(invokeIfCurtailedBlockMO.Expression, TypeGuru.objectType),
+											invokeIfCurtailedBlockMO.asExpressionWithType(TypeGuru.objectType),
 											Expression.Block(TypeGuru.objectType, Expression.Rethrow(), Expression.Constant(new Object())));
 				catchBlock = Expression.Catch(exception, conditionalExceptionHandler);
 			}
 			Expression expression = Expression.TryCatch(invokeProtectedBlockMO.Expression, catchBlock);
-			expression = Expression.Block(TypeGuru.objectType, Expression.Convert(expression, TypeGuru.objectType));
+			expression = Expression.Block(TypeGuru.objectType, expression.withType(TypeGuru.objectType));
 			return new DynamicMetaObject(
 				expression, 
 				(esClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
@@ -1210,7 +1203,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var exit = Expression.Label(TypeGuru.objectType);
 			var loop = Expression.Loop(
 					Expression.IfThenElse(
-						Expression.Convert(testFunction.Expression, TypeGuru.boolType),
+						testFunction.asExpressionWithType(TypeGuru.boolType),
 							actionFunction.Expression,
 							Expression.Break(exit, self)),
 					exit);
@@ -1232,7 +1225,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var exit = Expression.Label(TypeGuru.objectType);
 			var loop = Expression.Loop(
 					Expression.IfThenElse(
-						Expression.Convert(testFunction.Expression, TypeGuru.boolType),
+						testFunction.asExpressionWithType(TypeGuru.boolType),
 							Expression.Break(exit, self),
 							actionFunction.Expression),
 						exit);
@@ -1297,7 +1290,7 @@ namespace EssenceSharp.Runtime.Binding {
 				var keyValuePair = Expression.Parameter(keyValuePairType, "$keyValuePair");
 				var assignKeyValuePair = Expression.Assign(keyValuePair, getKeyValuePair);
 				Expression getValue = Expression.Property(keyValuePair, "Value");
-				if (getValue.Type != TypeGuru.objectType) getValue = Expression.Convert(getValue, TypeGuru.objectType);
+				if (getValue.Type != TypeGuru.objectType) getValue = getValue.withType(TypeGuru.objectType);
 				var assignValue = Expression.Assign(value, getValue);
 				var moveNext = Expression.Call(enumerator, enumeratorType.GetMethod("MoveNext"));
 
@@ -1325,7 +1318,7 @@ namespace EssenceSharp.Runtime.Binding {
 				var enumerator = Expression.Parameter(enumeratorType, "$enumerator");
 				var assignEnumerator = Expression.Assign(enumerator, Expression.Call(self, getEnumeratorMethod));
 				Expression getElement = Expression.Property(enumerator, "Current");
-				if (getElement.Type != TypeGuru.objectType) getElement = Expression.Convert(getElement, TypeGuru.objectType);
+				if (getElement.Type != TypeGuru.objectType) getElement = getElement.withType(TypeGuru.objectType);
 				var assignElement = Expression.Assign(element, getElement);
 				var moveNext = Expression.Call(enumerator, enumeratorType.GetMethod("MoveNext"));
 
@@ -1453,7 +1446,7 @@ namespace EssenceSharp.Runtime.Binding {
 				var enumerator = Expression.Parameter(enumeratorType, "$enumerator");
 				var assignEnumerator = Expression.Assign(enumerator, Expression.Call(self, getEnumeratorMethod));
 				Expression getElement = Expression.Property(enumerator, "Current");
-				if (getElement.Type != TypeGuru.objectType) getElement = Expression.Convert(getElement, TypeGuru.objectType);
+				if (getElement.Type != TypeGuru.objectType) getElement = getElement.withType(TypeGuru.objectType);
 				var assignElement = Expression.Assign(element, getElement);
 				var moveNext = Expression.Call(enumerator, enumeratorType.GetMethod("MoveNext"));
 
@@ -1509,7 +1502,7 @@ namespace EssenceSharp.Runtime.Binding {
 				var keyValuePair = Expression.Parameter(keyValuePairType, "$keyValuePair");
 				var assignKeyValuePair = Expression.Assign(keyValuePair, getKeyValuePair);
 				Expression getKey = Expression.Property(keyValuePair, "Key");
-				if (getKey.Type != TypeGuru.objectType) getKey = Expression.Convert(getKey, TypeGuru.objectType);
+				if (getKey.Type != TypeGuru.objectType) getKey = getKey.withType(TypeGuru.objectType);
 				var assignKey = Expression.Assign(key, getKey);
 				var moveNext = Expression.Call(enumerator, enumeratorType.GetMethod("MoveNext"));
 
@@ -1572,9 +1565,9 @@ namespace EssenceSharp.Runtime.Binding {
 				var keyValuePair = Expression.Parameter(keyValuePairType, "$keyValuePair");
 				var assignKeyValuePair = Expression.Assign(keyValuePair, getKeyValuePair);
 				Expression getKey = Expression.Property(keyValuePair, "Key");
-				if (getKey.Type != TypeGuru.objectType) getKey = Expression.Convert(getKey, TypeGuru.objectType);
+				if (getKey.Type != TypeGuru.objectType) getKey = getKey.withType(TypeGuru.objectType);
 				Expression getValue = Expression.Property(keyValuePair, "Value");
-				if (getValue.Type != TypeGuru.objectType) getValue = Expression.Convert(getValue, TypeGuru.objectType);
+				if (getValue.Type != TypeGuru.objectType) getValue = getValue.withType(TypeGuru.objectType);
 				var assignKey = Expression.Assign(key, getKey);
 				var assignValue = Expression.Assign(value, getValue);
 				var moveNext = Expression.Call(enumerator, enumeratorType.GetMethod("MoveNext"));
@@ -1624,13 +1617,13 @@ namespace EssenceSharp.Runtime.Binding {
 					suffixMO.BindInvokeMember(canonicalInvokeMemberBinderFor(suffixClass, symbolFor("copyTo"), "CopyTo"), argArrayFor(newArray, prefixSize)).Expression,
 					newArray.Expression);
 			} else if (receiverType == TypeGuru.stringType) {
-				esPrefix = ExpressionTreeGuru.expressionToCreateESStringFromString(kernel, Expression.Convert(self, TypeGuru.stringType));
+				esPrefix = ExpressionTreeGuru.expressionToCreateESStringFromString(kernel, self.withType(TypeGuru.stringType));
 				expression = ExpressionTreeGuru.expressionToInvokeESMethod(kernel.StringClass.compiledMethodAt(symbolFor(",")), new Expression[]{esPrefix, esSuffix});
 			} else {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(self, esClass, selector, argArrayFor(suffixMO));
 			}
 			return new DynamicMetaObject(
-				Expression.Convert(expression, TypeGuru.objectType), 
+				expression.withType(TypeGuru.objectType), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass, suffixMO), 
 				receiver.Value);
 		}
@@ -2155,7 +2148,7 @@ namespace EssenceSharp.Runtime.Binding {
 							receiver, 
 							esClass, 
 							ExpressionTreeGuru.expressionToComputeSignOf(
-										Expression.Convert(mo.Expression, TypeGuru.intType), 
+										mo.asExpressionWithType(TypeGuru.intType), 
 										TypeGuru.intType));
 				case CanonicalSelectorSemantics.IsImmutable:
 					return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, "IsReadOnly"), args);
@@ -2294,11 +2287,11 @@ namespace EssenceSharp.Runtime.Binding {
 					var leftShift = receiver.BindBinaryOperation(canonicalBinaryOperationBinderFor(esClass, symbolFor("<<"), ExpressionType.LeftShift), shiftExtent);
 					var rightShift = receiver.BindBinaryOperation(canonicalBinaryOperationBinderFor(esClass, symbolFor(">>"), ExpressionType.RightShift), shiftExtentNegated);
 					var shiftExpression = Expression.Condition(
-								Expression.Convert(shiftExtentIsPositive.Expression, TypeGuru.boolType), 
-									Expression.Convert(leftShift.Expression, TypeGuru.objectType), 
-									Expression.Convert(rightShift.Expression, TypeGuru.objectType));
+								shiftExtentIsPositive.asExpressionWithType(TypeGuru.boolType), 
+									leftShift.asExpressionWithType(TypeGuru.objectType), 
+									rightShift.asExpressionWithType(TypeGuru.objectType));
 					return new DynamicMetaObject(
-							Expression.Convert(shiftExpression, TypeGuru.objectType),
+							shiftExpression.withType(TypeGuru.objectType),
 							receiver.bindingRestrictionsForForeignObjectReceiver(esClass, shiftExtent),
 							receiver.Value);
 
@@ -2439,7 +2432,7 @@ namespace EssenceSharp.Runtime.Binding {
 							(property) => getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property), 
 							(field) => getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field))) {
 
-					if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = Expression.Convert(getPropertyOrFieldExpression, TypeGuru.objectType);
+					if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = getPropertyOrFieldExpression.withType(TypeGuru.objectType);
 					return new DynamicMetaObject(
 						getPropertyOrFieldExpression, 
 						target.bindingRestrictionsForForeignObjectReceiver(esClass),
@@ -2451,7 +2444,7 @@ namespace EssenceSharp.Runtime.Binding {
 								(property) => getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property), 
 								(field) => getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field))) {
 
-						if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = Expression.Convert(getPropertyOrFieldExpression, TypeGuru.objectType);
+						if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = getPropertyOrFieldExpression.withType(TypeGuru.objectType);
 						return new DynamicMetaObject(
 							getPropertyOrFieldExpression, 
 							target.bindingRestrictionsForForeignObjectReceiver(esClass),
@@ -2462,7 +2455,7 @@ namespace EssenceSharp.Runtime.Binding {
 								(property) => getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property), 
 								(field) => getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field))) {
 
-						if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = Expression.Convert(getPropertyOrFieldExpression, TypeGuru.objectType);
+						if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = getPropertyOrFieldExpression.withType(TypeGuru.objectType);
 						return new DynamicMetaObject(
 							getPropertyOrFieldExpression, 
 							target.bindingRestrictionsForForeignObjectReceiver(esClass),
@@ -2656,7 +2649,7 @@ namespace EssenceSharp.Runtime.Binding {
 					performOperationExpression = Expression.Call(methodInfo.IsStatic ? null : target.asExpressionWithFormalType(), methodInfo, index);
 				}
 
-				if (performOperationExpression.Type != TypeGuru.objectType) performOperationExpression = Expression.Convert(performOperationExpression, TypeGuru.objectType);
+				if (performOperationExpression.Type != TypeGuru.objectType) performOperationExpression = performOperationExpression.withType(TypeGuru.objectType);
 
 				return new DynamicMetaObject(
 						performOperationExpression, 
@@ -2765,7 +2758,7 @@ namespace EssenceSharp.Runtime.Binding {
 					performOperationExpression = Expression.Call(methodInfo.IsStatic ? null : target.asExpressionWithFormalType(), methodInfo, new Expression[]{index, typedValue.Expression});
 				}
 
-				if (performOperationExpression.Type != TypeGuru.objectType) performOperationExpression = Expression.Convert(performOperationExpression, TypeGuru.objectType);
+				if (performOperationExpression.Type != TypeGuru.objectType) performOperationExpression = performOperationExpression.withType(TypeGuru.objectType);
 
 				return new DynamicMetaObject(
 						performOperationExpression, 
@@ -2916,7 +2909,7 @@ namespace EssenceSharp.Runtime.Binding {
 				}
 
 				return new DynamicMetaObject(
-						Expression.Convert(unaryOperatorExpression, TypeGuru.objectType), 
+						unaryOperatorExpression.withType(TypeGuru.objectType), 
 						bindingRestrictions,
 						target.Value);
 
@@ -2999,21 +2992,21 @@ namespace EssenceSharp.Runtime.Binding {
 						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
 							binaryOperatorExpression = Expression.And(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.And(Expression.Convert(leftOperandMO.asExpressionWithFormalType(), TypeGuru.boolType), Expression.Convert(rightOperandMO.asExpressionWithFormalType(), TypeGuru.boolType));
+							binaryOperatorExpression = Expression.And(leftOperandMO.asExpressionWithFormalType().withType(TypeGuru.boolType), rightOperandMO.asExpressionWithFormalType().withType(TypeGuru.boolType));
 						}
 						break;
 					case CanonicalSelectorSemantics.LogicalOr:
 						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
 							binaryOperatorExpression = Expression.Or(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.Or(Expression.Convert(leftOperandMO.asExpressionWithFormalType(), TypeGuru.boolType), Expression.Convert(rightOperandMO.asExpressionWithFormalType(), TypeGuru.boolType));
+							binaryOperatorExpression = Expression.Or(leftOperandMO.asExpressionWithFormalType().withType(TypeGuru.boolType), rightOperandMO.asExpressionWithFormalType().withType(TypeGuru.boolType));
 						}
 						break;
 					case CanonicalSelectorSemantics.LogicalXor:
 						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
 							binaryOperatorExpression = Expression.ExclusiveOr(leftOperand, rightOperand);
 						} else {
-							binaryOperatorExpression = Expression.ExclusiveOr(Expression.Convert(leftOperandMO.asExpressionWithFormalType(), TypeGuru.boolType), Expression.Convert(rightOperandMO.asExpressionWithFormalType(), TypeGuru.boolType));
+							binaryOperatorExpression = Expression.ExclusiveOr(leftOperandMO.asExpressionWithFormalType().withType(TypeGuru.boolType), rightOperandMO.asExpressionWithFormalType().withType(TypeGuru.boolType));
 						}
 						break;
 					case CanonicalSelectorSemantics.IsLessThan:
@@ -3122,16 +3115,16 @@ namespace EssenceSharp.Runtime.Binding {
 						break;
 					case CanonicalSelectorSemantics.ShiftLeft:
 						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
-							binaryOperatorExpression = Expression.LeftShift(leftOperand, Expression.Convert(rightOperand, TypeGuru.intType));
+							binaryOperatorExpression = Expression.LeftShift(leftOperand, rightOperand.withType(TypeGuru.intType));
 						} else {
-							binaryOperatorExpression = Expression.LeftShift(leftOperandMO.asExpressionWithFormalType(), Expression.Convert(rightOperandMO.asExpressionWithFormalType(), TypeGuru.intType));
+							binaryOperatorExpression = Expression.LeftShift(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType().withType(TypeGuru.intType));
 						}
 						break;
 					case CanonicalSelectorSemantics.ShiftRight:
 						if (convertNumericTypesToHighestGenerality(leftOperandMO, rightOperandMO, out leftOperand, out rightOperand)) {
-							binaryOperatorExpression = Expression.RightShift(leftOperand, Expression.Convert(rightOperand, TypeGuru.intType));
+							binaryOperatorExpression = Expression.RightShift(leftOperand, rightOperand.withType(TypeGuru.intType));
 						} else {
-							binaryOperatorExpression = Expression.RightShift(leftOperandMO.asExpressionWithFormalType(), Expression.Convert(rightOperandMO.asExpressionWithFormalType(), TypeGuru.intType));
+							binaryOperatorExpression = Expression.RightShift(leftOperandMO.asExpressionWithFormalType(), rightOperandMO.asExpressionWithFormalType().withType(TypeGuru.intType));
 						}
 						break;
 
@@ -3146,7 +3139,7 @@ namespace EssenceSharp.Runtime.Binding {
 					binaryOperatorExpression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(leftOperandMO.Expression, esClass, selector, argArrayFor(rightOperandMO));
 					bindingRestrictions = leftOperandMO.bindingRestrictionsForForeignObjectReceiver(esClass, rightOperandMO);
 				} else {
-					binaryOperatorExpression = Expression.Convert(binaryOperatorExpression, TypeGuru.objectType);
+					binaryOperatorExpression = binaryOperatorExpression.withType(TypeGuru.objectType);
 					if (bindingRestrictions == null) {
 						bindingRestrictions = leftOperandMO.addingFormalTypeRestriction().Merge(rightOperandMO.addingFormalTypeRestriction());
 					}
@@ -3206,7 +3199,7 @@ namespace EssenceSharp.Runtime.Binding {
 				var conversion = targetGuru.metaObjectToConvertTo(Type);
 
 				return new DynamicMetaObject(
-							Expression.Convert(conversion.Expression, TypeGuru.objectType), 
+							conversion.asExpressionWithType(TypeGuru.objectType), 
 							target.bindingRestrictionsForForeignObjectReceiver(esClass),
 							target.Value);
 			}
@@ -3365,14 +3358,14 @@ namespace EssenceSharp.Runtime.Binding {
 						invokeMemberExpression = Expression.Call(null, methodInfo, expressionArrayFor(typedArguments.ToArray()));
 					} else { 
 						var self = target.asExpressionWithFormalType();
-						if (!methodInfo.DeclaringType.IsAssignableFrom(self.Type)) self = Expression.Convert(self, methodInfo.DeclaringType);
+						if (!methodInfo.DeclaringType.IsAssignableFrom(self.Type)) self = self.withType(methodInfo.DeclaringType);
 						invokeMemberExpression = Expression.Call(self, methodInfo, expressionArrayFor(typedArguments.ToArray()));
 					}
 					if (methodInfo.ReturnType == TypeGuru.voidType) invokeMemberExpression = Expression.Block(TypeGuru.objectType, invokeMemberExpression, target.Expression);
 				}
 
 				return new DynamicMetaObject(
-						Expression.Convert(invokeMemberExpression, TypeGuru.objectType), 
+						invokeMemberExpression.withType(TypeGuru.objectType), 
 						target.bindingRestrictionsForForeignObjectReceiver(esClass, typedArguments),
 						target.Value);
 

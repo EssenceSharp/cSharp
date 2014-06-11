@@ -446,7 +446,7 @@ namespace EssenceSharp.Runtime.Binding {
 			if (aNumber.Type.isRational()) {
 				return aNumber;
 			} else {
-				return Expression.Convert(aNumber, TypeGuru.doubleType);
+				return aNumber.withType(TypeGuru.doubleType);
 			}
 		}
 
@@ -518,7 +518,7 @@ namespace EssenceSharp.Runtime.Binding {
 		#region BindingRestriction expressions
 
 		public static  Expression expressionToGetClassOfESObject(Expression self) {
-			if (!TypeGuru.esObjectType.IsAssignableFrom(self.Type)) self = Expression.Convert(self, TypeGuru.esObjectType);
+			if (!TypeGuru.esObjectType.IsAssignableFrom(self.Type)) self = self.withType(TypeGuru.esObjectType);
 			return Expression.Field(self, TypeGuru.esObjectType, "_class");
 			// return Expression.Property(self, TypeGuru.esObjectType, "Class");
 		}
@@ -746,7 +746,7 @@ namespace EssenceSharp.Runtime.Binding {
 							TypeGuru.boolType, 
 							Expression.Throw(expressionToCreateMustBeBooleanException(errorMessage)), 
 							ExpressionTreeGuru.trueConstant));
-			return Expression.TryCatch(Expression.Convert(expressionWhoseTypeMustBeBoolean, TypeGuru.boolType), catchBlock);
+			return Expression.TryCatch(expressionWhoseTypeMustBeBoolean.withType(TypeGuru.boolType), catchBlock);
 		}
 
 		public static Expression expressionToInvoke_Kernel_classOf(ESKernel kernel, Expression self) {
@@ -964,7 +964,7 @@ namespace EssenceSharp.Runtime.Binding {
 		}
 
 		public static Expression expressionToComputeSignOf(Expression self, Type numericType) {
-			var zero = Expression.Convert(zeroConstant, numericType);
+			var zero = zeroConstant.withType(numericType);
 			return Expression.Condition(
 					Expression.GreaterThan(self, zero),
 						Expression.Constant(1L),
@@ -976,7 +976,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public static Expression expressionToComputeAbsoluteValueOf(Expression self, Type numericType) {
 			return Expression.Condition(
-					Expression.LessThan(self, Expression.Convert(zeroConstant, numericType)),
+					Expression.LessThan(self, zeroConstant.withType(numericType)),
 						Expression.Negate(self),
 						self);
 		}
@@ -986,7 +986,7 @@ namespace EssenceSharp.Runtime.Binding {
 			return Expression.Call(
 					null,
 					TypeGuru.mathType.GetMethod("Floor", new Type[]{operationType}),
-					Expression.Convert(self, operationType));
+					self.withType(operationType));
 		}
 
 		public static Expression expressionToInvoke_Math_Ceiling(Expression self, Type numericType) {
@@ -994,7 +994,7 @@ namespace EssenceSharp.Runtime.Binding {
 			return Expression.Call(
 					null,
 					TypeGuru.mathType.GetMethod("Ceiling", new Type[]{operationType}),
-					Expression.Convert(self, operationType));
+					self.withType(operationType));
 		}
 
 		public static Expression expressionToInvoke_Math_Round(Expression self, Type numericType) {
@@ -1002,18 +1002,18 @@ namespace EssenceSharp.Runtime.Binding {
 			return Expression.Call(
 					null,
 					TypeGuru.mathType.GetMethod("Round", new Type[]{operationType}),
-					Expression.Convert(self, operationType));
+					self.withType(operationType));
 		}
 
 		public static Expression expressionToTruncateNumber(Expression self, Type numericType) {
-			return Expression.Convert(Expression.Convert(self, numericType), TypeGuru.longType);
+			return self.withType(numericType).withType(TypeGuru.longType);
 		}
 
 		public static Expression expressionToRoundANumberTo(Expression self, Expression modulus) {
 			// Smalltalk: 53 roundTo: 5 => 55; 1263.48 roundTo: 0.25 => 1263.50.
 			// C-Lang: 53.roundTo(5) => 55; 1263.48.roundTo(0.25) => 1263.50.
-			self = Expression.Convert(self, TypeGuru.doubleType);
-			modulus = Expression.Convert(modulus, TypeGuru.doubleType);
+			self = self.withType(TypeGuru.doubleType);
+			modulus = modulus.withType(TypeGuru.doubleType);
 			return Expression.Multiply(
 					Expression.Call(
 						null,
@@ -1025,10 +1025,10 @@ namespace EssenceSharp.Runtime.Binding {
 		public static Expression expressionToTruncateANumberTo(Expression self, Expression modulus) {
 			// Smalltalk: 53 truncateTo: 5 => 50; 1263.48 truncateTo: 0.25 => 1263.25.
 			// C-Lang: 53.truncateTo(5) => 50; 1263.48.truncateTo(0.25) => 1263.25.
-			self = Expression.Convert(self, TypeGuru.doubleType);
-			modulus = Expression.Convert(modulus, TypeGuru.doubleType);
+			self = self.withType(TypeGuru.doubleType);
+			modulus = modulus.withType(TypeGuru.doubleType);
 			return Expression.Multiply(
-					Expression.Convert(Expression.Convert(Expression.Divide(self, modulus), TypeGuru.longType), TypeGuru.doubleType), 
+					Expression.Divide(self, modulus).withType(TypeGuru.longType).withType(TypeGuru.doubleType), 
 					modulus);
 		}
 
@@ -1036,23 +1036,23 @@ namespace EssenceSharp.Runtime.Binding {
 			return Expression.Call(
 					null,
 					TypeGuru.mathType.GetMethod("Pow", new Type[]{TypeGuru.doubleType, TypeGuru.doubleType}),
-					Expression.Convert(self, TypeGuru.doubleType),
-					Expression.Convert(exponent, TypeGuru.doubleType));
+					self.withType(TypeGuru.doubleType),
+					exponent.withType(TypeGuru.doubleType));
 		}
 
 		public static Expression expressionToInvoke_Math_Log(Expression self) {
 			return Expression.Call(
 					null,
 					TypeGuru.mathType.GetMethod("Log", new Type[]{TypeGuru.doubleType}),
-					Expression.Convert(self, TypeGuru.doubleType));
+					self.withType(TypeGuru.doubleType));
 		}
 
 		public static Expression expressionToInvoke_Math_Log(Expression self, Expression logBase) {
 			return Expression.Call(
 					null,
 					TypeGuru.mathType.GetMethod("Log", new Type[]{TypeGuru.doubleType, TypeGuru.doubleType}),
-					Expression.Convert(self, TypeGuru.doubleType),
-					Expression.Convert(logBase, TypeGuru.doubleType));
+					self.withType(TypeGuru.doubleType),
+					logBase.withType(TypeGuru.doubleType));
 		}
 
 		public static Expression expressionToCreateMessage(ESBehavior messageClass, ESSymbol selector, DynamicMetaObject[] args) {
@@ -1068,6 +1068,29 @@ namespace EssenceSharp.Runtime.Binding {
 					createArrayAction);
 		}
 
+		public static Expression expressionToThrowInvalidFunctionCallException(
+						Expression self, 
+						ESBehavior esClass, 
+						ESSymbol selector, 
+						String messageText, 
+						long actualArgCount,
+						Type expectedFunctionType, 
+						Type actualFunctionType) {
+
+			return
+				Expression.Call(
+						null,
+						TypeGuru.esKernelType.GetMethod(
+								"throwInvalidFunctionCallException", 
+								new Type[]{TypeGuru.stringType, TypeGuru.longType, TypeGuru.longType, TypeGuru.typeType, TypeGuru.typeType, TypeGuru.exceptionType}),
+						Expression.Constant(messageText),
+						Expression.Constant(selector.NumArgs),
+						Expression.Constant(actualArgCount),
+						Expression.Constant(expectedFunctionType),
+						Expression.Constant(actualFunctionType),
+						nilConstant);
+		}
+
 		public static Expression expressionToSendDoesNotUnderstand(Expression self, ESBehavior esClass, SymbolRegistry symbolRegistry, Expression createMessageAction) {
 
 			var method = esClass.compiledMethodAt(symbolRegistry.DoesNotUnderstandSelector);
@@ -1081,9 +1104,7 @@ namespace EssenceSharp.Runtime.Binding {
 			} else {
 				return			
 					Expression.Invoke(
-						Expression.Convert(
-							Expression.Constant(method.Function), 
-							ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
+						Expression.Constant(method.Function).withType(ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
 						self, 
 						createMessageAction); 
 
@@ -1100,9 +1121,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public static Expression expressionToInvokeESMethod(ESMethod method, Expression[] argumentsWithReceiver) {
 			return 
 				Expression.Invoke(
-					Expression.Convert(
-						Expression.Constant(method.Function), 
-						ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
+					Expression.Constant(method.Function).withType(ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
 					argumentsWithReceiver);
 		}
 
@@ -1309,14 +1328,14 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public static DynamicMetaObject withExpressionAndTypeRestrictionConvertingTo(this DynamicMetaObject metaObject, Expression expression, Type targetType) {
 			return new DynamicMetaObject(
-					Expression.Convert(expression, targetType), 
+					expression.withType(targetType), 
 					metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
 					metaObject.Value);
 		}
 
 		public static DynamicMetaObject withExpressionAndTypeRestrictionConvertingTo(this DynamicMetaObject metaObject, Expression expression, Type targetType, MethodInfo conversionOperator) {
 			return new DynamicMetaObject(
-					Expression.Convert(expression, targetType, conversionOperator), 
+					expression.withType(targetType, conversionOperator), 
 					metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
 					metaObject.Value);
 		}

@@ -28,6 +28,7 @@
 */
 #region Using declarations
 using System;
+using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using EssenceSharp.Runtime;
@@ -44,10 +45,11 @@ namespace EssenceSharp.ClientServices {
 
 		protected SourceUnit		sourceUnit;
 		protected ESNamespace		bindingNamespace;
+		protected TimeSpan		durationToRun			= TimeSpan.Zero;
 
 		public ESScriptCode(SourceUnit sourceUnit, ESNamespace bindingNamespace) : base(sourceUnit) {
-			this.sourceUnit		= sourceUnit;
-			this.bindingNamespace	= bindingNamespace;
+			this.sourceUnit			= sourceUnit;
+			this.bindingNamespace		= bindingNamespace;
 		}
 
 		public abstract CodeKind Kind {
@@ -64,6 +66,10 @@ namespace EssenceSharp.ClientServices {
 
 		public ESNamespace BindingNamespace {
 			get {return bindingNamespace;}
+		}
+
+		public TimeSpan DurationToRun {
+			get {return durationToRun;}
 		}
 
 		protected void bindToScope(Scope scope) {
@@ -113,8 +119,17 @@ namespace EssenceSharp.ClientServices {
 		public override Object Run(Scope scope, Object[] arguments) {
 			if (block == null) return null;
 			bindToScope(scope);
-			if (arguments == null || arguments.Length < 1) return block.value0();
-			return block.valueWithArguments(arguments);
+			Object value;
+			var stopwatch = new Stopwatch();
+			stopwatch.Start();
+			if (arguments == null || arguments.Length < 1) {
+				value = block.value0();
+			} else {
+				value = block.valueWithArguments(arguments);
+			}
+			stopwatch.Stop();
+			durationToRun = stopwatch.Elapsed;
+			return value;
 		}
 
 	}
@@ -152,11 +167,6 @@ namespace EssenceSharp.ClientServices {
 		public override Object Run(Object[] arguments) {
 			return Run(null, DefaultReceiver, arguments);
 		}
-
-		public Object Run(Object receiver, Object[] arguments) {
-			return Run(null, receiver, arguments);
-		}
-
 		public override Object Run(Scope scope, Object[] arguments) {
 			return Run(scope, DefaultReceiver, arguments);
 		}
@@ -164,8 +174,18 @@ namespace EssenceSharp.ClientServices {
 		public Object Run(Scope scope, Object receiver, Object[] arguments) {
 			if (method == null) return null;
 			bindToScope(scope);
-			if (arguments == null || arguments.Length < 1) return method.value0(receiver);
-			return method.valueWithReceiverWithArguments(receiver, arguments);
+
+			Object value;
+			var stopwatch = new Stopwatch();
+			stopwatch.Start();
+			if (arguments == null || arguments.Length < 1) {
+				value = method.value0(receiver);
+			} else { 
+				value = method.valueWithReceiverWithArguments(receiver, arguments);
+			}
+			stopwatch.Stop();
+			durationToRun = stopwatch.Elapsed;
+			return value;
 		}
 
 	}

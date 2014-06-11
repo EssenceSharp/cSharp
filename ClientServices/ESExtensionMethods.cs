@@ -367,6 +367,18 @@ namespace Microsoft.Scripting.Hosting {
 			return essenceScriptCode.Run();
 		}
 
+		public static Object Execute(this ScriptSource aScriptSource, ESCompilerOptions compilerOptions, Object[] arguments, out TimeSpan durationToRun) {
+			var compiledCode = aScriptSource.Compile(compilerOptions);
+			var essenceScriptCode = compiledCode.essenceScriptCode();
+			if (essenceScriptCode == null) {
+				durationToRun = TimeSpan.Zero;
+				return null;
+			}
+			var value = essenceScriptCode.Run(arguments);
+			durationToRun = essenceScriptCode.DurationToRun;
+			return value;
+		}
+
 		public static Object Execute(this ScriptSource aScriptSource, ESCompilerOptions compilerOptions, Object[] arguments) {
 			var compiledCode = aScriptSource.Compile(compilerOptions);
 			var essenceScriptCode = compiledCode.essenceScriptCode();
@@ -388,11 +400,35 @@ namespace Microsoft.Scripting.Hosting {
 			return essenceScriptCode.Run(arguments);
 		}
 
+		public static Object Execute(this ScriptSource aScriptSource, ESCompilerOptions compilerOptions, ErrorListener errorListener, Object[] arguments, out TimeSpan durationToRun) {
+			var compiledCode = aScriptSource.Compile(compilerOptions, errorListener);
+			var essenceScriptCode = compiledCode.essenceScriptCode();
+			if (essenceScriptCode == null) {
+				durationToRun = TimeSpan.Zero;
+				return null;
+			}
+			var value = essenceScriptCode.Run(null, arguments);
+			durationToRun = essenceScriptCode.DurationToRun;
+			return value;
+		}
+
 		public static Object Execute(this ScriptSource aScriptSource, ScriptScope scriptScope, Object[] arguments) {
 			var compiledCode = aScriptSource.Compile();
 			var essenceScriptCode = compiledCode.essenceScriptCode();
 			if (essenceScriptCode == null) return null;
 			return essenceScriptCode.Run(scriptScope.scope(), arguments);
+		}
+
+		public static Object Execute(this ScriptSource aScriptSource, ScriptScope scriptScope, Object[] arguments, out TimeSpan durationToRun) {
+			var compiledCode = aScriptSource.Compile();
+			var essenceScriptCode = compiledCode.essenceScriptCode();
+			if (essenceScriptCode == null) {
+				durationToRun = TimeSpan.Zero;
+				return null;
+			}
+			var value = essenceScriptCode.Run(scriptScope.scope(), arguments);
+			durationToRun = essenceScriptCode.DurationToRun;
+			return value;
 		}
 
 		public static Object Execute(this ScriptSource aScriptSource, ErrorListener errorListener, ScriptScope scriptScope, Object[] arguments) {
@@ -402,6 +438,18 @@ namespace Microsoft.Scripting.Hosting {
 			return essenceScriptCode.Run(scriptScope.scope(), arguments);
 		}
 
+		public static Object Execute(this ScriptSource aScriptSource, ErrorListener errorListener, ScriptScope scriptScope, Object[] arguments, out TimeSpan durationToRun) {
+			var compiledCode = aScriptSource.Compile(errorListener);
+			var essenceScriptCode = compiledCode.essenceScriptCode();
+			if (essenceScriptCode == null) {
+				durationToRun = TimeSpan.Zero;
+				return null;
+			}
+			var value = essenceScriptCode.Run(scriptScope.scope(), arguments);
+			durationToRun = essenceScriptCode.DurationToRun;
+			return value;
+		}
+
 		public static Object Execute(this ScriptSource aScriptSource, ESCompilerOptions compilerOptions, ScriptScope scriptScope, Object[] arguments) {
 			var compiledCode = aScriptSource.Compile(compilerOptions);
 			var essenceScriptCode = compiledCode.essenceScriptCode();
@@ -409,11 +457,35 @@ namespace Microsoft.Scripting.Hosting {
 			return essenceScriptCode.Run(scriptScope.scope(), arguments);
 		}
 
+		public static Object Execute(this ScriptSource aScriptSource, ESCompilerOptions compilerOptions, ScriptScope scriptScope, Object[] arguments, out TimeSpan durationToRun) {
+			var compiledCode = aScriptSource.Compile(compilerOptions);
+			var essenceScriptCode = compiledCode.essenceScriptCode();
+			if (essenceScriptCode == null) {
+				durationToRun = TimeSpan.Zero;
+				return null;
+			}
+			var value = essenceScriptCode.Run(scriptScope.scope(), arguments);
+			durationToRun = essenceScriptCode.DurationToRun;
+			return value;
+		}
+
 		public static Object Execute(this ScriptSource aScriptSource, ESCompilerOptions compilerOptions, ErrorListener errorListener, ScriptScope scriptScope, Object[] arguments) {
 			var compiledCode = aScriptSource.Compile(compilerOptions, errorListener);
 			var essenceScriptCode = compiledCode.essenceScriptCode();
 			if (essenceScriptCode == null) return null;
 			return essenceScriptCode.Run(scriptScope.scope(), arguments);
+		}
+
+		public static Object Execute(this ScriptSource aScriptSource, ESCompilerOptions compilerOptions, ErrorListener errorListener, ScriptScope scriptScope, Object[] arguments, out TimeSpan durationToRun) {
+			var compiledCode = aScriptSource.Compile(compilerOptions, errorListener);
+			var essenceScriptCode = compiledCode.essenceScriptCode();
+			if (essenceScriptCode == null) {
+				durationToRun = TimeSpan.Zero;
+				return null;
+			}
+			var value = essenceScriptCode.Run(scriptScope.scope(), arguments);
+			durationToRun = essenceScriptCode.DurationToRun;
+			return value;
 		}
 
 		private static ESScriptCode essenceScriptCode(this CompiledCode aCompiledCode) {

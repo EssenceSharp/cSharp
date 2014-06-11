@@ -63,7 +63,7 @@ namespace EssenceSharp.ClientServices {
 		public EssenceSharpContext(ScriptDomainManager manager, Dictionary<String,  Object> optionsDictionary) : base(manager) {
 			kernel = new ESKernel();
 			bindToLanguageOptions(optionsDictionary ?? new  Dictionary<String,  Object>());
-			librariesLoaded = Kernel.ensureStartUp(options.LibraryNames, options.LoadLibrariesVerbosely, options.ReportLibraryLoadTime);
+			librariesLoaded = Kernel.ensureStartUp(options.LibraryNames, options.LoadLibrariesVerbosely, options.ReportTimings);
 		}
  
 		protected void bindToLanguageOptions(Dictionary<String,  Object> protoOptions) {

@@ -496,7 +496,7 @@ namespace EssenceSharp.Runtime {
 			return new ESClass(newMetaclass());
 		}
 
-		internal ESClass newClass(Type hostSystemType) {
+		public ESClass newClass(Type hostSystemType) {
 			return new ESClass(newMetaclass(), hostSystemType);
 		}
 
@@ -1500,7 +1500,6 @@ namespace EssenceSharp.Runtime {
 				} else {
 					hostSystemClass = newClass(hostSystemType);
 					hostSystemClass.setEnvironment(environment);
-					hostSystemClass.bindToHostSystemSuperclasses();
 				}
 			} else {
 				var thisValue = binding.Value.Value;
@@ -1512,7 +1511,6 @@ namespace EssenceSharp.Runtime {
 					} else {
 						hostSystemClass = newClass(hostSystemType);
 						hostSystemClass.setEnvironment(environment);
-						hostSystemClass.bindToHostSystemSuperclasses();
 					}
 				}
 			}
@@ -1811,7 +1809,25 @@ namespace EssenceSharp.Runtime {
 			if (method == null) return throwMessageNotUnderstood(esClass, newMessage(SymbolRegistry.DoesNotUnderstandSelector, new Object[]{a1}));
 			return method.value1(receiver, a1);
 		}
-		
+
+		public static Object throwInvalidFunctionCallException(
+					String messageText, 
+					long expectedArgCount, 
+					long actualArgCount, 
+					Type expectedFunctionType, 
+					Type actualFunctionType, 
+					Exception specificException) {
+
+			throw new InvalidFunctionCallException(
+					messageText, 
+					expectedArgCount, 
+					actualArgCount, 
+					expectedFunctionType, 
+					actualFunctionType, 
+					specificException);
+
+		}
+
 		public Object throwInvalidArgumentException(ESBehavior esClass, String opName, String parameterName, Object argValue) {
 			var sb = new StringBuilder();
 			sb.AppendLine("Invalid argument value: ");

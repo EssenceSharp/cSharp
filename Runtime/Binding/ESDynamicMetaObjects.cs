@@ -50,11 +50,8 @@ namespace EssenceSharp.Runtime.Binding {
 
 		protected ESBehavior valueClass = null;
 
-		public ESDynamicMetaObject(Expression expression, BindingRestrictions restrictions) : base(expression, restrictions) {
-		}
-
-		public ESDynamicMetaObject(Expression expression, BindingRestrictions restrictions, Object value) : base(expression, restrictions, value) {
-			if (value != null) valueClass = ((ESObject)value).Class;
+		public ESDynamicMetaObject(Expression expression, BindingRestrictions restrictions, Object value, ESBehavior valueClass) : base(expression, restrictions, value) {
+			this.valueClass = valueClass;
 		}
 
 		public ESBehavior ValueClass {
@@ -107,7 +104,7 @@ namespace EssenceSharp.Runtime.Binding {
 						break;
 				}
 				if (selector == null) {
-					messageSendMO = metaObjectToSendDoesNotUnderstand(esClass, kernel.symbolFor(messageName), args);
+					messageSendMO = metaObjectToSendDoesNotUnderstand(kernel.symbolFor(messageName), args);
 					return false;
 				} else {
 					method = esClass.compiledMethodAt(selector);
@@ -125,11 +122,16 @@ namespace EssenceSharp.Runtime.Binding {
 			}
 		}
 
-		public DynamicMetaObject metaObjectToSendDoesNotUnderstand(ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] args) {
+		public DynamicMetaObject metaObjectToSendDoesNotUnderstand(ESSymbol selector, DynamicMetaObject[] args) {
+			return ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Expression, ValueClass, selector, args).asDynamicMetaObject(DefaultBindingRestrictions, Value);
 			return new DynamicMetaObject(
-					ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Expression, esClass, selector, args), 
+					ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Expression, ValueClass, selector, args), 
 					DefaultBindingRestrictions,
 					Value);
+		}
+
+		public DynamicMetaObject metaObjectToThrowInvalidFunctionCallException(ESSymbol selector, DynamicMetaObject[] args, String messageText, Type expectedFunctionType, Type actualFunctionType) {
+			return ExpressionTreeGuru.expressionToThrowInvalidFunctionCallException(Expression, ValueClass, selector, messageText, (long)args.Length, expectedFunctionType, actualFunctionType).asDynamicMetaObject(DefaultBindingRestrictions, Value);
 		}
 
 		public override DynamicMetaObject BindGetMember(GetMemberBinder binder) {
@@ -215,7 +217,7 @@ namespace EssenceSharp.Runtime.Binding {
 				var esClass = ValueClass;
 				var kernel = esClass.Kernel;
 				var selector = kernel.symbolFor("??");
-				messageSendMO = metaObjectToSendDoesNotUnderstand(esClass, selector, DynamicBindingGuru.emptyArgArray);
+				messageSendMO = metaObjectToSendDoesNotUnderstand(selector, DynamicBindingGuru.emptyArgArray);
 			}
 			return binder.FallbackUnaryOperation(this, messageSendMO);
 
@@ -344,7 +346,7 @@ namespace EssenceSharp.Runtime.Binding {
 			}
 
 			if (messageSendMO == null) {
-				messageSendMO = metaObjectToSendDoesNotUnderstand(esClass, selector, DynamicBindingGuru.argArrayFor(arg));
+				messageSendMO = metaObjectToSendDoesNotUnderstand(selector, DynamicBindingGuru.argArrayFor(arg));
 			}
 
 			return binder.FallbackBinaryOperation(this, arg, messageSendMO);
@@ -362,7 +364,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var esClass = ValueClass;
 			var kernel = esClass.Kernel;
 			long numArgs = args.Length;
-			return binder.FallbackInvoke(this, args, metaObjectToSendDoesNotUnderstand(esClass, kernel.selectorToEvaluatBlockWithNumArgs(numArgs), args));
+			return binder.FallbackInvoke(this, args, metaObjectToSendDoesNotUnderstand(kernel.selectorToEvaluatBlockWithNumArgs(numArgs), args));
 		}
 
 		public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args) {
@@ -387,7 +389,7 @@ namespace EssenceSharp.Runtime.Binding {
 					selector = kernel.selectorToEvaluatBlockWithNumArgs(numArgs);
 					break;
 			}
-			return binder.FallbackCreateInstance(this, args, metaObjectToSendDoesNotUnderstand(esClass, selector, args));
+			return binder.FallbackCreateInstance(this, args, metaObjectToSendDoesNotUnderstand(selector, args));
 		}
 
 		public override IEnumerable<String> GetDynamicMemberNames() {
@@ -409,9 +411,8 @@ namespace EssenceSharp.Runtime.Binding {
 	}
 
 	public class ESBlockDynamicMetaObject : ESDynamicMetaObject {
-		public ESBlockDynamicMetaObject(Expression expression, BindingRestrictions restrictions) : base(expression, restrictions) {}
 
-		public ESBlockDynamicMetaObject(Expression expression, BindingRestrictions restrictions, object value) : base(expression, restrictions, value) {}
+		public ESBlockDynamicMetaObject(Expression expression, BindingRestrictions restrictions, object value, ESBehavior valueClass) : base(expression, restrictions, value, valueClass) {}
 
 		public override DynamicMetaObject BindInvoke(InvokeBinder binder, DynamicMetaObject[] args) {
 			var block = (ESBlock)Value;
@@ -420,7 +421,12 @@ namespace EssenceSharp.Runtime.Binding {
 			if (numArgs != block.NumArgs) {
 				var esClass = ValueClass;
 				var kernel = esClass.Kernel;
-				return metaObjectToSendDoesNotUnderstand(esClass, kernel.selectorToEvaluatBlockWithNumArgs(numArgs), args);
+				return metaObjectToThrowInvalidFunctionCallException(
+						kernel.selectorToEvaluatBlockWithNumArgs(numArgs), 
+						args, 
+						"Argument count mismatch", 
+						ESCompiledCode.blockFunctionTypeForNumArgs(block.NumArgs), 
+						ESCompiledCode.blockFunctionTypeForNumArgs(args.Length));
 			}
 			switch (block.NumArgs) {
 				case 0:
@@ -531,9 +537,8 @@ namespace EssenceSharp.Runtime.Binding {
 	}
 
 	public class ESMethodDynamicMetaObject : ESDynamicMetaObject {
-		public ESMethodDynamicMetaObject(Expression expression, BindingRestrictions restrictions) : base(expression, restrictions) {}
 
-		public ESMethodDynamicMetaObject(Expression expression, BindingRestrictions restrictions, object value) : base(expression, restrictions, value) {}
+		public ESMethodDynamicMetaObject(Expression expression, BindingRestrictions restrictions, object value, ESBehavior valueClass) : base(expression, restrictions, value, valueClass) {}
 
 		public override DynamicMetaObject BindInvoke(InvokeBinder binder, DynamicMetaObject[] args) {
 			var method = (ESMethod)Value;
@@ -542,7 +547,12 @@ namespace EssenceSharp.Runtime.Binding {
 			if (numArgs - method.NumArgs != 1) {
 				var esClass = ValueClass;
 				var kernel = esClass.Kernel;
-				return metaObjectToSendDoesNotUnderstand(esClass, kernel.selectorToEvaluatMethodWithNumArgs(numArgs), args);
+				return metaObjectToThrowInvalidFunctionCallException(
+						kernel.selectorToEvaluatMethodWithNumArgs(Math.Max(0, numArgs - 1)), 
+						args, 
+						"Argument count mismatch", 
+						ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs), 
+						ESCompiledCode.blockFunctionTypeForNumArgs(args.Length));
 			}
 			switch (method.NumArgs) {
 				case 1:
@@ -652,9 +662,8 @@ namespace EssenceSharp.Runtime.Binding {
 	}
 
 	public class ESBehaviorDynamicMetaObject : ESDynamicMetaObject {
-		public ESBehaviorDynamicMetaObject(Expression expression, BindingRestrictions restrictions) : base(expression, restrictions) {}
 
-		public ESBehaviorDynamicMetaObject(Expression expression, BindingRestrictions restrictions, object value) : base(expression, restrictions, value) {}
+		public ESBehaviorDynamicMetaObject(Expression expression, BindingRestrictions restrictions, object value, ESBehavior valueClass) : base(expression, restrictions, value, valueClass) {}
 
 		public override DynamicMetaObject BindCreateInstance(CreateInstanceBinder binder, DynamicMetaObject[] args) {
 			DynamicMetaObject messageSendMO;
@@ -667,14 +676,15 @@ namespace EssenceSharp.Runtime.Binding {
 					selector = "new";
 					break;
 				case 1: 
-					selector = "new:";
+					if (createMetaObjectToSendMessage("new:", args, out messageSendMO)) return messageSendMO;
+					selector = "value:";
 					break;
 				default:
 					selector = kernel.selectorToEvaluatBlockWithNumArgs(numArgs).PrimitiveValue;
 					break;
 			}
 			if (createMetaObjectToSendMessage(selector, args, out messageSendMO)) return messageSendMO;
-			return binder.FallbackCreateInstance(this, args, metaObjectToSendDoesNotUnderstand(esClass, kernel.symbolFor(selector), args));
+			return binder.FallbackCreateInstance(this, args, metaObjectToSendDoesNotUnderstand(kernel.symbolFor(selector), args));
 		}
 
 	}

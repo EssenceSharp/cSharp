@@ -707,7 +707,7 @@ namespace EssenceSharp.Runtime {
 		#region Foreign language interoperability
 
 		public virtual DynamicMetaObject GetMetaObject(Expression parameter) {
-			return new ESDynamicMetaObject(parameter, BindingRestrictions.Empty, this);
+			return new ESDynamicMetaObject(parameter, BindingRestrictions.Empty, this, Class);
 		}
 		
 		public Object Clone() {

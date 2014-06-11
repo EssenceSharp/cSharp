@@ -52,6 +52,128 @@ namespace EssenceSharp.Runtime {
 
 		#region Static variables and methods
 
+		#region InstanceArchitecture Constraints
+
+		public static bool instancesArchitectureForbidsNamedSlots(ObjectStateArchitecture instanceArchitecture) {
+			switch (instanceArchitecture) {
+				case ObjectStateArchitecture.Stateless:
+				case ObjectStateArchitecture.Association:
+				case ObjectStateArchitecture.BindingReference:
+				case ObjectStateArchitecture.Message:
+				case ObjectStateArchitecture.Block:
+				case ObjectStateArchitecture.Method:
+				case ObjectStateArchitecture.HostSystemObject:
+					return true;
+				default:
+					return false;
+			}
+		}
+
+		public static bool isValidInheritanceRelationship(ObjectStateArchitecture inheritingInstanceArchitecture, ObjectStateArchitecture superclassInstanceArchitecture) {
+			switch (inheritingInstanceArchitecture) {
+
+				case ObjectStateArchitecture.Abstract:
+					return true;
+
+				case ObjectStateArchitecture.Stateless:
+					switch (superclassInstanceArchitecture) {
+						case ObjectStateArchitecture.Abstract:
+						case ObjectStateArchitecture.Stateless:
+							return true;
+						default:
+							return false;
+					}
+
+				case ObjectStateArchitecture.NamedSlots:
+					switch (superclassInstanceArchitecture) {
+						case ObjectStateArchitecture.Abstract:
+						case ObjectStateArchitecture.Stateless:
+						case ObjectStateArchitecture.NamedSlots:
+							return true;
+						default:
+							return false;
+					}
+
+				case ObjectStateArchitecture.IdentityDictionary:
+				case ObjectStateArchitecture.Dictionary:
+				case ObjectStateArchitecture.Namespace:
+				case ObjectStateArchitecture.Behavior:
+				case ObjectStateArchitecture.IndexedObjectSlots:
+				case ObjectStateArchitecture.IndexedByteSlots:
+				case ObjectStateArchitecture.IndexedCharSlots:
+				case ObjectStateArchitecture.IndexedHalfWordSlots:
+				case ObjectStateArchitecture.IndexedWordSlots:
+				case ObjectStateArchitecture.IndexedLongWordSlots:
+				case ObjectStateArchitecture.IndexedSinglePrecisionSlots:
+				case ObjectStateArchitecture.IndexedDoublePrecisionSlots:
+				case ObjectStateArchitecture.IndexedQuadPrecisionSlots:
+				case ObjectStateArchitecture.Symbol:
+				case ObjectStateArchitecture.Pathname:
+					switch (superclassInstanceArchitecture) {
+						case ObjectStateArchitecture.Abstract:
+						case ObjectStateArchitecture.Stateless:
+						case ObjectStateArchitecture.NamedSlots:
+							return true;
+						default:
+							return inheritingInstanceArchitecture == superclassInstanceArchitecture;
+					}
+
+				case ObjectStateArchitecture.Class:
+				case ObjectStateArchitecture.Metaclass:
+					switch (superclassInstanceArchitecture) {
+						case ObjectStateArchitecture.Behavior:
+							return true;
+						default:
+							return inheritingInstanceArchitecture == superclassInstanceArchitecture;
+					}
+
+				case ObjectStateArchitecture.Association:
+				case ObjectStateArchitecture.BindingReference:
+				case ObjectStateArchitecture.Message:
+				case ObjectStateArchitecture.Block:
+				case ObjectStateArchitecture.Method:
+					switch (superclassInstanceArchitecture) {
+						case ObjectStateArchitecture.Abstract:
+						case ObjectStateArchitecture.Stateless:
+							return true;
+						default:
+							return inheritingInstanceArchitecture == superclassInstanceArchitecture;
+					}
+
+				case ObjectStateArchitecture.Nil:
+				case ObjectStateArchitecture.False:
+				case ObjectStateArchitecture.True:
+				case ObjectStateArchitecture.Char:
+				case ObjectStateArchitecture.SmallInteger:
+				case ObjectStateArchitecture.LargeInteger:
+				case ObjectStateArchitecture.SinglePrecision:
+				case ObjectStateArchitecture.DoublePrecision:
+				case ObjectStateArchitecture.QuadPrecision:
+					switch (superclassInstanceArchitecture) {
+						case ObjectStateArchitecture.Abstract:
+						case ObjectStateArchitecture.HostSystemObject:
+							return true;
+						default:
+							return inheritingInstanceArchitecture == superclassInstanceArchitecture;
+					}
+
+				case ObjectStateArchitecture.HostSystemObject:
+					switch (superclassInstanceArchitecture) {
+						case ObjectStateArchitecture.Abstract:
+						case ObjectStateArchitecture.HostSystemObject:
+							return true;
+						default:
+							return false;
+					}
+
+				default:
+					return false;
+
+			}
+		}
+
+		#endregion
+
 		#region Host System Reflection
 
 		public static readonly BindingFlags						instanceCreationBindingFlags		= BindingFlags.Instance | BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.NonPublic;
@@ -159,6 +281,7 @@ namespace EssenceSharp.Runtime {
 		protected Type									instanceType				= null;
 		protected bool									isInstanceTypeLocked			= false;
 		protected ObjectStateArchitecture 						instanceArchitecture			= ObjectStateArchitecture.NamedSlots;
+		protected bool									constraintsMustBeSatisfied		= false;
 		protected bool									isInstanceArchitectureLocked		= false;
 
 		protected ESSymbol[]								instanceVariableNames			= emptyInstanceVariableNames;
@@ -237,16 +360,6 @@ namespace EssenceSharp.Runtime {
 			return new Dictionary<long, IDictionary<String, ESMethod>>();
 		}
 
-		/*
-		protected IDictionary<ESSymbol, ESMethod> MethodDictionary {
-			get {return methodDictionary;}
-		}
-
-		protected IDictionary<long, Dictionary<String, ESMethod>> HostMethodDictionary {
-			get {return hostMethodDictionary;}
-		}
-		*/
-
 		protected override String AnonymousName {
 			get {return "AnAnonymousBehavior";}
 		}
@@ -259,38 +372,49 @@ namespace EssenceSharp.Runtime {
 		public virtual ObjectStateArchitecture InstanceArchitecture {
 			get {return instanceArchitecture;}
 			set {	if (instanceArchitecture == value) return;
-				if (isInstanceArchitectureLocked) throw new PrimitiveFailException("Instance architecture cannot be changed after a class has created instances.");
+				if (isInstanceArchitectureLocked) throw new PrimitiveFailException("A Behavior's instance architecture cannot be changed after it has created instances.");
+				if (constraintsMustBeSatisfied && !canInheritFrom(value, Superclass)) throwIncompatibleSuperclassException(value, Superclass);
 				instanceArchitecture = value;
-				invalidateInstanceType(); }
-		}
-
-		protected void setInstanceType(Type aType) {
-			if (isInstanceTypeLocked)  throw new PrimitiveFailException("The instance type of classes representing open generic types cannot be changed.");
-			if (instanceType != null) unbindFromInstanceType();
-			instanceType = aType;
-			if (instanceType != null) bindToInstanceType();
-		}
-
-		protected virtual void unbindFromInstanceType() {
-			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject && instanceType.IsGenericType) {
-				methodDictionary = newMethodDictionary();
-				hostSystemMethodDictionary = newHostSystemMethodDictionary();
+				isBoundToHostSystemNamespace = instanceArchitecture == ObjectStateArchitecture.HostSystemObject;
+				invalidateInstanceType(); 
 			}
 		}
 
-		protected virtual void bindToInstanceType() {
-			assembly = instanceType.Assembly;
-			String namespacePrefix = instanceType.Namespace;
-			if (namespacePrefix != HostSystemNamespace) {
-				hostSystemNamespace = namespacePrefix;
+		public bool InstancesCanHaveNamedSlots {
+			get {
+				switch (InstanceArchitecture) {
+					case ObjectStateArchitecture.Stateless:
+					case ObjectStateArchitecture.Association:
+					case ObjectStateArchitecture.BindingReference:
+					case ObjectStateArchitecture.Message:
+					case ObjectStateArchitecture.Block:
+					case ObjectStateArchitecture.Method:
+					case ObjectStateArchitecture.HostSystemObject:
+						return false;
+					case ObjectStateArchitecture.Abstract:
+						return superclass ==  null ? false : superclass.SubclassInstancesCanHaveNamedSlots;
+					default:
+						return true;
+				}
 			}
-			String typeName = instanceType.Name;
-			if (typeName != HostSystemName) {
-				hostSystemName = typeName;
-			}
-			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject && instanceType.IsGenericTypeDefinition) {
-				isInstanceTypeLocked = true;
-				isInstanceArchitectureLocked = true;
+		}
+
+		public bool SubclassInstancesCanHaveNamedSlots {
+			get {
+				switch (InstanceArchitecture) {
+					case ObjectStateArchitecture.Association:
+					case ObjectStateArchitecture.BindingReference:
+					case ObjectStateArchitecture.Message:
+					case ObjectStateArchitecture.Block:
+					case ObjectStateArchitecture.Method:
+					case ObjectStateArchitecture.HostSystemObject:
+						return false;
+					case ObjectStateArchitecture.Abstract:
+					case ObjectStateArchitecture.Stateless:
+						return superclass == null ? true : superclass.SubclassInstancesCanHaveNamedSlots;
+					default:
+						return true;
+				}
 			}
 		}
 
@@ -302,11 +426,52 @@ namespace EssenceSharp.Runtime {
 			get {	if (instanceType == null) setInstanceType(getInstanceType());
 				return instanceType;}
 			set {	if (instanceType == value) return;
-				if (value != null && !value.isEssenceSharpType() && instanceArchitecture != ObjectStateArchitecture.HostSystemObject) {
-					InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
-				}
 				setInstanceType(value);}
 		}
+
+		protected void setInstanceType(Type newInstanceType) {
+			if (isInstanceTypeLocked)  throw new PrimitiveFailException("The instance type of classes representing open generic types cannot be changed.");
+			if (instanceType == newInstanceType) return;
+			if (instanceType != null) unbindFromInstanceType();
+			instanceType = newInstanceType;
+			if (instanceType != null) bindToInstanceType();
+			incrementVersion();
+		}
+
+		protected virtual void unbindFromInstanceType() {
+			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject && instanceType.IsGenericType) {
+				methodDictionary = newMethodDictionary();
+				hostSystemMethodDictionary = newHostSystemMethodDictionary();
+			}
+		}
+
+		protected void basicBindToInstanceType() {
+			if (instanceType == null) return;
+			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
+				var namespacePrefix = instanceType.Namespace;
+				if (namespacePrefix != HostSystemNamespace) {
+					hostSystemNamespace = namespacePrefix;
+				}
+				var typeName = instanceType.Name;
+				if (typeName != HostSystemName) {
+					hostSystemName = typeName;
+				}
+			}
+		}
+
+		protected virtual void bindToInstanceType() {
+			isBoundToHostSystemNamespace = instanceArchitecture == ObjectStateArchitecture.HostSystemObject;
+			if (instanceType == null) return;
+			assembly = instanceType.Assembly;
+			if (!instanceType.isEssenceSharpType()) InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
+			basicBindToInstanceType();
+		}
+
+		protected void invalidateInstanceType() {
+			setInstanceType(getInstanceType());
+		}
+
+		#region getInstanceType()
 
 		protected Type getInstanceType() {
 			switch (InstanceArchitecture) {
@@ -390,6 +555,8 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
+		#endregion
+
 		public Type typeFromQualifiedName(String qualifiedTypeName, bool raiseExceptionOnErrorOrNotFound) {
 			Type type = null;
 			var assembly = Assembly;
@@ -398,17 +565,6 @@ namespace EssenceSharp.Runtime {
 				if (type != null) return type;
 			}
 			return Type.GetType(qualifiedTypeName, raiseExceptionOnErrorOrNotFound);
-		}
-
-		protected void invalidateInstanceType() {
-			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
-				instanceType = null;
-				isBoundToHostSystemNamespace = true;
-				incrementVersion();
-			} else {
-				setInstanceType(getInstanceType());
-				isBoundToHostSystemNamespace = false;
-			}
 		}
 
 		public ESSymbol nameInEnvironmentFor(Type hostSystemType) {
@@ -425,6 +581,11 @@ namespace EssenceSharp.Runtime {
 			set {	if (assembly == value) return;
 				assembly = value;
 				if (instanceType != null && assembly != instanceType.Assembly) invalidateInstanceType();}
+		}
+
+		public void validate() {
+			constraintsMustBeSatisfied = true;
+			assertValidInheritanceStructure(Superclass);
 		}
 
 		#endregion
@@ -471,39 +632,140 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Named instance variables
+		#region Inheritance hierarchy
 
-		public bool InstancesCanHaveNamedSlots {
-			get {
-				switch (InstanceArchitecture) {
+		protected void throwIncompatibleSuperclassException(ObjectStateArchitecture instanceArchitecture, ESBehavior incompatibleSuperclass) {
+			throw new PrimInvalidOperandException("A class whose instance architecture is " + instanceArchitecture + " cannot have a superclass whose instance architecture is " + incompatibleSuperclass.InstanceArchitecture + ".");
+		}
+
+		protected void throwIncompatibleSuperclassException(ESBehavior incompatibleSuperclass) {
+			throwIncompatibleSuperclassException(InstanceArchitecture, incompatibleSuperclass);
+		}
+
+		public void assertValidInheritanceStructure(ESBehavior superclass) {
+			if (!constraintsMustBeSatisfied) return;
+			if (!canInheritFrom(superclass)) {
+				if (isInstanceArchitectureLocked) throwIncompatibleSuperclassException(superclass);
+				switch (superclass.InstanceArchitecture) {
 					case ObjectStateArchitecture.Abstract:
 					case ObjectStateArchitecture.Stateless:
-					case ObjectStateArchitecture.Association:
-					case ObjectStateArchitecture.BindingReference:
-					case ObjectStateArchitecture.Message:
-					case ObjectStateArchitecture.Block:
-					case ObjectStateArchitecture.Method:
-						return false;
+						InstanceArchitecture = ObjectStateArchitecture.NamedSlots;
+						break;
 					default:
-						return true;
-				}
+						InstanceArchitecture = superclass.InstanceArchitecture;
+						break;
+				}			
 			}
 		}
 
-		public bool SubclassInstancesCanHaveNamedSlots {
-			get {
-				switch (InstanceArchitecture) {
-					case ObjectStateArchitecture.Association:
-					case ObjectStateArchitecture.BindingReference:
-					case ObjectStateArchitecture.Message:
-					case ObjectStateArchitecture.Block:
-					case ObjectStateArchitecture.Method:
-						return false;
-					default:
-						return superclass == null ? true : superclass.SubclassInstancesCanHaveNamedSlots;
+ 		public bool HasSuperclass {
+			get {return superclass != null;}
+		}
+		
+		public ESBehavior Superclass {
+			get {return superclass;}
+			set {setSuperclass(value);}
+		}
+
+		protected bool canInheritFrom(ObjectStateArchitecture instanceArchitecture, ESBehavior aSuperclass) {
+			if (aSuperclass == null) return true;
+			if (!isValidInheritanceRelationship(instanceArchitecture, aSuperclass.InstanceArchitecture)) return false;
+			return canInheritFrom(instanceArchitecture, aSuperclass.Superclass);
+		}
+
+		public bool canInheritFrom(ESBehavior aSuperclass) {
+			return canInheritFrom(InstanceArchitecture, aSuperclass);
+		}
+
+		protected void setSuperclass(ESBehavior newSuperclass) {
+			if (superclass == newSuperclass) return;
+			if (newSuperclass != null) {
+				assertValidInheritanceStructure(newSuperclass);
+				var wouldCreateCycle = newSuperclass.includesBehavior(this);
+				if (wouldCreateCycle) {
+					throw new PrimInvalidOperandException("A superclass must not also inherit from a subclass");
 				}
 			}
+			unbindFromSuperclass();
+			superclass = newSuperclass;
+			bindToSuperclass();		
 		}
+
+		protected virtual void unbindFromSuperclass() {
+			if (superclass != null) superclass.basicRemoveSubclass(this);
+		}
+
+		protected virtual void bindToSuperclass() {
+			if (superclass != null) superclass.basicAddSubclass(this);
+			invalidateSuperclass();
+		}
+
+		protected virtual void invalidateSuperclass() {
+			incrementVersion();
+		}
+
+		protected void basicAddSubclass(ESBehavior subclass) {
+			if (subclass == null) return;
+			subclasses.Add(subclass);
+		}
+
+		protected void basicRemoveSubclass(ESBehavior subclass) {
+			if (subclass == null) return;
+			subclasses.Remove(subclass);
+		}
+
+		public void addSubclass(ESBehavior subclass) {
+			if (subclass == null) return;
+			var wouldCreateCycle = this.includesBehavior(subclass);
+			if (wouldCreateCycle) {
+				throw new PrimInvalidOperandException("A superclass must not also inherit from a subclass");
+			}
+			int prevSize = subclasses.Count;
+			subclasses.Add(subclass);
+			subclass.Superclass = this;
+		}
+
+		public void removeSubclass(ESBehavior subclass) {
+			if (subclass == null) return;
+			if (subclasses.Remove(subclass)) subclass.Superclass = null;
+		}
+
+		internal void bindToHostSystemSuperclasses() {
+			if (superclass != null || InstanceArchitecture != ObjectStateArchitecture.HostSystemObject) return;
+			Type systemType = InstanceType;
+			if (systemType == null) return;
+			Type systemSupertype;
+			if (systemType.IsGenericTypeDefinition || !systemType.IsGenericType) {
+				systemSupertype = systemType.BaseType;
+			} else {
+				systemSupertype = systemType.GetGenericTypeDefinition();
+			}
+			if (systemSupertype == null) return;
+			var newSuperclass = kernel.classForHostSystemType(systemSupertype);
+			Superclass = newSuperclass;
+		}
+
+		public bool includesBehavior(ESBehavior aBehavior) {
+			// The receiver may either be a subclass of <aBehavior>, or it may be identical to <aBehavior>
+			if (ReferenceEquals(this, aBehavior)) return true;
+			ESBehavior mySuperclass = Superclass;
+			return mySuperclass == null ?
+				false :
+				mySuperclass.includesBehavior(aBehavior);
+		}
+		
+		public bool inheritsFrom(ESBehavior aBehavior) {
+			// The receiver must be a SUBCLASS of <aBehavior>
+			if (aBehavior == null) return true;
+			ESBehavior mySuperclass = Superclass;
+			return mySuperclass == null ?
+				false :
+				mySuperclass.includesBehavior(aBehavior);
+		}
+		
+		#endregion
+
+		#region Named instance variables
 
 		public ESSymbol[] InstanceVariableNames {
 			get {return instanceVariableNames;}
@@ -606,112 +868,6 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		#endregion
-
-		#region Inheritance hierarchy
-
-		public bool HasSuperclass {
-			get {return superclass != null;}
-		}
-		
-		public ESBehavior Superclass {
-			get {return superclass;}
-			set {	if (superclass == value) return;
-				if (value != null) {
-					if (InstanceArchitecture != ObjectStateArchitecture.Abstract && InstanceArchitecture != ObjectStateArchitecture.Stateless) {
-						var myInstancesCanHaveInstanceVars = InstancesCanHaveNamedSlots;
-						var superInstancesCanHaveInstanceVars = value.SubclassInstancesCanHaveNamedSlots;
-						if (myInstancesCanHaveInstanceVars != superInstancesCanHaveInstanceVars) {
-							if (isInstanceArchitectureLocked) {
-								throw new PrimInvalidOperandException("A class whose instance architecture is " + InstanceArchitecture + " cannot have a superclass whose instances can" + (superInstancesCanHaveInstanceVars ? " " :" not ") + "have instance variables.");
-							}
-							InstanceArchitecture = superInstancesCanHaveInstanceVars ? ObjectStateArchitecture.NamedSlots : value.InstanceArchitecture;
-						}
-					}
-					var wouldCreateCycle = value.includesBehavior(this);
-					if (wouldCreateCycle) {
-						throw new PrimInvalidOperandException("A superclass must not also inherit from a subclass");
-					}
-				}
-				unbindFromSuperclass();
-				superclass = value;
-				bindToSuperclass();
-			}
-		}
-
-		protected virtual void unbindFromSuperclass() {
-			if (superclass != null) superclass.basicRemoveSubclass(this);
-		}
-
-		protected virtual void bindToSuperclass() {
-			if (superclass != null) superclass.basicAddSubclass(this);
-			invalidateSuperclass();
-		}
-
-		protected virtual void invalidateSuperclass() {
-			incrementVersion();
-		}
-
-		protected void basicAddSubclass(ESBehavior subclass) {
-			if (subclass == null) return;
-			subclasses.Add(subclass);
-		}
-
-		protected void basicRemoveSubclass(ESBehavior subclass) {
-			if (subclass == null) return;
-			subclasses.Remove(subclass);
-		}
-
-		public void addSubclass(ESBehavior subclass) {
-			if (subclass == null) return;
-			var wouldCreateCycle = this.includesBehavior(subclass);
-			if (wouldCreateCycle) {
-				throw new PrimInvalidOperandException("A superclass must not also inherit from a subclass");
-			}
-			int prevSize = subclasses.Count;
-			subclasses.Add(subclass);
-			subclass.Superclass = this;
-		}
-
-		public void removeSubclass(ESBehavior subclass) {
-			if (subclass == null) return;
-			if (subclasses.Remove(subclass)) subclass.Superclass = null;
-		}
-
-		internal void bindToHostSystemSuperclasses() {
-			if (superclass != null || InstanceArchitecture != ObjectStateArchitecture.HostSystemObject) return;
-			Type systemType = InstanceType;
-			if (systemType == null) return;
-			Type systemSupertype;
-			if (systemType.IsGenericTypeDefinition || !systemType.IsGenericType) {
-				systemSupertype = systemType.BaseType;
-			} else {
-				systemSupertype = systemType.GetGenericTypeDefinition();
-			}
-			if (systemSupertype == null) return;
-			var newSuperclass = kernel.classForHostSystemType(systemSupertype);
-			Superclass = newSuperclass;
-			newSuperclass.bindToHostSystemSuperclasses();
-		}
-
-		public bool includesBehavior(ESBehavior aBehavior) {
-			// The receiver may either be a subclass of <aBehavior>, or it may be identical to <aBehavior>
-			if (ReferenceEquals(this, aBehavior)) return true;
-			ESBehavior mySuperclass = Superclass;
-			return mySuperclass == null ?
-				false :
-				mySuperclass.includesBehavior(aBehavior);
-		}
-		
-		public bool inheritsFrom(ESBehavior aBehavior) {
-			// The receiver must be a SUBCLASS of <aBehavior>
-			if (aBehavior == null) return true;
-			ESBehavior mySuperclass = Superclass;
-			return mySuperclass == null ?
-				false :
-				mySuperclass.includesBehavior(aBehavior);
-		}
-		
 		#endregion
 		
 		#region Compiled Methods -- Smalltalk Protocol
@@ -1073,7 +1229,7 @@ namespace EssenceSharp.Runtime {
 
 				case ObjectStateArchitecture.HostSystemObject:
 					Type hostType = InstanceType;
-					if (hostType == null) throw new PrimitiveFailException("Named host type not resident.");
+					if (hostType == null) throw new PrimitiveFailException("Named host type is not resolvable: " + QualifiedHostSystemName);
 					return newInstanceOf(hostType, new object[]{size});
 					
 				case ObjectStateArchitecture.Abstract:
@@ -1291,7 +1447,7 @@ namespace EssenceSharp.Runtime {
 		#endregion
 
 		public override DynamicMetaObject GetMetaObject(Expression parameter) {
-			return new ESBehaviorDynamicMetaObject(parameter, BindingRestrictions.Empty, this);
+			return new ESBehaviorDynamicMetaObject(parameter, BindingRestrictions.Empty, this, Class);
 		}
 
 		public override T valueBy<T>(Operation<T> operation) {
@@ -1560,6 +1716,7 @@ namespace EssenceSharp.Runtime {
 			setName(nameInEnvironmentFor(hostSystemType));
 			setInstanceType(hostSystemType);
 			isBoundToHostSystemNamespace = true;
+			bindToHostSystemSuperclasses();
 		}
 			
 		public ESClass(ESBehavior metaClass, ESSymbol name) : base(metaClass) {
@@ -1619,7 +1776,12 @@ namespace EssenceSharp.Runtime {
 		protected override void bindToInstanceType() {
 			base.bindToInstanceType();
 			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
+				if (instanceType.IsGenericTypeDefinition) {
+					isInstanceTypeLocked = true;
+					isInstanceArchitectureLocked = true;
+				}
 				kernel.bindHostSystemTypeTo(instanceType, this);
+				bindToHostSystemSuperclasses();
 			}
 		}
 
@@ -1666,7 +1828,8 @@ namespace EssenceSharp.Runtime {
 			get {return ObjectStateArchitecture.Class;}
 			set {	if (instanceArchitecture == value) return;
 				instanceArchitecture = ObjectStateArchitecture.Class;
-				invalidateInstanceType(); }
+				invalidateInstanceType(); 
+			}
 		}
 		
 		public override bool IsMetaclass {

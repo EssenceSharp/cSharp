@@ -59,7 +59,7 @@ namespace EssenceSharp.ClientServices {
 		protected IDictionary<String, String>	assemblyNameBindings;
 		protected IDictionary<String, String>	assemblyPathBindings;
 		protected bool				loadLibrariesVerbosely		= false;
-		protected bool				reportLibraryLoadTime		= false;
+		protected bool				reportTimings			= false;
 
 		protected virtual void transferValuesToOptionsDictionary() {
 			options[EssenceSharpOptions.exceptionDetailKey]			= ProvideExceptionDetail;
@@ -69,7 +69,7 @@ namespace EssenceSharp.ClientServices {
 			options[EssenceSharpOptions.compilationThresholdKey]		= CompilationThreshold;
 			options[EssenceSharpOptions.essenceSharpPathKey]		= EssenceSharpPath;
 			options[EssenceSharpOptions.loadLibrariesVerboselyKey]		= loadLibrariesVerbosely;
-			options[EssenceSharpOptions.reportLibraryLoadTimeKey]		= reportLibraryLoadTime;
+			options[EssenceSharpOptions.reportTimingsKey]			= reportTimings;
 
 			var pathNamesList = new List<String>();
 			foreach (var path in librarySearchPaths)			pathNamesList.Add(path);
@@ -190,9 +190,9 @@ namespace EssenceSharp.ClientServices {
 			set { loadLibrariesVerbosely = value;}
 		}
 
-		public bool ReportLibraryLoadTime {
-			get {return reportLibraryLoadTime;}
-			set { reportLibraryLoadTime = value;}
+		public bool ReportTimings {
+			get {return reportTimings;}
+			set { reportTimings = value;}
 		}
 		
 	}
@@ -214,7 +214,7 @@ namespace EssenceSharp.ClientServices {
 		public static readonly String	assemblyNameBindingsKey		= "AssemblyNameBindings";
 		public static readonly String	assemblyPathBindingsKey		= "AssemblyPathBindings";
 		public static readonly String	loadLibrariesVerboselyKey	= "LoadLibrariesVerbosely";
-		public static readonly String	reportLibraryLoadTimeKey	= "ReportLibraryLoadTime";
+		public static readonly String	reportTimingsKey		= "ReportTimings";
 
 		public static IDictionary<String, String> getStringMapOption(IDictionary<String, Object> options, String key) {
 
@@ -236,7 +236,7 @@ namespace EssenceSharp.ClientServices {
 		protected IDictionary<String, String>	assemblyNameBindings;
 		protected IDictionary<String, String>	assemblyPathBindings;
 		protected bool				loadLibrariesVerbosely		= false;
-		protected bool				reportLibraryLoadTime		= false;
+		protected bool				reportTimings		= false;
 
 		public EssenceSharpOptions() : base(null) {
 		}
@@ -246,7 +246,7 @@ namespace EssenceSharp.ClientServices {
 			assemblyNameBindings		= getStringMapOption(options, assemblyNameBindingsKey);
 			assemblyPathBindings		= getStringMapOption(options, assemblyPathBindingsKey);
 			loadLibrariesVerbosely		= GetOption(options, loadLibrariesVerboselyKey, false);
-			reportLibraryLoadTime		= GetOption(options, reportLibraryLoadTimeKey, false);
+			reportTimings			= GetOption(options, reportTimingsKey, false);
 
 			var pathNamesList		= GetOption(options, librarySearchPathsKey, new ReadOnlyCollection<String>(new String[0]));
 			foreach (var name in pathNamesList) librarySearchPaths.Add(name);
@@ -274,8 +274,8 @@ namespace EssenceSharp.ClientServices {
 			get {return loadLibrariesVerbosely;}
 		}
 
-		public bool ReportLibraryLoadTime {
-			get {return reportLibraryLoadTime;}
+		public bool ReportTimings {
+			get {return reportTimings;}
 		}
 
 		public void assemblyNameBindingsDo(Action<String, String> enumerator2) {
