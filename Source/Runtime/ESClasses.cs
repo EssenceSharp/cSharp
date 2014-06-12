@@ -29,6 +29,7 @@
 
 #region Using declarations
 using System;
+using System.Text;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -999,7 +1000,41 @@ namespace EssenceSharp.Runtime {
 			}
 			systemSelector = String.Intern(systemSelector);
 			ESMethod mappedMethod;
-			if (!methodDictionary.TryGetValue(essenceSelector, out mappedMethod)) return null;
+			if (!methodDictionary.TryGetValue(essenceSelector, out mappedMethod)) {
+				var methodHeaderBuilder = new StringBuilder();
+				long arity = 0;
+				switch (essenceSelector.Type) {
+					case SymbolType.Identifier:
+						methodHeaderBuilder.Append(essenceSelector.PrimitiveValue);
+						break;
+					case SymbolType.BinaryMessageSelector:
+						arity = 1;
+						methodHeaderBuilder.Append(essenceSelector.PrimitiveValue);
+						methodHeaderBuilder.Append(" a1");
+						break;
+					case SymbolType.Keyword:
+						arity = essenceSelector.NumArgs;
+						var argIndex = 1;
+						essenceSelector.keywordsDo(keyword => {methodHeaderBuilder.Append(keyword); methodHeaderBuilder.Append(": a"); methodHeaderBuilder.Append(argIndex++);});
+						break;
+					default:
+						kernel.throwInvalidArgumentException(Class, "bindMethod:toSystemSelector:", "essenceSelector", essenceSelector);
+						break;
+				}
+				var methodDeclarationBuilder = new StringBuilder();
+				methodDeclarationBuilder.AppendLine(methodHeaderBuilder.ToString());
+				methodDeclarationBuilder.AppendLine();
+				methodDeclarationBuilder.Append("        ^self doesNotUnderstand: (Message selector: #");
+				methodDeclarationBuilder.Append(essenceSelector.PrimitiveValue);
+				methodDeclarationBuilder.Append(" arguments: {");
+				for (var i = 0; i < arity; i++) {
+					methodDeclarationBuilder.Append("a");
+					methodDeclarationBuilder.Append(i + 1);
+					if (arity - 1 > 1) methodDeclarationBuilder.Append(". ");
+				}
+				methodDeclarationBuilder.AppendLine("})");
+				kernel.compileMethod(new StringReader(methodDeclarationBuilder.ToString()), this, kernel.symbolFor("error handling"), out mappedMethod);
+			}
 			long numArgs = mappedMethod.NumArgs;
 			IDictionary<String, ESMethod> hostMethodDict;
 			if (!hostSystemMethodDictionary.TryGetValue(numArgs, out hostMethodDict)) {

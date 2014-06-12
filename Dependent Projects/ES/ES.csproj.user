@@ -13,4 +13,7 @@
   <PropertyGroup>
     <EnableSecurityDebugging>false</EnableSecurityDebugging>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.35.Debug|x86'">
+    <StartArguments>-d "Message selector: #fuck: arguments: #%28yourself%29"</StartArguments>
+  </PropertyGroup>
 </Project>

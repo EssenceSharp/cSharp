@@ -310,8 +310,8 @@ namespace EssenceSharp.ClientServices {
 				compilationOptions.EnvironmentName = EnvironmentName;
  				value = runScript(engine, compilationOptions, environment);
 				Console.WriteLine("");
-				Console.Write(Identity);
-				Console.WriteLine(" => " + value);
+				Console.WriteLine(Identity);
+				Console.WriteLine("\n\t=> " + value);
 			} finally {
 				if (ReportTimings) { 
 					Console.WriteLine("________________________________________");
