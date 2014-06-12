@@ -2612,7 +2612,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 				if (receiverType.IsArray) {
 					indexMo = indexGuru.metaObjectToConvertTo(TypeGuru.intType);
-					var index = Expression.Subtract(indexMo.Expression, oneInt32.Expression);
+					var index = Expression.Subtract(indexMo.Expression, oneInt32.Expression.withType(indexMo.LimitType));
 					performOperationExpression = Expression.ArrayAccess(target.asExpressionWithFormalType(), index);
 				} else {
 					Type indexParameterType;
@@ -2626,14 +2626,6 @@ namespace EssenceSharp.Runtime.Binding {
 						} else {
 							return target.BindInvokeMember(dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, Selector, "At"), indexesOrKeys);
 						}
-
-						/*
-						var propertyInfo = esClass.getReadableProperty("Chars");
-						if (propertyInfo == null) {
-							return target.BindInvokeMember(dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, Selector, "At"), indexesOrKeys);
-						}
-						methodInfo = propertyInfo.GetGetMethod();
-						*/
 					} else {
 						var parameters = methodInfo.GetParameters();
 						var indexParameter = parameters[0];
@@ -2642,7 +2634,7 @@ namespace EssenceSharp.Runtime.Binding {
 					}
 					Expression index;
 					if (indexParameterType.isNumeric()) {
-						index = Expression.Subtract(typedIndexMo.Expression, oneInt32.Expression);
+						index = Expression.Subtract(typedIndexMo.Expression, oneInt32.Expression.withType(typedIndexMo.LimitType));
 					} else {
 						index = typedIndexMo.Expression;
 					}
@@ -2718,7 +2710,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 				if (receiverType.IsArray) {
 					typedIndexMo = indexGuru.metaObjectToConvertTo(TypeGuru.intType);
-					var index = Expression.Subtract(typedIndexMo.Expression, oneInt32.Expression);
+					var index = Expression.Subtract(typedIndexMo.Expression, oneInt32.Expression.withType(typedIndexMo.LimitType));
 					typedValue = valueGuru.metaObjectToConvertTo(receiverType.GetElementType());
 					performOperationExpression = Expression.Assign(Expression.ArrayAccess(target.asExpressionWithFormalType(), index), typedValue.Expression);
 				} else {
@@ -2734,14 +2726,6 @@ namespace EssenceSharp.Runtime.Binding {
 						} else {
 							return target.BindInvokeMember(dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, Selector, "AtPut"), indexesOrKeys);
 						}
-
-						/*
-						var propertyInfo = esClass.getWritableProperty("Chars");
-						if (propertyInfo == null) {
-							return target.BindInvokeMember(dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, Selector, "AtPut"), indexesOrKeys);
-						}
-						methodInfo = propertyInfo.GetSetMethod();
-						*/
 					} else {
 						var parameters = methodInfo.GetParameters();
 						var indexParameter = parameters[0];
@@ -2750,7 +2734,7 @@ namespace EssenceSharp.Runtime.Binding {
 					}
 					Expression index;
 					if (indexParameterType.isNumeric()) {
-						index = Expression.Subtract(typedIndexMo.Expression, oneInt32.Expression);
+						index = Expression.Subtract(typedIndexMo.Expression, oneInt32.Expression.withType(typedIndexMo.LimitType));
 					} else {
 						index = typedIndexMo.Expression;
 					}

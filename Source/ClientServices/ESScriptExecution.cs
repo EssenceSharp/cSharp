@@ -193,7 +193,6 @@ namespace EssenceSharp.ClientServices {
 				provideHelp();
 				return;
 			}
-			TimeSpan durationToRun = TimeSpan.Zero;
 			ScriptRuntime scriptRuntime = null;
 			try {
 				// ScriptRuntime scriptRuntime = ScriptRuntime.CreateFromConfiguration();  // This is the "standard" way to do it; but it's rather less flexible.
@@ -311,7 +310,7 @@ namespace EssenceSharp.ClientServices {
  				value = runScript(engine, compilationOptions, environment);
 				Console.WriteLine("");
 				Console.WriteLine(Identity);
-				Console.WriteLine("\n\t=> " + value);
+				Console.WriteLine(" => " + value);
 			} finally {
 				if (ReportTimings) { 
 					Console.WriteLine("________________________________________");

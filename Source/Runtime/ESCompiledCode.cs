@@ -1397,8 +1397,7 @@ namespace EssenceSharp.Runtime {
 		
 		public void recompile() {
 			if (methodDeclarationNode == null) return;
-			methodDeclarationNode.HomeClass = HomeClass;
-			Function = methodDeclarationNode.Function;
+			methodDeclarationNode.recompileFor(this);
 		}
 
 		internal void become(ESMethod other) {

@@ -197,35 +197,35 @@ namespace EssenceSharp.CompilationServices {
 		#region Terminal and/or Literal Nodes
 
 		public override AbstractSyntaxTreeNode applyToNilToken(NilToken operand) {
-			return Context.newConstantValueNode(ExpressionTreeGuru.nilConstant);
+			return Context.newReducedNode(ExpressionTreeGuru.nilConstant);
 		}
 
 		public override AbstractSyntaxTreeNode applyToFalseToken(FalseToken operand) {
-			return Context.newConstantValueNode(falseConstant);
+			return Context.newReducedNode(falseConstant);
 		}
 
 		public override AbstractSyntaxTreeNode applyToTrueToken(TrueToken operand) {
-			return Context.newConstantValueNode(trueConstant);
+			return Context.newReducedNode(trueConstant);
 		}
 
 		public override AbstractSyntaxTreeNode applyToCharLiteralToken(CharLiteralToken operand) {
-			return Context.newConstantValueNode((Object)operand.CharValue);
+			return Context.newReducedNode((Object)operand.CharValue);
 		}
 
 		public override AbstractSyntaxTreeNode applyToIntegerLiteralToken(IntegerLiteralToken operand) {
-			return Context.newConstantValueNode((Object)operand.SmallIntegerValue);
+			return Context.newReducedNode((Object)operand.SmallIntegerValue);
 		}
 
 		public override AbstractSyntaxTreeNode applyToSinglePrecisionLiteralToken(SinglePrecisionLiteralToken operand) {
-			return Context.newConstantValueNode((Object)operand.FloatValue);
+			return Context.newReducedNode((Object)operand.FloatValue);
 		}
 
 		public override AbstractSyntaxTreeNode applyToDoublePrecisionLiteralToken(DoublePrecisionLiteralToken operand) {
-			return Context.newConstantValueNode((Object)operand.DoubleValue);
+			return Context.newReducedNode((Object)operand.DoubleValue);
 		}
 
 		public override AbstractSyntaxTreeNode applyToQuadPrecisionLiteralToken(QuadPrecisionLiteralToken operand) {
-			return Context.newConstantValueNode((Object)operand.DecimalValue);
+			return Context.newReducedNode((Object)operand.DecimalValue);
 		}
 
 		public override AbstractSyntaxTreeNode applyToScaledDecimalLiteralToken(ScaledDecimalLiteralToken operand) {
@@ -235,27 +235,27 @@ namespace EssenceSharp.CompilationServices {
 		public override AbstractSyntaxTreeNode applyToStringLiteralToken(StringLiteralToken operand) {
 			var stString = kernel.newString(operand.StringValue);
 			stString.beImmutable();
-			return Context.newConstantValueNode(stString);
+			return Context.newReducedNode(stString);
 		}
 
 		public override AbstractSyntaxTreeNode applyToSymbolLiteralToken(SymbolLiteralToken operand) {
-			return Context.newConstantValueNode(symbolFrom(operand));
+			return Context.newReducedNode(symbolFrom(operand));
 		}
 
 		public override AbstractSyntaxTreeNode applyToLiteralBindingReferenceToken(LiteralBindingReferenceToken operand) {
 			var pathName = kernel.pathnameFromString(operand.StringValue);
 			pathName.beImmutable();
-			return Context.newConstantValueNode(pathName);
+			return Context.newReducedNode(pathName);
 		}
 
 		public override AbstractSyntaxTreeNode applyToByteArrayLiteralToken(ByteArrayLiteralToken operand) {
 			var stByteArray = kernel.newByteArray(operand.ByteArray);
 			stByteArray.beImmutable();
-			return Context.newConstantValueNode(stByteArray);
+			return Context.newReducedNode(stByteArray);
 		}
 
 		public override AbstractSyntaxTreeNode applyToArrayLiteralToken(ArrayLiteralToken operand) {
-			return Context.newConstantValueNode(valueFromLiteralToken(operand));
+			return Context.newReducedNode(valueFromLiteralToken(operand));
 		}
 
 		public override AbstractSyntaxTreeNode applyToSelfToken(SelfToken operand) {
@@ -371,29 +371,21 @@ namespace EssenceSharp.CompilationServices {
 		// c) a dynamic array literal, d) a dictionary literal, d) a block literal and e) a method literal.
 
 		public override AbstractSyntaxTreeNode applyToExpression(ParsingServices.Expression operand) {
-			// This is the "heart of the ocean." This is the Essence :-) 
 			Context.setRootScopeIfNone();
 			var value = (OperandNode)operand.Operand.valueBy(this);
 			var prevReceiver = value;
+			MessageNode finalMessage = null;
 			operand.messagesDo(
-				delegate(Message message) {
+				(Message message) => {
 					prevReceiver = value; // The receiver of a cascaded message must be the value resulting from sending the penultimate (non-cascaded) message.
-					value = Context.newMessageSendNode(value, (MessageNode)message.valueBy(this));
+					finalMessage = (MessageNode)message.valueBy(this);
+					value = Context.newMessageSendNode(value, finalMessage);
 				});
 			if (operand.CascadedMessageCount < 1) return Context.newExpressionNode(value);
-			var initialExpression = value;
-			var cascadedMessages = new List<MessageSendNode>();
-			operand.cascadedMessageChainsDo(
-				delegate(CascadedMessageChain messageChain) {
-					value = prevReceiver;
-					messageChain.messagesDo(
-						delegate (Message message) {
-							var messageSend = Context.newMessageSendNode(value, (MessageNode)message.valueBy(this));
-							value = messageSend;
-							cascadedMessages.Add(messageSend);
-						});
-				});
-			return Context.newCascadedMessageExpressionNode(initialExpression, cascadedMessages);
+			var cascadedMessages = new List<MessageNode>();
+			cascadedMessages.Add(finalMessage);
+			operand.cascadedMessageChainsDo(messageChain => messageChain.messagesDo(messageParseNode => cascadedMessages.Add((MessageNode)messageParseNode.valueBy(this))));
+			return Context.newCascadedMessageExpressionNode(prevReceiver, cascadedMessages);
 		}
 
 		public override AbstractSyntaxTreeNode applyToExecutableCode(ExecutableCode operand) {
@@ -421,7 +413,7 @@ namespace EssenceSharp.CompilationServices {
 			if (Context.Scope.IsRoot) {
 				Context.rootParametersDo(
 					parameter => Context.Scope.declareParameter(parameter, 
-						delegate (NamedValueDeclaration existingDeclaration) {
+						(NamedValueDeclaration existingDeclaration) => {
 							Context.markAsUncompilable();
 							compiler.handleParameterNameCollision(existingDeclaration.NameString, SourceSpan.None);
 							return existingDeclaration.IsParameter ? (ParameterDeclaration)existingDeclaration : Context.Scope.declareParameter("rootParameter$" + parameter.Name, null);}));

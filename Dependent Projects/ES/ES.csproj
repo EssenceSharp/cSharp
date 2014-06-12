@@ -223,54 +223,54 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="EssenceSharp" Condition="'$(Configuration)'=='x86.35.Debug'">
-      <HintPath>..\Essence Sharp\bin\x86\35\Debug\EssenceSharp.dll</HintPath>
+      <HintPath>..\..\bin\x86\35\Debug\EssenceSharp.dll</HintPath>
     </Reference>
     <Reference Include="EssenceSharp" Condition="'$(Configuration)'=='x86.35.Release'">
-      <HintPath>..\Essence Sharp\bin\x86\35\Release\EssenceSharp.dll</HintPath>
+      <HintPath>..\..\bin\x86\35\Release\EssenceSharp.dll</HintPath>
     </Reference>
     <Reference Include="EssenceSharp" Condition="'$(Configuration)'=='x86.40.Debug'">
-      <HintPath>..\Essence Sharp\bin\x86\40\Debug\EssenceSharp.dll</HintPath>
+      <HintPath>..\..\bin\x86\40\Debug\EssenceSharp.dll</HintPath>
     </Reference>
     <Reference Include="EssenceSharp" Condition="'$(Configuration)'=='x86.40.Release'">
-      <HintPath>..\Essence Sharp\bin\x86\40\Release\EssenceSharp.dll</HintPath>
+      <HintPath>..\..\bin\x86\40\Release\EssenceSharp.dll</HintPath>
     </Reference>
     <Reference Include="EssenceSharp" Condition="'$(Configuration)'=='x64.35.Debug'">
-      <HintPath>..\Essence Sharp\bin\x64\35\Debug\EssenceSharp.dll</HintPath>
+      <HintPath>..\..\bin\x64\35\Debug\EssenceSharp.dll</HintPath>
     </Reference>
     <Reference Include="EssenceSharp" Condition="'$(Configuration)'=='x64.35.Release'">
-      <HintPath>..\Essence Sharp\bin\x64\35\Release\EssenceSharp.dll</HintPath>
+      <HintPath>..\..\bin\x64\35\Release\EssenceSharp.dll</HintPath>
     </Reference>
     <Reference Include="EssenceSharp" Condition="'$(Configuration)'=='x64.40.Debug'">
-      <HintPath>..\Essence Sharp\bin\x64\40\Debug\EssenceSharp.dll</HintPath>
+      <HintPath>..\..\bin\x64\40\Debug\EssenceSharp.dll</HintPath>
     </Reference>
     <Reference Include="EssenceSharp" Condition="'$(Configuration)'=='x64.40.Release'">
-      <HintPath>..\Essence Sharp\bin\x64\40\Release\EssenceSharp.dll</HintPath>
+      <HintPath>..\..\bin\x64\40\Release\EssenceSharp.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Dynamic, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'!='v3.5'">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Codeplex-DLR-1.0\bin\40\Microsoft.Dynamic.dll</HintPath>
+      <HintPath>..\..\..\Codeplex-DLR-1.0\bin\40\Microsoft.Dynamic.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Scripting, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'!='v3.5'">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Codeplex-DLR-1.0\bin\40\Microsoft.Scripting.dll</HintPath>
+      <HintPath>..\..\..\Codeplex-DLR-1.0\bin\40\Microsoft.Scripting.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Scripting.Debugging, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'!='v3.5'">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Codeplex-DLR-1.0\bin\40\Microsoft.Scripting.Debugging.dll</HintPath>
+      <HintPath>..\..\..\Codeplex-DLR-1.0\bin\40\Microsoft.Scripting.Debugging.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Scripting.Core" Condition="'$(TargetFrameworkVersion)'=='v3.5'">
-      <HintPath>..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.Core.dll</HintPath>
+      <HintPath>..\..\..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.Core.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Scripting.ExtensionAttribute" Condition="'$(TargetFrameworkVersion)'=='v3.5'">
       <HintPath>..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.ExtensionAttribute.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Dynamic, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'=='v3.5'">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Dynamic.dll</HintPath>
+      <HintPath>..\..\..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Dynamic.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Scripting, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'=='v3.5'">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.dll</HintPath>
+      <HintPath>..\..\..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

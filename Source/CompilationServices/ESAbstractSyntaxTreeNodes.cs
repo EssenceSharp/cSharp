@@ -144,7 +144,7 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		public virtual bool CompilesToExpression {
-			// Can it be compiled to a Smalltalk expression?
+			// Can it be compiled to an Essence# expression?
 			get {return false;}
 		}
 
@@ -172,6 +172,10 @@ namespace EssenceSharp.CompilationServices {
 			return null;
 		}
 
+		public virtual void invalidateCachedExpressions() {
+			// By default, do nothing
+		}
+
 		public virtual Expression asInlinedCLRExpression() {
 			return asCLRExpression();
 		}
@@ -184,6 +188,8 @@ namespace EssenceSharp.CompilationServices {
 
 	public abstract class OperandNode : AbstractSyntaxTreeNode {
 
+		protected Expression cachedExpression;
+
 		public OperandNode(CodeGenerationContext context) : base(context) {
 		}
 
@@ -195,20 +201,24 @@ namespace EssenceSharp.CompilationServices {
 			get {return true;}
 		}
 
+		public override void invalidateCachedExpressions() {
+			cachedExpression = null;
+		}
+
 	}
 
-	public class ConstantValueNode : OperandNode {
+	public class ReducedNode : OperandNode {
 
 		protected Expression constantExpression = null;
 
-		public ConstantValueNode(CodeGenerationContext context) : base(context) {
+		public ReducedNode(CodeGenerationContext context) : base(context) {
 		}
 
-		public ConstantValueNode(CodeGenerationContext context, Object constantValue) : base(context) {
+		public ReducedNode(CodeGenerationContext context, Object constantValue) : base(context) {
 			constantExpression = constantValue == null ? ExpressionTreeGuru.nilConstant : Expression.Constant(constantValue);
 		}
 
-		public ConstantValueNode(CodeGenerationContext context, Expression constantValue) : base(context) {
+		public ReducedNode(CodeGenerationContext context, Expression constantValue) : base(context) {
 			constantExpression = constantValue == null ? ExpressionTreeGuru.nilConstant : constantValue;
 		}
 
@@ -234,8 +244,14 @@ namespace EssenceSharp.CompilationServices {
 			this.elements = elements;
 		}
 
+		public override void invalidateCachedExpressions() {
+			base.invalidateCachedExpressions();
+			foreach (var element in elements) element.invalidateCachedExpressions();
+		}
+
 		public override Expression asCLRExpression() {
-			return ExpressionTreeGuru.expressionToCreateESObjectArray(Context.Kernel.ArrayClass, newCLRExpressionArray<ExpressionNode, Expression>(elements));
+			if (cachedExpression != null) return cachedExpression;
+			return cachedExpression = ExpressionTreeGuru.expressionToCreateESObjectArray(Context.Kernel.ArrayClass, newCLRExpressionArray<ExpressionNode, Expression>(elements));
 		}
 
 		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
@@ -261,9 +277,10 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		public override Expression asCLRExpression() {
+			if (cachedExpression != null) return cachedExpression;
 			var associationElements = new List<Expression>();
 			foreach (var element in elements) associationElements.Add(Expression.Convert(element.asCLRExpression(), typeof(ESAssociation)));
-			return ExpressionTreeGuru.expressionToCreateESDictionary(Context.Kernel.DictionaryClass, associationElements);		}
+			return cachedExpression = ExpressionTreeGuru.expressionToCreateESDictionary(Context.Kernel.DictionaryClass, associationElements);		}
 
 	}
 
@@ -284,7 +301,8 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		public override Expression asCLRExpression() {
-			return variableReference.asCLRGetValueExpression();
+			if (cachedExpression != null) return cachedExpression;
+			return cachedExpression = variableReference.asCLRGetValueExpression();
 		}
 
 	}
@@ -458,6 +476,11 @@ namespace EssenceSharp.CompilationServices {
 			get {return operand;}
 		}
 
+		public override void invalidateCachedExpressions() {
+			base.invalidateCachedExpressions();
+			operand.invalidateCachedExpressions();
+		}
+
 		public override OperandNode argumentAt(int index) {
 			if (index < 0) throw new InvalidArgumentException("The argument index must be greater than or equal to zero.");
 			if (index > 0) throw new InvalidArgumentException("The argument index must be less than 1.");
@@ -508,6 +531,11 @@ namespace EssenceSharp.CompilationServices {
 				return operands[0].IsOneArgBlockLiteral && operands[1].IsOneArgBlockLiteral;}
 		}
 
+		public override void invalidateCachedExpressions() {
+			base.invalidateCachedExpressions();
+			foreach (var operand in operands) operand.invalidateCachedExpressions();
+		}
+
 		public override OperandNode argumentAt(int index) {
 			if (index < 0) throw new InvalidArgumentException("The argument index must be greater than or equal to zero.");
 			if (index >= operands.Count) throw new InvalidArgumentException("The argument index must be less than " + operands.Count + ".");
@@ -538,6 +566,12 @@ namespace EssenceSharp.CompilationServices {
 		public MessageNode Message {
 			get {return message;}
 		}
+
+		public override void invalidateCachedExpressions() {
+			base.invalidateCachedExpressions();
+			receiver.invalidateCachedExpressions();
+			message.invalidateCachedExpressions();
+		}
 		
 		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
 			var undeclaredVariables = receiver.bindNonLocalVariablesToEnvironment();
@@ -553,6 +587,7 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		public override Expression asCLRExpression() {
+			if (cachedExpression != null) return cachedExpression;
 
 			OperandNode arg1;
 			OperandNode arg2;
@@ -569,41 +604,38 @@ namespace EssenceSharp.CompilationServices {
 				// Here is where message sends WILL be inlined:
 
 				case CanonicalSelectorSemantics.IsNil:
-					return Expression.Convert(Expression.ReferenceEqual(receiverExpression, ExpressionTreeGuru.nilConstant), TypeGuru.objectType);
+					return cachedExpression = Expression.ReferenceEqual(receiverExpression, ExpressionTreeGuru.nilConstant).withType(TypeGuru.objectType);
 
 				case CanonicalSelectorSemantics.IsNotNil:
-					return Expression.Convert(Expression.ReferenceNotEqual(receiverExpression, ExpressionTreeGuru.nilConstant), TypeGuru.objectType);
+					return cachedExpression = Expression.ReferenceNotEqual(receiverExpression, ExpressionTreeGuru.nilConstant).withType(TypeGuru.objectType);
 
 				case CanonicalSelectorSemantics.IsIdenticalTo:
 					arg1 = message.argumentAt(0);
-					return Expression.Convert(Expression.ReferenceEqual(receiverExpression, arg1.asCLRExpression()), TypeGuru.objectType);
+					return cachedExpression = Expression.ReferenceEqual(receiverExpression, arg1.asCLRExpression()).withType(TypeGuru.objectType);
 
 				case CanonicalSelectorSemantics.IsNotIdenticalTo:
 					arg1 = message.argumentAt(0);
-					return Expression.Convert(Expression.ReferenceNotEqual(receiverExpression, arg1.asCLRExpression()), TypeGuru.objectType);
+					return cachedExpression = Expression.ReferenceNotEqual(receiverExpression, arg1.asCLRExpression()).withType(TypeGuru.objectType);
 
 				case CanonicalSelectorSemantics.LogicalNot:
-					return Expression.Convert(
-							Expression.Not(ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #not must be a Boolean value")),
-							TypeGuru.objectType);
+					return cachedExpression = 
+						Expression.Not(ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #not must be a Boolean value")).withType(TypeGuru.objectType);
 
 				case CanonicalSelectorSemantics.ConditionalAnd:
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
-					return Expression.Convert(
-							Expression.AndAlso(
+					return cachedExpression = 
+						Expression.AndAlso(
 								ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #and: must be a Boolean value"),
-								ExpressionTreeGuru.expressionThatMustBeBoolean(arg1Expression, "The argument of #and: must evaluate to a Boolean value")),
-							TypeGuru.objectType);
+								ExpressionTreeGuru.expressionThatMustBeBoolean(arg1Expression, "The argument of #and: must evaluate to a Boolean value")).withType(TypeGuru.objectType);
 
 				case CanonicalSelectorSemantics.ConditionalOr:
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
-					return Expression.Convert(
+					return cachedExpression = 
 							Expression.OrElse(
 								ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #or: must be a Boolean value"),
-								ExpressionTreeGuru.expressionThatMustBeBoolean(arg1Expression, "The argument of #or: must evaluate to a Boolean value")),
-							TypeGuru.objectType);
+								ExpressionTreeGuru.expressionThatMustBeBoolean(arg1Expression, "The argument of #or: must evaluate to a Boolean value")).withType(TypeGuru.objectType);
 
 				// Here is where message sends MIGHT be inlined:
 
@@ -612,20 +644,20 @@ namespace EssenceSharp.CompilationServices {
 					testExpression = Expression.ReferenceEqual(receiverExpression, ExpressionTreeGuru.nilConstant);
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
-					return Expression.Condition(
-								testExpression,
-									arg1Expression,
-									receiverExpression);
+					return cachedExpression = Expression.Condition(
+										testExpression,
+											arg1Expression,
+											receiverExpression);
 
 				case CanonicalSelectorSemantics.IfNotNil:
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					testExpression = Expression.ReferenceNotEqual(receiverExpression, ExpressionTreeGuru.nilConstant);
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
-					return Expression.Condition(
-								testExpression,
-									arg1Expression,
-									receiverExpression);
+					return cachedExpression = Expression.Condition(
+										testExpression,
+											arg1Expression,
+											receiverExpression);
 
 				case CanonicalSelectorSemantics.IfNilIfNotNil:
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
@@ -634,10 +666,10 @@ namespace EssenceSharp.CompilationServices {
 					arg1Expression = arg1.asInlinedCLRExpression();
 					arg2 = message.argumentAt(1);
 					arg2Expression = arg2.asInlinedCLRExpression();
-					return Expression.Condition(
-								testExpression,
-									arg1Expression,
-									arg2Expression);
+					return cachedExpression = Expression.Condition(
+										testExpression,
+											arg1Expression,
+											arg2Expression);
 
 				case CanonicalSelectorSemantics.IfNotNilIfNil:
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
@@ -646,10 +678,10 @@ namespace EssenceSharp.CompilationServices {
 					arg1Expression = arg1.asInlinedCLRExpression();
 					arg2 = message.argumentAt(1);
 					arg2Expression = arg2.asInlinedCLRExpression();
-					return Expression.Condition(
-								testExpression,
-									arg1Expression,
-									arg2Expression);
+					return cachedExpression = Expression.Condition(
+										testExpression,
+											arg1Expression,
+											arg2Expression);
 
 				case CanonicalSelectorSemantics.IfTrue:
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
@@ -664,10 +696,10 @@ namespace EssenceSharp.CompilationServices {
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
-					return Expression.Condition(
-								ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifFalse: must be a Boolean value"),
-									ExpressionTreeGuru.nilConstant,
-									arg1Expression);
+					return cachedExpression = Expression.Condition(
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifFalse: must be a Boolean value"),
+											ExpressionTreeGuru.nilConstant,
+											arg1Expression);
 
 				case CanonicalSelectorSemantics.IfTrueIfFalse:
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
@@ -675,10 +707,10 @@ namespace EssenceSharp.CompilationServices {
 					arg1Expression = arg1.asInlinedCLRExpression();
 					arg2 = message.argumentAt(1);
 					arg2Expression = arg2.asInlinedCLRExpression();
-					return Expression.Condition(
-								ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifTrue:ifFalse: must be a Boolean value"),
-									arg1Expression,
-									arg2Expression);
+					return cachedExpression = Expression.Condition(
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifTrue:ifFalse: must be a Boolean value"),
+											arg1Expression,
+											arg2Expression);
 
 				case CanonicalSelectorSemantics.IfFalseIfTrue:
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
@@ -686,30 +718,30 @@ namespace EssenceSharp.CompilationServices {
 					arg1Expression = arg1.asInlinedCLRExpression();
 					arg2 = message.argumentAt(1);
 					arg2Expression = arg2.asInlinedCLRExpression();
-					return Expression.Condition(
-								ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifFalse:ifTrue: must be a Boolean value"),
-									arg2Expression,
-									arg1Expression);
+					return cachedExpression = Expression.Condition(
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifFalse:ifTrue: must be a Boolean value"),
+											arg2Expression,
+											arg1Expression);
 
 				case CanonicalSelectorSemantics.WhileNil:
 					if (!receiver.IsBlockLiteral) break;
 					exit = Expression.Label(TypeGuru.objectType);
-					return Expression.Loop(
-							Expression.IfThenElse(
-								Expression.ReferenceEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
-									Expression.Empty(),
-									Expression.Break(exit, receiverExpression)),
+					return cachedExpression = Expression.Loop(
+									Expression.IfThenElse(
+										Expression.ReferenceEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
+											Expression.Empty(),
+											Expression.Break(exit, receiverExpression)),
 							exit);
 
 				case CanonicalSelectorSemantics.WhileNotNil:
 					if (!receiver.IsZeroArgBlockLiteral) break;
 					exit = Expression.Label(TypeGuru.objectType);
-					return Expression.Loop(
-							Expression.IfThenElse(
-								Expression.ReferenceNotEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
-									Expression.Empty(),
-									Expression.Break(exit, receiverExpression)),
-							exit);
+					return cachedExpression = Expression.Loop(
+									Expression.IfThenElse(
+										Expression.ReferenceNotEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
+											Expression.Empty(),
+											Expression.Break(exit, receiverExpression)),
+									exit);
 
 				case CanonicalSelectorSemantics.WhileNilDo:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -717,12 +749,12 @@ namespace EssenceSharp.CompilationServices {
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
 					exit = Expression.Label(TypeGuru.objectType);
-					return Expression.Loop(
-							Expression.IfThenElse(
-								Expression.ReferenceEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
-									arg1Expression,
-									Expression.Break(exit, receiverExpression)),
-							exit);
+					return cachedExpression = Expression.Loop(
+									Expression.IfThenElse(
+										Expression.ReferenceEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
+											arg1Expression,
+											Expression.Break(exit, receiverExpression)),
+									exit);
 
 				case CanonicalSelectorSemantics.WhileNotNilDo:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -731,32 +763,32 @@ namespace EssenceSharp.CompilationServices {
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
 					exit = Expression.Label(TypeGuru.objectType);
-					return Expression.Loop(
-							Expression.IfThenElse(
-								Expression.ReferenceNotEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
-									arg1Expression,
-									Expression.Break(exit, receiverExpression)),
-							exit);
+					return cachedExpression = Expression.Loop(
+									Expression.IfThenElse(
+										Expression.ReferenceNotEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
+											arg1Expression,
+											Expression.Break(exit, receiverExpression)),
+									exit);
 
 				case CanonicalSelectorSemantics.WhileTrue:
 					if (!receiver.IsZeroArgBlockLiteral) break;
 					exit = Expression.Label(TypeGuru.objectType);
-					return Expression.Loop(
-							Expression.IfThenElse(
-								ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileTrue must evaluate to a Boolean value"),
-									Expression.Empty(),
-									Expression.Break(exit, receiverExpression)),
-							exit);
+					return cachedExpression = Expression.Loop(
+									Expression.IfThenElse(
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileTrue must evaluate to a Boolean value"),
+											Expression.Empty(),
+											Expression.Break(exit, receiverExpression)),
+									exit);
 
 				case CanonicalSelectorSemantics.WhileFalse:
 					if (!receiver.IsZeroArgBlockLiteral) break;
 					exit = Expression.Label(TypeGuru.objectType);
-					return Expression.Loop(
-							Expression.IfThenElse(
-								ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileFalse must evaluate to a Boolean value"),
-									Expression.Break(exit, receiverExpression),
-									Expression.Empty()),
-							exit);
+					return cachedExpression = Expression.Loop(
+									Expression.IfThenElse(
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileFalse must evaluate to a Boolean value"),
+											Expression.Break(exit, receiverExpression),
+											Expression.Empty()),
+									exit);
 
 				case CanonicalSelectorSemantics.WhileTrueDo:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -764,12 +796,12 @@ namespace EssenceSharp.CompilationServices {
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
 					exit = Expression.Label(TypeGuru.objectType);
-					return Expression.Loop(
-							Expression.IfThenElse(
-								ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileTrue: must evaluate to a Boolean value"),
-									arg1Expression,
-									Expression.Break(exit, receiverExpression)),
-							exit);
+					return cachedExpression = Expression.Loop(
+									Expression.IfThenElse(
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileTrue: must evaluate to a Boolean value"),
+											arg1Expression,
+											Expression.Break(exit, receiverExpression)),
+									exit);
 
 				case CanonicalSelectorSemantics.WhileFalseDo:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -778,12 +810,12 @@ namespace EssenceSharp.CompilationServices {
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
 					exit = Expression.Label(TypeGuru.objectType);
-					return Expression.Loop(
-							Expression.IfThenElse(
-								ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileFalse: must evaluate to a Boolean value"),
-									Expression.Break(exit, receiverExpression),
-									arg1Expression),
-							exit);
+					return cachedExpression = Expression.Loop(
+									Expression.IfThenElse(
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileFalse: must evaluate to a Boolean value"),
+											Expression.Break(exit, receiverExpression),
+											arg1Expression),
+									exit);
 
 				default:
 
@@ -802,7 +834,7 @@ namespace EssenceSharp.CompilationServices {
 			argumentExpressions.Add(callSiteConstant);
 			argumentExpressions.Add(receiverExpression);
 			Message.appendArgumentsAsCLRExpressionsTo(argumentExpressions);
-			return Expression.Invoke(Expression.Field(callSiteConstant, CodeGenerationContext.callSiteType[selector.NumArgs], "Target"), argumentExpressions);
+			return cachedExpression = Expression.Invoke(Expression.Field(callSiteConstant, CodeGenerationContext.callSiteType[selector.NumArgs], "Target"), argumentExpressions);
 
 		}
 
@@ -846,6 +878,11 @@ namespace EssenceSharp.CompilationServices {
 			// It's a compilable expression
 			get {return true;}
 		}
+
+		public override void invalidateCachedExpressions() {
+			base.invalidateCachedExpressions();
+			operand.invalidateCachedExpressions();
+		}
 		
 		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
 			return operand.bindNonLocalVariablesToEnvironment();
@@ -862,26 +899,33 @@ namespace EssenceSharp.CompilationServices {
 	}
 
 	public class CascadedMessageExpressionNode : ExpressionNode {
-		protected MessageSendNode[] cascadedMessages;
+		protected MessageNode[] cascadedMessages;
 
-		public CascadedMessageExpressionNode(CodeGenerationContext context, OperandNode initialExpression, MessageSendNode[] cascadedMessages) : base(context, initialExpression) {
+		public CascadedMessageExpressionNode(CodeGenerationContext context, OperandNode operandExpression, MessageNode[] cascadedMessages) : base(context, operandExpression) {
 			this.cascadedMessages = cascadedMessages;
 		}
 
-		public void cascadedMessagesDo(Action<MessageSendNode> enumerator1) {
+		public void cascadedMessagesDo(Action<MessageNode> enumerator1) {
 			if (cascadedMessages == null) return;
 			foreach (var message in cascadedMessages) enumerator1(message);
 		}
 
+		public override void invalidateCachedExpressions() {
+			base.invalidateCachedExpressions();
+			cascadedMessagesDo(message => message.invalidateCachedExpressions());
+		}
+
 		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
 			System.Collections.Generic.HashSet<ESSymbol> undeclaredVariables = base.bindNonLocalVariablesToEnvironment();
-			foreach (var messageSendNode in cascadedMessages) {
-				var undeclaredVarSet = messageSendNode.bindNonLocalVariablesToEnvironment();
-				if (undeclaredVarSet != null) {
-					if (undeclaredVariables == null) {
-						undeclaredVariables = undeclaredVarSet;
-					} else {
-						foreach (var undeclaredVarName in undeclaredVarSet) undeclaredVariables.Add(undeclaredVarName);
+			if (cascadedMessages != null) { 
+				foreach (var messageNode in cascadedMessages) {
+					var undeclaredVarSet = messageNode.bindNonLocalVariablesToEnvironment();
+					if (undeclaredVarSet != null) {
+						if (undeclaredVariables == null) {
+							undeclaredVariables = undeclaredVarSet;
+						} else {
+							foreach (var undeclaredVarName in undeclaredVarSet) undeclaredVariables.Add(undeclaredVarName);
+						}
 					}
 				}
 			}
@@ -889,12 +933,17 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		public override Expression asCLRExpression() {
-			var messageExpressions = new List<Expression>();
-			messageExpressions.Add(operand.asCLRExpression());
-			cascadedMessagesDo(messageSendNode => messageExpressions.Add(messageSendNode.asCLRExpression()));
-			return Expression.Block(
-				TypeGuru.objectType,
-				messageExpressions);
+			if (cachedExpression != null) return cachedExpression;
+			var receiver = Expression.Parameter(TypeGuru.objectType, "$receiver");
+			var receiverNode = Context.newReducedNode(receiver);
+			var assignReceiver = Expression.Assign(receiver, operand.asCLRExpression());
+			var expressionSequence = new List<Expression>();
+			expressionSequence.Add(assignReceiver);
+			cascadedMessagesDo(messageNode => {
+				var messageSend = Context.newMessageSendNode(receiverNode, messageNode);
+				expressionSequence.Add(messageSend.asCLRExpression());
+			});
+			return cachedExpression = Expression.Block(TypeGuru.objectType, new ParameterExpression[]{receiver}, expressionSequence);
 		}
 
 	}
@@ -919,15 +968,21 @@ namespace EssenceSharp.CompilationServices {
 			foreach (var variable in variables) enumerator1(variable);
 		}
 
+		public override void invalidateCachedExpressions() {
+			base.invalidateCachedExpressions();
+			operand.invalidateCachedExpressions();
+		}
+
 		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
 			return operand.bindNonLocalVariablesToEnvironment();
 		}
 
 		public override Expression asCLRExpression() {
-			Expression expression = operand.asCLRExpression();
-			if (variables == null || variables.Length < 1) return expression; // This would be weird....
-			foreach (var variable in variables) expression = variable.asCLRSetValueExpression(expression);
-			return expression;
+			if (cachedExpression != null) return cachedExpression;
+			cachedExpression = operand.asCLRExpression();
+			if (variables == null || variables.Length < 1) return cachedExpression; // This would be weird....
+			foreach (var variable in variables) cachedExpression = variable.asCLRSetValueExpression(cachedExpression);
+			return cachedExpression;
 		}
 
 	}
@@ -944,13 +999,19 @@ namespace EssenceSharp.CompilationServices {
 			get {return statement;}
 		}
 
+		public override void invalidateCachedExpressions() {
+			base.invalidateCachedExpressions();
+			statement.invalidateCachedExpressions();
+		}
+
 		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
 			return statement.bindNonLocalVariablesToEnvironment();
 		}
 
 		public override Expression asCLRExpression() {
+			if (cachedExpression != null) return cachedExpression;
 			if (Scope.IsRoot) {
-				return Expression.Return(Context.ReturnTarget, StatementNode.asCLRExpression(), TypeGuru.objectType);
+				return cachedExpression = Expression.Return(Context.ReturnTarget, StatementNode.asCLRExpression(), TypeGuru.objectType);
 			}
 			var createNonLocalReturnExpression =
 				Expression.New(
@@ -961,9 +1022,7 @@ namespace EssenceSharp.CompilationServices {
 						null),
 					Context.IdentityExpression,
 					StatementNode.asCLRExpression());
-			return Expression.Block(
-				Expression.Throw(createNonLocalReturnExpression),
-				Context.SelfParameter);
+			return cachedExpression = Expression.Block(Expression.Throw(createNonLocalReturnExpression), Context.SelfParameter);
 		}
 
 	}
@@ -971,6 +1030,7 @@ namespace EssenceSharp.CompilationServices {
 	public class ExecutableCodeNode : AbstractSyntaxTreeNode {
 
 		protected List<StatementNode> statements; 
+		protected Expression cachedExpression;
  
 		public ExecutableCodeNode(CodeGenerationContext context) : base(context) {
 			statements = new List<StatementNode>();
@@ -990,6 +1050,11 @@ namespace EssenceSharp.CompilationServices {
 
 		public int StatementCount  {
 			get {return statements == null ? 0 : statements.Count;}
+		}
+
+		public override void invalidateCachedExpressions() {
+			cachedExpression = null;
+			statementsDo(statement => statement.invalidateCachedExpressions());
 		}
 
 		public void variableDeclarationsDo(Action<StackResidentVariableDeclaration> enumerator1) {
@@ -1021,11 +1086,12 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		public override Expression asCLRExpression() {
-			if (StatementCount < 1) return Context.SelfParameter;
+			if (cachedExpression != null) return cachedExpression;
+			if (StatementCount < 1) return cachedExpression = Context.SelfParameter;
 			if (VariableDeclarationCount < 1) {
-				return Expression.Block(
-						TypeGuru.objectType,
-						newCLRExpressionArray<StatementNode, Expression>(statements));
+				return cachedExpression = Expression.Block(
+								TypeGuru.objectType,
+								newCLRExpressionArray<StatementNode, Expression>(statements));
 			} else {
 				var clrVarDeclarations = new List<ParameterExpression>();
 				Scope.localVariablesDo(
@@ -1035,11 +1101,8 @@ namespace EssenceSharp.CompilationServices {
 					});
 				var statementExpressions = new List<Expression>();
 				foreach (var statement in statements) statementExpressions.Add(statement.asCLRExpression());
-				var mainBlock = Expression.Block(
-							TypeGuru.objectType,
-							clrVarDeclarations,
-							statementExpressions);
-				return mainBlock;
+				cachedExpression = Expression.Block(TypeGuru.objectType, clrVarDeclarations, statementExpressions);
+				return cachedExpression;
 
 				/*
 				var exception = Expression.Parameter(typeof(Exception), "ex");
@@ -1133,6 +1196,10 @@ namespace EssenceSharp.CompilationServices {
 		protected List<ParameterExpression> ParmeterExpressions {
 			get {	if (parmeterExpressions == null) parmeterExpressions = computeCLRParameterExpressions();
 				return parmeterExpressions;}
+		}
+
+		public override void invalidateCachedExpressions() {
+			body.invalidateCachedExpressions();
 		}
 
 		protected abstract Expression bodyAsCLRExpression();
@@ -1420,6 +1487,12 @@ namespace EssenceSharp.CompilationServices {
 
 		}
 
+		public void recompileFor(ESMethod method) {
+			HomeClass = method.HomeClass;
+			invalidateCachedExpressions();
+			method.Function = Function;
+		}
+
 	}
 
 	public abstract class PrimitiveMethodDeclarationNode : MethodDeclarationNode {
@@ -1596,6 +1669,11 @@ namespace EssenceSharp.CompilationServices {
 			get {return declarationNode.UndeclaredVariables;}
 		}
 
+		public override void invalidateCachedExpressions() {
+			base.invalidateCachedExpressions();
+			declarationNode.invalidateCachedExpressions();
+		}
+
 		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
 			return declarationNode.bindNonLocalVariablesToEnvironment();
 		}
@@ -1605,10 +1683,11 @@ namespace EssenceSharp.CompilationServices {
 		}
 
  		public override Expression asCLRExpression() {
-			return ExpressionTreeGuru.expressionToCreateESBlock(
-							Context.Kernel.BlockClass, 
-							declarationNode.asCLRExpression(),
-							declarationNode.NumArgs);
+			if (cachedExpression != null) return cachedExpression;
+			return cachedExpression = ExpressionTreeGuru.expressionToCreateESBlock(
+									Context.Kernel.BlockClass, 
+									declarationNode.asCLRExpression(),
+									declarationNode.NumArgs);
 		}
 
 	}
@@ -1637,12 +1716,18 @@ namespace EssenceSharp.CompilationServices {
 			get {return declarationNode.UndeclaredVariables;}
 		}
 
+		public override void invalidateCachedExpressions() {
+			base.invalidateCachedExpressions();
+			declarationNode.invalidateCachedExpressions();
+		}
+
 		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
 			return declarationNode.bindNonLocalVariablesToEnvironment();
 		}
 
  		public override Expression asCLRExpression() {
-			return ExpressionTreeGuru.expressionToCreateESMethod(Context.Kernel.MethodClass, declarationNode);
+			if (cachedExpression != null) return cachedExpression;
+			return cachedExpression = ExpressionTreeGuru.expressionToCreateESMethod(Context.Kernel.MethodClass, declarationNode);
 		}
 
 	}

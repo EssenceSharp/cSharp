@@ -43,6 +43,7 @@ using FuncNs = System;
 #endif
 using EssenceSharp.ClientServices;
 using EssenceSharp.UtilityServices;
+using EssenceSharp.Exceptions.System;
 using EssenceSharp.Runtime.Binding;
 using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
@@ -594,15 +595,23 @@ namespace EssenceSharp.Runtime {
 		#region Namespace Protocol
 		
 		internal override void nameChanged() {
-			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject && hostSystemName == null) invalidateInstanceType();
+			if (hostSystemName == null && InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) invalidateInstanceType();
 		}
 		
 		internal override void hostSystemNameChanged() {
-			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) invalidateInstanceType();
+			if (hostSystemName == null || InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
+				invalidateInstanceType();
+			} else {
+				InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
+			}
 		}
 		
 		internal override void hostSystemNamespaceChanged() {
-			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) invalidateInstanceType();
+			if (hostSystemName == null || InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
+				invalidateInstanceType();
+			} else {
+				InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
+			}
 		}
 
 		protected ESBindingReference bindingForSubclassAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, System.Collections.Generic.HashSet<ESNamespace> transitiveClosure) {
@@ -898,8 +907,12 @@ namespace EssenceSharp.Runtime {
 				return superclass == null ? null : superclass.compiledMethodAt(selector);
 			}
 		}
-		
+
 		public ESMethod addMethod(ESMethod newMethod) {
+			return addMethodBoundToSystemSelector(newMethod, null);
+		}
+		
+		public ESMethod addMethodBoundToSystemSelector(ESMethod newMethod, String systemSelector) {
 			if (newMethod == null) {
 				kernel.throwInvalidArgumentException(Class, "addMethod:", "newMethod", newMethod);
 				return null;
@@ -917,12 +930,19 @@ namespace EssenceSharp.Runtime {
 				methodDictionary[selector] = residentMethod;
 			}
 			incrementVersion();
+
+			if (systemSelector == null) return residentMethod;
+			systemSelector = String.Intern(systemSelector);
+
+			long numArgs = residentMethod.NumArgs;
+			IDictionary<String, ESMethod> hostMethodDict;
+			if (!hostSystemMethodDictionary.TryGetValue(numArgs, out hostMethodDict)) {
+				hostMethodDict = new Dictionary<String, ESMethod>();
+				hostSystemMethodDictionary[numArgs] = hostMethodDict;
+			}
+			hostMethodDict[systemSelector] = residentMethod;
+			residentMethod.addToProtocol(kernel.symbolFor("host system API"));
 			return residentMethod;
-		}
-		
-		public ESMethod protocolMethod(ESSymbol protocol, ESMethod method) {
-			method.addToProtocol(protocol);
-			return addMethod(method);
 		}
 
 		public bool removeSelector(ESSymbol selector) {
@@ -1000,50 +1020,48 @@ namespace EssenceSharp.Runtime {
 			}
 			systemSelector = String.Intern(systemSelector);
 			ESMethod mappedMethod;
-			if (!methodDictionary.TryGetValue(essenceSelector, out mappedMethod)) {
-				var methodHeaderBuilder = new StringBuilder();
-				long arity = 0;
-				switch (essenceSelector.Type) {
-					case SymbolType.Identifier:
-						methodHeaderBuilder.Append(essenceSelector.PrimitiveValue);
-						break;
-					case SymbolType.BinaryMessageSelector:
-						arity = 1;
-						methodHeaderBuilder.Append(essenceSelector.PrimitiveValue);
-						methodHeaderBuilder.Append(" a1");
-						break;
-					case SymbolType.Keyword:
-						arity = essenceSelector.NumArgs;
-						var argIndex = 1;
-						essenceSelector.keywordsDo(keyword => {methodHeaderBuilder.Append(keyword); methodHeaderBuilder.Append(": a"); methodHeaderBuilder.Append(argIndex++);});
-						break;
-					default:
-						kernel.throwInvalidArgumentException(Class, "bindMethod:toSystemSelector:", "essenceSelector", essenceSelector);
-						break;
-				}
-				var methodDeclarationBuilder = new StringBuilder();
-				methodDeclarationBuilder.AppendLine(methodHeaderBuilder.ToString());
-				methodDeclarationBuilder.AppendLine();
-				methodDeclarationBuilder.Append("        ^self doesNotUnderstand: (Message selector: #");
-				methodDeclarationBuilder.Append(essenceSelector.PrimitiveValue);
-				methodDeclarationBuilder.Append(" arguments: {");
-				for (var i = 0; i < arity; i++) {
-					methodDeclarationBuilder.Append("a");
-					methodDeclarationBuilder.Append(i + 1);
-					if (arity - 1 > 1) methodDeclarationBuilder.Append(". ");
-				}
-				methodDeclarationBuilder.AppendLine("})");
-				kernel.compileMethod(new StringReader(methodDeclarationBuilder.ToString()), this, kernel.symbolFor("error handling"), out mappedMethod);
+			if (methodDictionary.TryGetValue(essenceSelector, out mappedMethod)) return addMethodBoundToSystemSelector(mappedMethod, systemSelector);
+
+			var methodHeaderBuilder = new StringBuilder();
+			long arity = 0;
+			switch (essenceSelector.Type) {
+				case SymbolType.Identifier:
+					methodHeaderBuilder.Append(essenceSelector.PrimitiveValue);
+					break;
+				case SymbolType.BinaryMessageSelector:
+					arity = 1;
+					methodHeaderBuilder.Append(essenceSelector.PrimitiveValue);
+					methodHeaderBuilder.Append(" a1");
+					break;
+				case SymbolType.Keyword:
+					arity = essenceSelector.NumArgs;
+					var argIndex = 1;
+					essenceSelector.keywordsDo(keyword => {
+						methodHeaderBuilder.Append(keyword); 
+						methodHeaderBuilder.Append(": a"); 
+						methodHeaderBuilder.Append(argIndex++); 
+						methodHeaderBuilder.Append(" ");});
+					break;
+				default:
+					kernel.throwInvalidArgumentException(Class, "bindMethod:toSystemSelector:", "essenceSelector", essenceSelector);
+					break;
 			}
-			long numArgs = mappedMethod.NumArgs;
-			IDictionary<String, ESMethod> hostMethodDict;
-			if (!hostSystemMethodDictionary.TryGetValue(numArgs, out hostMethodDict)) {
-				hostMethodDict = new Dictionary<String, ESMethod>();
-				hostSystemMethodDictionary[numArgs] = hostMethodDict;
+			var methodDeclarationBuilder = new StringBuilder();
+			methodDeclarationBuilder.AppendLine(methodHeaderBuilder.ToString());
+			methodDeclarationBuilder.AppendLine();
+			methodDeclarationBuilder.Append("        ^self doesNotUnderstand: (Message selector: #");
+			methodDeclarationBuilder.Append(essenceSelector.PrimitiveValue);
+			methodDeclarationBuilder.Append(" arguments: {");
+			for (var i = 0; i < arity; i++) {
+				methodDeclarationBuilder.Append("a");
+				methodDeclarationBuilder.Append(i + 1);
+				if (arity - i > 1) methodDeclarationBuilder.Append(". ");
 			}
-			hostMethodDict[systemSelector] = mappedMethod;
-			incrementVersion();
-			return mappedMethod;
+			methodDeclarationBuilder.AppendLine("})");
+			if (!kernel.compileMethod(new StringReader(methodDeclarationBuilder.ToString()), this, kernel.symbolFor("error handling"), out mappedMethod)) {
+				throw new InternalSystemError("Unexpected compilation error in ESBehavior.bindMethodToSystemSelector() -- probably not user or programmer error");
+			}
+			return addMethodBoundToSystemSelector(mappedMethod, systemSelector);
 		}
 		
 		public bool unbindMethodFromSystemSelector(String systemSelector, long numArgs) {
@@ -1554,9 +1572,20 @@ namespace EssenceSharp.Runtime {
 				return ((ESBehavior)receiver).addMethod((ESMethod)method);
 			}	
 
+			public Object _addMethodBoundToSystemSelector_(Object receiver, Object method, Object systemSelector) {
+				return ((ESBehavior)receiver).addMethodBoundToSystemSelector((ESMethod)method, asHostString(systemSelector));
+			}	
+
 			public Object _protocolMethod_(Object receiver, Object protocol, Object method) {
-				ESObject compiledMethod =  ((ESBehavior)receiver).protocolMethod(kernel.asESSymbol(protocol), (ESMethod)method);
-				return ((ESBehavior)receiver).protocolMethod(kernel.asESSymbol(protocol), (ESMethod)method);
+				var compiledMethod = (ESMethod)method;
+				compiledMethod.addToProtocol(kernel.asESSymbol(protocol));
+				return ((ESBehavior)receiver).addMethod(compiledMethod);
+			}	
+
+			public Object _protocolSystemSelectorMethod_(Object receiver, Object protocol, Object systemSelector, Object method) {
+				var compiledMethod = (ESMethod)method;
+				compiledMethod.addToProtocol(kernel.asESSymbol(protocol));
+				return ((ESBehavior)receiver).addMethodBoundToSystemSelector(compiledMethod, asHostString(systemSelector));
 			}	
 
 			public Object _compileMethodFromString_(Object receiver, Object protocol, Object methodText) {
@@ -1700,7 +1729,9 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("basicCompiledMethodAt:",				new FuncNs.Func<Object, Object, Object>(_basicCompiledMethodAt_));
 				publishPrimitive("compiledMethodAt:",					new FuncNs.Func<Object, Object, Object>(_compiledMethodAt_));
 				publishPrimitive("addMethod:",						new FuncNs.Func<Object, Object, Object>(_addMethod_));
+				publishPrimitive("addMethod:systemSelector:",				new FuncNs.Func<Object, Object, Object, Object>(_addMethodBoundToSystemSelector_));
 				publishPrimitive("protocol:method:",					new FuncNs.Func<Object, Object, Object, Object>(_protocolMethod_));
+				publishPrimitive("protocol:systemSelector:method:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_protocolSystemSelectorMethod_));
 				publishPrimitive("compileMethodInProtocol:fromString:",			new FuncNs.Func<Object, Object, Object, Object>(_compileMethodFromString_));
 				publishPrimitive("removeSelector:",					new FuncNs.Func<Object, Object, Object>(_removeSelector_));
 				publishPrimitive("includesSelector:",					new FuncNs.Func<Object, Object, Object>(_includesSelector_));
@@ -1919,6 +1950,14 @@ namespace EssenceSharp.Runtime {
 		
 		internal override void nameChanged() {
 			name = null;
+		}
+		
+		internal override void hostSystemNameChanged() {
+			// Do nothing
+		}
+		
+		internal override void hostSystemNamespaceChanged() {
+			// Do nothing
 		}
 
 		protected override void basicSetName(ESSymbol newName) {

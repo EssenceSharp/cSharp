@@ -125,8 +125,7 @@ namespace EssenceSharp.Runtime {
 			#region Primitive Definitions
 		
 			public Object _selector_(Object receiver) {
-				Object value = ((ESMessage)receiver).Selector;
-				return value;
+				return ((ESMessage)receiver).Selector;
 			}
 		
 			public Object _setSelector_(Object receiver, Object selector) {

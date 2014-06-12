@@ -271,12 +271,12 @@ namespace EssenceSharp.CompilationServices {
 
 		#region AST Node Instantiation
 
-		public ConstantValueNode newConstantValueNode(Object constantValue) {
-			return new ConstantValueNode(this, constantValue);
+		public ReducedNode newReducedNode(Object reducedValue) {
+			return new ReducedNode(this, reducedValue);
 		}
 
-		public ConstantValueNode newConstantValueNode(Expression constantValue) {
-			return new ConstantValueNode(this, constantValue);
+		public ReducedNode newReducedNode(Expression reducedValue) {
+			return new ReducedNode(this, reducedValue);
 		}
 
 		public DynamicArrayLiteralNode newDynamicArrayLiteralNode(List<ExpressionNode> elements) {
@@ -323,10 +323,10 @@ namespace EssenceSharp.CompilationServices {
 			return new ExpressionNode(this, operand);
 		}
 
-		public ExpressionNode newCascadedMessageExpressionNode(OperandNode initialExpression, List<MessageSendNode> cascadedMessages) {
+		public ExpressionNode newCascadedMessageExpressionNode(OperandNode operandExpression, List<MessageNode> cascadedMessages) {
 			return cascadedMessages == null || cascadedMessages.Count < 1 ?
-				newExpressionNode(initialExpression) :
-				new CascadedMessageExpressionNode(this, initialExpression, cascadedMessages.ToArray());
+				newExpressionNode(operandExpression) :
+				new CascadedMessageExpressionNode(this, operandExpression, cascadedMessages.ToArray());
 		}
 
 		public AssignmentStatementNode newAssignmentStatementNode(NamedValueOccurrence[] variables, OperandNode operand) {

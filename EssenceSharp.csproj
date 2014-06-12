@@ -179,6 +179,7 @@
     <Compile Include="Source\Exceptions\System\AssemblyBindingFailure.cs" />
     <Compile Include="Source\Exceptions\System\ImmutableBindingException.cs" />
     <Compile Include="Source\Exceptions\System\ImmutableObjectException.cs" />
+    <Compile Include="Source\Exceptions\System\InternalSystemError.cs" />
     <Compile Include="Source\Exceptions\System\InvalidFunctionCallException.cs" />
     <Compile Include="Source\Exceptions\System\NullReceiverException.cs" />
     <Compile Include="Source\Exceptions\System\PrimitiveFailures\MustBeBoolean.cs" />
