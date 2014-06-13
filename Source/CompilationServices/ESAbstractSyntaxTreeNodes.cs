@@ -1508,9 +1508,16 @@ namespace EssenceSharp.CompilationServices {
 		}
 
  		public Expression onFailCodeAsCLRExpression() {
+			if (StatementCount > 0) return base.bodyAsCLRExpression();
+			var kernel = Context.Kernel;
 			var parameters = ParmeterExpressions;
-			var body = StatementCount > 0 ? base.bodyAsCLRExpression() : Context.SelfParameter;
- 			return body;
+			var parametersArray = new Expression[parameters.Count];
+			for (var i = 0; i < parametersArray.Length; i++) parametersArray[i] = parameters[i];
+			var message = ExpressionTreeGuru.expressionToCreateMessage(kernel.MessageClass, Selector, parametersArray);
+			return Expression.Block(
+				new ParameterExpression[]{Context.SelfParameter},
+				Expression.Assign(Context.SelfParameter, Expression.Constant(Context.SelfValue)),
+				ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, HomeClass, kernel.SymbolRegistry, message));
 		}
 
 	}

@@ -607,7 +607,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		internal override void hostSystemNamespaceChanged() {
-			if (hostSystemName == null || InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
+			if (hostSystemNamespace == null || InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
 				invalidateInstanceType();
 			} else {
 				InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
@@ -1409,9 +1409,9 @@ namespace EssenceSharp.Runtime {
 			var matchingMethods = new List<MethodInfo>();
 			var methods = ReflectionType.GetMethods(HostObjectMethodInvokeBindingFlags);
 			foreach (var mi in methods) {
-				if (mi.Name != methodName) continue;
 				var parameters = mi.GetParameters();
 				if (parameters.Length != arity) continue;
+				if (mi.Name != methodName) continue;
 				matchingMethods.Add(mi);
 			}
 			return matchingMethods;

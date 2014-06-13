@@ -18,3 +18,23 @@ C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x86\x86.40.Rel
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x86\x86.40.Release\es.application
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x86\x86.40.Release\es.exe
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x86\x86.40.Release\es.pdb
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\es.exe.config
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.40.Release\es.exe
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.40.Release\es.pdb
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\es.exe.manifest
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\es.application
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\es.exe
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\es.pdb
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\EssenceSharp.dll
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\Microsoft.Dynamic.dll
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\Microsoft.Scripting.Debugging.dll
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\Microsoft.Scripting.dll
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\EssenceSharp.pdb
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\Microsoft.Dynamic.pdb
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\Microsoft.Scripting.pdb
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Release\Microsoft.Scripting.Debugging.pdb
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.40.Release\ES.csprojResolveAssemblyReference.cache
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.40.Release\EssenceSharp.Properties.Resources.resources
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.40.Release\ES.csproj.GenerateResource.Cache
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.40.Release\es.exe.manifest
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.40.Release\es.application

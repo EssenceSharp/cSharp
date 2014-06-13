@@ -226,18 +226,22 @@ namespace EssenceSharp.Runtime.Binding {
 				switch (operation.Type) {
 					case MethodOperationType.Convert:
 						Type targetType = ESBehavior.typeFromAssemblyQualifiedName(operation.Operand, true);
+						if (targetType == null) break;
 						expression = receiver.asExpressionWithFormalType().withType(targetType);
 						break;
 					case MethodOperationType.GetField:
 						field = esClass.getField(operation.Operand);
+						if (field == null) break;
 						expression = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), field);
 						break;
 					case MethodOperationType.GetProperty:
 						property = esClass.getReadableProperty(operation.Operand);
+						if (property == null) break;
 						expression = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), property);
 						break;
 					case MethodOperationType.SetField:
 						field = esClass.getField(operation.Operand);
+						if (field == null) break;
 						arg = argumentsWithoutReceiver[0];
 						argGuru = arg.typeBindingGuru(kernel);
 						arg = argGuru.metaObjectToConvertTo(field.FieldType);
@@ -247,6 +251,7 @@ namespace EssenceSharp.Runtime.Binding {
 						break;
 					case MethodOperationType.SetProperty:
 						property = esClass.getWritableProperty(operation.Operand);
+						if (property == null) break;
 						arg = argumentsWithoutReceiver[0];
 						argGuru = arg.typeBindingGuru(kernel);
 						arg = argGuru.metaObjectToConvertTo(property.PropertyType);
@@ -256,6 +261,7 @@ namespace EssenceSharp.Runtime.Binding {
 						break;
 					case MethodOperationType.InvokeField:
 						field = esClass.getField(operation.Operand);
+						if (field == null) break;
 						if (TypeGuru.delegateType.IsAssignableFrom(field.FieldType)) {
 							fieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), field);
 							methodInfo = field.FieldType.GetMethod("Invoke");
@@ -269,6 +275,7 @@ namespace EssenceSharp.Runtime.Binding {
 						break;
 					case MethodOperationType.InvokeProperty:
 						property = esClass.getReadableProperty(operation.Operand);
+						if (property == null) break;
 						if (TypeGuru.delegateType.IsAssignableFrom(property.PropertyType)) {
 							propertyExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), property);
 							methodInfo = property.PropertyType.GetMethod("Invoke");
@@ -1743,6 +1750,8 @@ namespace EssenceSharp.Runtime.Binding {
 			
 		}
 
+		#endregion
+
 		#region Sending #doesNotUnderstand:
 
 		public DynamicMetaObject metaObjectToSendDoesNotUnderstandToESObject(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] argumentsWithoutReceiver) {
@@ -1756,8 +1765,6 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectToSendDoesNotUnderstand(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] argumentsWithoutReceiver, BindingRestrictions bindingRestrictions) {
 			return new DynamicMetaObject(ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, argumentsWithoutReceiver), bindingRestrictions, receiver.Value);
 		}
-
-		#endregion
 
 		#endregion
 
@@ -2052,7 +2059,7 @@ namespace EssenceSharp.Runtime.Binding {
 				// UnaryOperationBinder:
 				case CanonicalSelectorSemantics.Size:	
 					if (receiver.LimitType.IsArray) {
-						return metaObjectForForeignObjectOperation(receiver, esClass, Expression.ArrayLength(receiver.asExpressionWithFormalType()));
+						return metaObjectForForeignObjectOperation(receiver, esClass, Expression.ArrayLength(receiver.asExpressionWithFormalType()).withType(TypeGuru.longType));
 					} else {
 						return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, "Size"), args);
 					}
@@ -2434,32 +2441,32 @@ namespace EssenceSharp.Runtime.Binding {
 
 					if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = getPropertyOrFieldExpression.withType(TypeGuru.objectType);
 					return new DynamicMetaObject(
-						getPropertyOrFieldExpression, 
-						target.bindingRestrictionsForForeignObjectReceiver(esClass),
-						target.Value);	
+							getPropertyOrFieldExpression, 
+							target.bindingRestrictionsForForeignObjectReceiver(esClass),
+							target.Value);	
 		
 				} else if (Selector.CanonicalSemantics == CanonicalSelectorSemantics.Size) {
 					if (esClass.getReadablePropertyOrElseField(
 								"Count", 
-								(property) => getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property), 
-								(field) => getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field))) {
+								(property) => getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property).promotedToLong(), 
+								(field) => getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field).promotedToLong())) {
 
 						if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = getPropertyOrFieldExpression.withType(TypeGuru.objectType);
 						return new DynamicMetaObject(
-							getPropertyOrFieldExpression, 
-							target.bindingRestrictionsForForeignObjectReceiver(esClass),
-							target.Value);	
+								getPropertyOrFieldExpression, 
+								target.bindingRestrictionsForForeignObjectReceiver(esClass),
+								target.Value);	
 		
 					} else if (esClass.getReadablePropertyOrElseField(
 								"Length", 
-								(property) => getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property), 
-								(field) => getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field))) {
+								(property) => getPropertyOrFieldExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : self, property).promotedToLong(), 
+								(field) => getPropertyOrFieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : self, field).promotedToLong())) {
 
 						if (getPropertyOrFieldExpression.Type != TypeGuru.objectType) getPropertyOrFieldExpression = getPropertyOrFieldExpression.withType(TypeGuru.objectType);
 						return new DynamicMetaObject(
-							getPropertyOrFieldExpression, 
-							target.bindingRestrictionsForForeignObjectReceiver(esClass),
-							target.Value);	
+								getPropertyOrFieldExpression, 
+								target.bindingRestrictionsForForeignObjectReceiver(esClass),
+								target.Value);	
 		
 					} else {
 						return target.BindInvokeMember(

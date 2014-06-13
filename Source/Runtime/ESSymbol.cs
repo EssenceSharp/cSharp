@@ -283,7 +283,7 @@ namespace EssenceSharp.Runtime {
 			return stringValue.ToCharArray();
 		}
 		
-		public override IEnumerator GetEnumerator() {
+		public override IEnumerator<char> GetEnumerator() {
 			return stringValue.GetEnumerator();
 		}
 		

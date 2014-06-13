@@ -31,6 +31,8 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Collections;
+using System.Collections.Generic;
 #if CLR2
 using FuncNs = Microsoft.Scripting.Utils;
 #else
@@ -43,7 +45,7 @@ using EssenceSharp.Exceptions.System.PrimitiveFailures;
 
 namespace EssenceSharp.Runtime {
 	
-	public abstract class ESIndexedComparableSlotsObject<ValueType> : ESIndexedSlotsObject<ValueType>, IComparable where ValueType : IEquatable<ValueType>, IComparable {
+	public abstract class ESIndexedComparableSlotsObject<ValueType> : ESIndexedSlotsObject<ValueType>, IEnumerable<ValueType>, IComparable where ValueType : IEquatable<ValueType>, IComparable {
 				
 		public ESIndexedComparableSlotsObject(ESBehavior esClass, long size) : base(esClass, size) {
 		}
@@ -80,6 +82,43 @@ namespace EssenceSharp.Runtime {
 				return compareTo(stArray);
 			}
 		}	
+		
+		public virtual IEnumerator<ValueType> GetEnumerator() {
+			return new ESPrimitiveElementArrayEnumerator(this);
+		}
+
+		public class ESPrimitiveElementArrayEnumerator : IEnumerator<ValueType> {
+			private ESIndexedComparableSlotsObject<ValueType> esArray;
+			private int index;
+
+			internal ESPrimitiveElementArrayEnumerator(ESIndexedComparableSlotsObject<ValueType> esArray) {
+				this.esArray = esArray;
+				index = -1;
+			}
+
+			public bool MoveNext() {
+				if (esArray.Count - index <= 1) return false;
+				index++;
+				return true;
+			}
+
+			public void Reset() {
+				index = -1;
+			}
+
+			void IDisposable.Dispose() {
+				esArray = null;
+			}
+
+			public ValueType Current {
+				get {return esArray.at(index);}
+			}
+
+			Object IEnumerator.Current {
+				get {return Current;}
+			}
+
+		}
 		
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
 			if (Class.InstSize > 0) {

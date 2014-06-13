@@ -257,7 +257,8 @@ namespace EssenceSharp.ParsingServices {
 		#endregion
 
 		public ParseTreeNode parseTree() {
-			// BlockLiteral
+			// Accepts:	ExecutableCode ("Do Its") || BlockDeclaration ("'Do Its' with parameters")
+			// Returns:	BlockLiteral
 
 			errorCount = 0;
 			var block = parseBlockDeclaration();
@@ -276,7 +277,8 @@ namespace EssenceSharp.ParsingServices {
 		}
 
 		public ParseTreeNode selfExpressionParseTree(List<String> parameterNames) {
-			// BlockLiteral, optionally with named parameters
+			// Accepts: A single cascaded message chain, optionally with parameters (receiver must not be specified syntactically)
+			// Returns: BlockLiteral
 
 			errorCount = 0;
 			var expression = parseExpression(selfToken);
@@ -304,7 +306,8 @@ namespace EssenceSharp.ParsingServices {
 		}
 
 		public ParseTreeNode methodParseTree() {
-			// MethodDeclaration
+			// Accepts: MethodDeclaration
+			// Returns: MethodDeclaration
 
 			errorCount = 0;
 			var node = parseMethodDeclaration();

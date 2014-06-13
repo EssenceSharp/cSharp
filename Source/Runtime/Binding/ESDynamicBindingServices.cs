@@ -567,7 +567,13 @@ namespace EssenceSharp.Runtime.Binding {
 			if (expressionType == targetType) return expression;
 			return Expression.Convert(expression, targetType, conversionOperator);
 		}
-		
+
+		public static Expression promotedToLong(this Expression expression) {
+			var expressionType = expression.Type; 
+			if (!expressionType.isSmallInteger()) return expression;
+			return expression.withType(TypeGuru.longType);
+		}
+
 		public static Expression expressionToInvoke_ToString(Expression value) {
 			return Expression.Call(
 					value,
@@ -1055,9 +1061,7 @@ namespace EssenceSharp.Runtime.Binding {
 					logBase.withType(TypeGuru.doubleType));
 		}
 
-		public static Expression expressionToCreateMessage(ESBehavior messageClass, ESSymbol selector, DynamicMetaObject[] args) {
-			var arguments = new Expression[args.Length];
-			for (var i = 0; i < args.Length; i++) arguments[i] = args[i].Expression;
+		public static Expression expressionToCreateMessage(ESBehavior messageClass, ESSymbol selector, IEnumerable<Expression> arguments) {
 			var pSelector = Expression.Constant(selector);
 			var createArrayAction = Expression.NewArrayInit(TypeGuru.objectType, arguments);
 			return 
@@ -1066,6 +1070,12 @@ namespace EssenceSharp.Runtime.Binding {
 					Expression.Constant(messageClass),
 					pSelector,
 					createArrayAction);
+		}
+
+		public static Expression expressionToCreateMessage(ESBehavior messageClass, ESSymbol selector, DynamicMetaObject[] args) {
+			var arguments = new Expression[args.Length];
+			for (var i = 0; i < args.Length; i++) arguments[i] = args[i].Expression;
+			return expressionToCreateMessage(messageClass, selector, arguments);
 		}
 
 		public static Expression expressionToThrowInvalidFunctionCallException(
@@ -1766,7 +1776,7 @@ namespace EssenceSharp.Runtime.Binding {
 			if (targetType == ModelType) return argument.withFormalTypeAndTypeRestriction();
 			var methodInfo = CompilerHelpers.GetImplicitConverter(ModelType, targetType);
 			if (methodInfo != null) return argument.withTypeRestrictionConvertingTo(targetType, methodInfo);
-			if (targetType.IsAssignableFrom(ModelType)) return argument.withFormalTypeAndTypeRestriction();
+			if (targetType.IsAssignableFrom(ModelType)) return argument.withTypeRestrictionConvertingTo(targetType);
 
 			Expression expression, asCharArrayExpression, asStringExpression;
 			Type functorType;

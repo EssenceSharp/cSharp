@@ -2025,7 +2025,7 @@ namespace EssenceSharp.Runtime {
 
 	#endregion
 
-	public class ESArray : ESIndexedSlotsObject<Object> {
+	public class ESArray : ESIndexedSlotsObject<Object>, IEnumerable<Object> {
 		
 		#region Static variables and functions
 		
@@ -2124,6 +2124,43 @@ namespace EssenceSharp.Runtime {
 			} else {
 				throw new PrimInvalidOperandException("Step value must not be zero");
 			}
+		}
+		
+		public IEnumerator<Object> GetEnumerator() {
+			return new ESArrayEnumerator(this);
+		}
+
+		public class ESArrayEnumerator : IEnumerator<Object> {
+			private ESArray esArray;
+			private int index;
+
+			internal ESArrayEnumerator(ESArray esArray) {
+				this.esArray = esArray;
+				index = -1;
+			}
+
+			public bool MoveNext() {
+				if (esArray.Count - index <= 1) return false;
+				index++;
+				return true;
+			}
+
+			public void Reset() {
+				index = -1;
+			}
+
+			void IDisposable.Dispose() {
+				esArray = null;
+			}
+
+			public Object Current {
+				get {return esArray.at(index);}
+			}
+
+			Object IEnumerator.Current {
+				get {return Current;}
+			}
+
 		}
 		
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {

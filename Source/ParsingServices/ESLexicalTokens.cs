@@ -888,6 +888,10 @@ namespace EssenceSharp.ParsingServices {
 			get;
 		}
 		
+		public override bool MayOccurAsElementOfArrayLiteral {
+			get {return true;}
+		}
+		
 	}
 
 	public class NilToken : ConstantReferenceToken {
