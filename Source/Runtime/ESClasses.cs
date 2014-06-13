@@ -174,6 +174,26 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
+		public static bool isAdoptedType(ObjectStateArchitecture instanceArchitecture) {
+			switch (instanceArchitecture) {
+
+				case ObjectStateArchitecture.Nil:
+				case ObjectStateArchitecture.False:
+				case ObjectStateArchitecture.True:
+				case ObjectStateArchitecture.Char:
+				case ObjectStateArchitecture.SmallInteger:
+				case ObjectStateArchitecture.LargeInteger:
+				case ObjectStateArchitecture.SinglePrecision:
+				case ObjectStateArchitecture.DoublePrecision:
+				case ObjectStateArchitecture.QuadPrecision:
+					return true;
+
+				default:
+					return false;
+
+			}
+		}
+
 		#endregion
 
 		#region Host System Reflection
@@ -425,7 +445,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public Type InstanceType {
-			get {	if (instanceType == null) setInstanceType(getInstanceType());
+			get {	if (instanceType == null) invalidateInstanceType();
 				return instanceType;}
 			set {	if (instanceType == value) return;
 				setInstanceType(value);}
@@ -465,7 +485,7 @@ namespace EssenceSharp.Runtime {
 			isBoundToHostSystemNamespace = instanceArchitecture == ObjectStateArchitecture.HostSystemObject;
 			if (instanceType == null) return;
 			assembly = instanceType.Assembly;
-			if (!instanceType.isEssenceSharpType()) InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
+			if (!isAdoptedType(InstanceArchitecture) && !instanceType.isEssenceSharpType()) InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
 			basicBindToInstanceType();
 		}
 

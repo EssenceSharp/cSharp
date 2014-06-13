@@ -1,49 +1,4 @@
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\es.exe.config
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\es.exe.manifest
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\es.application
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\es.exe
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\es.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\EssenceSharp.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Dynamic.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Scripting.Core.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Scripting.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Scripting.ExtensionAttribute.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\EssenceSharp.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Scripting.Core.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Scripting.Core.xml
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Scripting.ExtensionAttribute.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Dynamic.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Dynamic.xml
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Scripting.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\x64.35.Release\Microsoft.Scripting.xml
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\es.exe.config
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\es.exe.manifest
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\es.application
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\es.exe
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\es.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\EssenceSharp.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Dynamic.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Scripting.Core.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Scripting.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Scripting.ExtensionAttribute.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\EssenceSharp.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Scripting.Core.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Scripting.Core.xml
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Scripting.ExtensionAttribute.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Dynamic.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Dynamic.xml
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Scripting.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\bin\x64\35\Release\Microsoft.Scripting.xml
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x64\x64.35.Release\ES.csprojResolveAssemblyReference.cache
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x64\x64.35.Release\EssenceSharp.Properties.Resources.resources
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x64\x64.35.Release\ES.csproj.GenerateResource.Cache
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x64\x64.35.Release\es.exe.manifest
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x64\x64.35.Release\es.application
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x64\x64.35.Release\es.exe
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\ES\obj\x64\x64.35.Release\es.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\es.exe.config
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x64\x64.35.Release\es.exe
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x64\x64.35.Release\es.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\es.exe.manifest
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\es.application
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\es.exe
@@ -55,7 +10,6 @@ C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Depende
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\EssenceSharp.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\Microsoft.Scripting.Core.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\Microsoft.Scripting.Core.xml
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\Microsoft.Scripting.ExtensionAttribute.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\Microsoft.Dynamic.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\Microsoft.Dynamic.xml
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x64\35\Release\Microsoft.Scripting.pdb
@@ -65,3 +19,5 @@ C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Depende
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x64\x64.35.Release\ES.csproj.GenerateResource.Cache
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x64\x64.35.Release\es.exe.manifest
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x64\x64.35.Release\es.application
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x64\x64.35.Release\es.exe
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x64\x64.35.Release\es.pdb
