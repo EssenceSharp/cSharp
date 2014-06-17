@@ -31,8 +31,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Runtime.CompilerServices;
 #if CLR2
 using FuncNs = Microsoft.Scripting.Utils;
 #else
@@ -580,45 +578,6 @@ namespace EssenceSharp.Runtime {
 
 	}
 
-	public class ObjectIdentityComparator : IEqualityComparer<Object> {
-
-		public new bool Equals(Object left, Object right) {
-			return left == right;
-		}
-
-		public int GetHashCode(Object anObject) {
-			return RuntimeHelpers.GetHashCode(anObject);
-		}
-
-	}
-
-	public class ObjectEqualityComparator : IEqualityComparer<Object> {
-
-		protected FuncNs.Func<Object, Object, Object> areEqual;
-		protected FuncNs.Func<Object, Object> hashCodeOf;
-
-		public ObjectEqualityComparator(ESKernel kernel) {
-
-			ESBlock equalsBlock;
-			kernel.compile(new StringReader(":left :right | left = right"), kernel.SmalltalkNamespace, null, out equalsBlock);
-			areEqual = equalsBlock.F2;
-
-			ESBlock hashBlock;
-			kernel.compile(new StringReader(":anObject | anObject hash"), kernel.SmalltalkNamespace, null, out hashBlock);
-			hashCodeOf = hashBlock.F1;
-
-		}
-
-		public new bool Equals(Object left, Object right) {
-			return (bool)areEqual(left, right);
-		}
-
-		public int GetHashCode(Object anObject) {
-			return (int)hashCodeOf(anObject);
-		}
-
-	}
-
 	public class ESIdentityDictionary : ESAbstractDictionary<Object, Object, ESAssociation> {
 
 		public ESIdentityDictionary(ESBehavior esClass) : base(esClass) {}
@@ -629,7 +588,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected virtual IEqualityComparer<Object> defaultKeyComparator() {
-			return new ObjectIdentityComparator();
+			return Class.Kernel.ObjectIdentityComparator;
 		}
 
 		protected override IDictionary<Object, ESAssociation> newBindings(long capacity, IEqualityComparer<Object> keyComparator) {
@@ -778,7 +737,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected override IEqualityComparer<Object> defaultKeyComparator() {
-			return new ObjectEqualityComparator(Class.Kernel);
+			return Class.Kernel.newObjectEqualityComparator();
 		}
 
 		public override ObjectStateArchitecture Architecture {

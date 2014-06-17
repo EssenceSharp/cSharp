@@ -63,8 +63,9 @@ namespace EssenceSharp.UtilityServices {
 			// Leading whitespace is accepted.
 			// The namespace, any containing types and the assembly name may be omitted.
 			// Generic types must at least specify their parameter arity, but may omit any type arguments.
+			// And don't blame me for the complexity of the code required to parse type name syntax. The following is what's required by what Microsoft hath wrought:
 
-			var element = ESLexicalUtility.nextIdentifierFrom(stream);
+			var element = stream.nextIdentifier();
 			if (element == null) throw new PrimInvalidOperandException("Expecting type name, but encountered end of input."); 
 			if (element.Length < 1) throw new PrimInvalidOperandException("Type name must start with a letter or underscore."); 
 			
@@ -77,29 +78,29 @@ namespace EssenceSharp.UtilityServices {
 			AssemblyName	assemblyName		= null;
 
 			var		c			= stream.Peek();
-			var		ch			= (char)c;
+			var		ch			= c >= 0 ? (char)c : (char)0;
 
 			if (ch == '.' || ch == '+') {
 
 				namespaceElements = new List<String>();
-				while (ESLexicalUtility.nextMatches(stream, '.')) {
+				while (stream.nextMatches('.')) {
 					if (element.Length < 1) {
-						var prefix = ESLexicalUtility.compose(namespaceElements.ToArray(), ".");
+						var prefix = namespaceElements.ToArray().compose(".");
 						throw new PrimInvalidOperandException("Namespace path element cannot have a length of zero. Check for unintentional duplication of the separator character ('.'). Prefix = " + prefix);
 					}
 					namespaceElements.Add(element);
-					element = ESLexicalUtility.nextIdentifierFrom(stream);
+					element = stream.nextIdentifier();
 					if (element == null) {
-						var prefix = ESLexicalUtility.compose(namespaceElements.ToArray(), ".");
+						var prefix = namespaceElements.ToArray().compose(".");
 						throw new PrimInvalidOperandException("Type name cannot end with a period. Prefix = " + prefix);
 					}
 					outerTypeElement = element;
 				}
 
-				if (ESLexicalUtility.nextMatches(stream, '`')) {
-					var nArity = ESLexicalUtility.nextUnsignedIntegerFrom(stream);
+				if (stream.nextMatches('`')) {
+					var nArity = stream.nextUnsignedInteger();
 					if (nArity == null) {
-						var prefix = ESLexicalUtility.compose(namespaceElements.ToArray(), ".");
+						var prefix = namespaceElements.ToArray().compose(".");
 						throw new PrimInvalidOperandException("Type name cannot end with a '`' (backquote character.) Prefix = " + prefix);
 					}
 					genericArity = (int)nArity;
@@ -108,13 +109,13 @@ namespace EssenceSharp.UtilityServices {
 				innerTypeElement = outerTypeElement;
 
 				c = stream.Peek();
-				ch = (char)c;
+				ch = c >= 0 ? (char)c : (char)0;
 
 				if (ch == '+') {
 
 					var containingType = outerTypeElement;
 					containingTypes = new List<String>();
-					while (ESLexicalUtility.nextMatches(stream, '+')) {
+					while (stream.nextMatches('+')) {
 						if (genericArity > 0) {
 							containingType = containingType + "`" + genericArity.ToString();
 						}
@@ -124,8 +125,8 @@ namespace EssenceSharp.UtilityServices {
 							out containingType, 
 							out genericArity, 
 							(localPrefix, errorDescription) => {
-								var prefix = ESLexicalUtility.compose(namespaceElements.ToArray(), ".");
-								prefix = prefix + "." + ESLexicalUtility.compose(containingTypes.ToArray(), "+");
+								var prefix = namespaceElements.ToArray().compose(".");
+								prefix = prefix + "." + containingTypes.ToArray().compose("+");
 								if (localPrefix == null || localPrefix.Length < 1) {
 									throw new PrimInvalidOperandException("Nested type element cannot have a length of zero. Check for unintentional duplication of the separator character ('+'). Prefix = " + prefix);
 								} else {
@@ -138,39 +139,45 @@ namespace EssenceSharp.UtilityServices {
 
 				} 
 
-			} else if (ESLexicalUtility.nextMatches(stream, '`')) {
-				var nArity = ESLexicalUtility.nextUnsignedIntegerFrom(stream);
+			} else if (stream.nextMatches('`')) {
+				var nArity = stream.nextUnsignedInteger();
 				if (nArity == null) {
 					throw new PrimInvalidOperandException("Type name cannot end with a '`' (backquote character.)");
 				}
 				genericArity = (int)nArity;
 			} 
 
-			if (ESLexicalUtility.nextMatches(stream, '[')) {
+			if (stream.nextMatches('[')) {
 				var args = new List<TypeName>();
-				do {
-					while (ESLexicalUtility.nextMatches(stream, '[')) {
-						args.Add(fromStream(stream));
-						if (!ESLexicalUtility.nextMatches(stream, ']')) {
-							String prefix = "";
-							if (namespaceElements != null) {
-								prefix = ESLexicalUtility.compose(namespaceElements.ToArray(), ".") + ".";
+				c = stream.Peek();
+				ch = c >= 0 ? (char)c : (char)0;
+				if (ch.isInitialIdentifierChar()) {
+					args.Add(fromStream(stream));
+				} else { 
+					do {
+						while (stream.nextMatches('[')) {
+							args.Add(fromStream(stream));
+							if (!stream.nextMatches(']')) {
+								String prefix = "";
+								if (namespaceElements != null) {
+									prefix = namespaceElements.ToArray().compose(".") + ".";
+								}
+								if (containingTypes != null) {
+									prefix = prefix + containingTypes.ToArray().compose("+") + "+";
+								}
+								prefix = prefix + innerTypeElement;
+								throw new PrimInvalidOperandException("A generic type parameter in a type name must be terminated by a ']' character. Prefix = " + prefix);
 							}
-							if (containingTypes != null) {
-								prefix = prefix + ESLexicalUtility.compose(containingTypes.ToArray(), "+") + "+";
-							}
-							prefix = prefix + innerTypeElement;
-							throw new PrimInvalidOperandException("A generic type parameter in a type name must be terminated by a ']' character. Prefix = " + prefix);
 						}
-					}
-				} while (ESLexicalUtility.nextMatches(stream, ','));
-				if (!ESLexicalUtility.nextMatches(stream, ']')) {
+					} while (stream.nextMatches(','));
+				}
+				if (!stream.nextMatches(']')) {
 					String prefix = "";
 					if (namespaceElements != null) {
-						prefix = ESLexicalUtility.compose(namespaceElements.ToArray(), ".") + ".";
+						prefix = namespaceElements.ToArray().compose(".") + ".";
 					}
 					if (containingTypes != null) {
-						prefix = prefix + ESLexicalUtility.compose(containingTypes.ToArray(), "+") + "+";
+						prefix = prefix + containingTypes.ToArray().compose("+") + "+";
 					}
 					prefix = prefix + innerTypeElement;
 					throw new PrimInvalidOperandException("A type name's list of generic type parameters must be terminated by a ']' character. Prefix = " + prefix);
@@ -179,10 +186,10 @@ namespace EssenceSharp.UtilityServices {
 					if (args.Count != genericArity) {
 						String prefix = "";
 						if (namespaceElements != null) {
-							prefix = ESLexicalUtility.compose(namespaceElements.ToArray(), ".") + ".";
+							prefix = namespaceElements.ToArray().compose(".") + ".";
 						}
 						if (containingTypes != null) {
-							prefix = prefix + ESLexicalUtility.compose(containingTypes.ToArray(), "+") + "+";
+							prefix = prefix + containingTypes.ToArray().compose("+") + "+";
 						}
 						prefix = prefix + innerTypeElement;
 						throw new PrimInvalidOperandException("The number of generic type parameters does not match the specified arity: " + prefix);
@@ -190,10 +197,10 @@ namespace EssenceSharp.UtilityServices {
 				} else if (args.Count < 1) {
 					String prefix = "";
 					if (namespaceElements != null) {
-						prefix = ESLexicalUtility.compose(namespaceElements.ToArray(), ".") + ".";
+						prefix = namespaceElements.ToArray().compose( ".") + ".";
 					}
 					if (containingTypes != null) {
-						prefix = prefix + ESLexicalUtility.compose(containingTypes.ToArray(), "+") + "+";
+						prefix = prefix + containingTypes.ToArray().compose("+") + "+";
 					}
 					prefix = prefix + innerTypeElement;
 					throw new PrimInvalidOperandException("A type name cannot have an empty list of generic type arguments. Prefix = " + prefix);
@@ -203,15 +210,15 @@ namespace EssenceSharp.UtilityServices {
 				genericArguments = args.ToArray();
 			} 
 			
-			if (ESLexicalUtility.nextMatches(stream, ',')) {
+			if (stream.nextMatches(',')) {
 				if (!parseAssemblyName(
 					stream, 
 					out assemblyName, 
 					(localPrefix, errorDescription) => {
-						var prefix = ESLexicalUtility.compose(namespaceElements.ToArray(), ".");
+						var prefix = namespaceElements.ToArray().compose(".");
 						if (containingTypes != null) {
 							prefix = prefix + outerTypeElement + ".";
-							prefix = prefix + ESLexicalUtility.compose(containingTypes.ToArray(), "+");
+							prefix = prefix + containingTypes.ToArray().compose("+");
 						}
 						throw new PrimInvalidOperandException(errorDescription + " TypeName context = " + prefix);
 					})) {
@@ -247,7 +254,7 @@ namespace EssenceSharp.UtilityServices {
 			// Leading whitespace is accepted.
 			// Note: The arlgorithm leaves any generic type arguments unparsed. To parse generic type arguments, use the fromString(String) or fromStream(TextReader) methods.
 			genericArity = 0;
-			namePrefix = ESLexicalUtility.nextIdentifierFrom(namePrefixStream);
+			namePrefix = namePrefixStream.nextIdentifier();
 			if (namePrefix == null) {
 				if (handleError == null) {
 					throw new PrimInvalidOperandException("Expecting type/namespace name, encountered end of input.");
@@ -264,8 +271,8 @@ namespace EssenceSharp.UtilityServices {
 				}
 				return false;
 			}
-			if (ESLexicalUtility.nextMatches(namePrefixStream, '`')) {
-				var nArity = ESLexicalUtility.nextUnsignedIntegerFrom(namePrefixStream);
+			if (namePrefixStream.nextMatches('`')) {
+				var nArity = namePrefixStream.nextUnsignedInteger();
 				if (nArity == null) {
 					if (handleError == null) {
 						throw new PrimInvalidOperandException("Type name must not end with a '`' (backquote character.) Prefix = " + namePrefix);
@@ -286,7 +293,7 @@ namespace EssenceSharp.UtilityServices {
 							  (* Note: It is a semantic error for the same PropertySpec to occur more than once,
 								or for the PublicKeySpec and the PublicKeyTokenSpec to both occur. *)
 				NameElementSeparator	= ',', [Whitespace];
-				NamePrefix		= [Whitespace], Identifier;
+				NamePrefix		= [Whitespace], Identifier,{".", Identifier};
 				Identifier		= (Letter | '_'), {Letter | '_' | Digit};
 				PropertySpec		= VersionSpec | CultureSpec | PublicKeySpec | PublicKeyTokenSpec; (* The Custom property is NOT supported *)
 				VersionSpec		= 'Version', '=', 3 * (VersionNumberInteger, "."), VersionNumberInteger;
@@ -301,7 +308,7 @@ namespace EssenceSharp.UtilityServices {
 			*/
 
 			assemblyName = new AssemblyName();
-			var namePrefix = ESLexicalUtility.nextIdentifierFrom(stream);
+			var namePrefix = stream.nextQualifiedIdentifier();
 			if (namePrefix == null) {
 				if (handleError == null) {
 					throw new PrimInvalidOperandException("Expecting assembly name, encountered end of input.");
@@ -332,7 +339,7 @@ namespace EssenceSharp.UtilityServices {
 			while (ch == ',') {
 				stream.Read();
 
-				var keyword			= ESLexicalUtility.nextIdentifierFrom(stream);
+				var keyword			= stream.nextIdentifier();
 				if (keyword == null) {
 					if (handleError == null) {
 						throw new PrimInvalidOperandException("Expecting assembly property keyword, encountered end of input.");
@@ -349,7 +356,7 @@ namespace EssenceSharp.UtilityServices {
 					}
 					return false;
 				}
-				if (!ESLexicalUtility.nextMatches(stream, '=')) {
+				if (!stream.nextMatches('=')) {
 					if (handleError == null) {
 						throw new PrimInvalidOperandException("Assembly name property keyword must be immediately followed by '='.");
 					} else {
@@ -367,7 +374,7 @@ namespace EssenceSharp.UtilityServices {
 							}
 							return false;
 						}
-						var major	= ESLexicalUtility.nextUnsignedIntegerFrom(stream);
+						var major	= stream.nextUnsignedInteger();
 						if (major == null) {
 							if (handleError == null) {
 								throw new PrimInvalidOperandException("The version property of an AssemblyName requires a major version number that is an unsigned integer.");
@@ -376,7 +383,7 @@ namespace EssenceSharp.UtilityServices {
 							}
 							return false;
 						}
-						if (!ESLexicalUtility.nextMatches(stream, '.')) {
+						if (!stream.nextMatches('.')) {
 							if (handleError == null) {
 								throw new PrimInvalidOperandException("The version property of an AssemblyName requires a period between the major and minor version numbers.");
 							} else {
@@ -384,7 +391,7 @@ namespace EssenceSharp.UtilityServices {
 							}
 							return false;
 						}
-						var minor	= ESLexicalUtility.nextUnsignedIntegerFrom(stream);
+						var minor	= stream.nextUnsignedInteger();
 						if (major == null) {
 							if (handleError == null) {
 								throw new PrimInvalidOperandException("The version property of an AssemblyName requires a minor version number that is an unsigned integer.");
@@ -393,7 +400,7 @@ namespace EssenceSharp.UtilityServices {
 							}
 							return false;
 						}
-						if (!ESLexicalUtility.nextMatches(stream, '.')) {
+						if (!stream.nextMatches('.')) {
 							if (handleError == null) {
 								throw new PrimInvalidOperandException("The version property of an AssemblyName requires a period between the minor and build version numbers.");
 							} else {
@@ -401,7 +408,7 @@ namespace EssenceSharp.UtilityServices {
 							}
 							return false;
 						}
-						var build	= ESLexicalUtility.nextUnsignedIntegerFrom(stream);
+						var build	= stream.nextUnsignedInteger();
 						if (major == null) {
 							if (handleError == null) {
 								throw new PrimInvalidOperandException("The version property of an AssemblyName requires a build version number that is an unsigned integer.");
@@ -410,7 +417,7 @@ namespace EssenceSharp.UtilityServices {
 							}
 							return false;
 						}
-						if (!ESLexicalUtility.nextMatches(stream, '.')) {
+						if (!stream.nextMatches('.')) {
 							if (handleError == null) {
 								throw new PrimInvalidOperandException("The version property of an AssemblyName requires a period between the build and revision version numbers.");
 							} else {
@@ -418,7 +425,7 @@ namespace EssenceSharp.UtilityServices {
 							}
 							return false;
 						}
-						var revision	= ESLexicalUtility.nextUnsignedIntegerFrom(stream);
+						var revision	= stream.nextUnsignedInteger();
 						if (major == null) {
 							if (handleError == null) {
 								throw new PrimInvalidOperandException("The version property of an AssemblyName requires a revision version number that is an unsigned integer.");
@@ -439,7 +446,7 @@ namespace EssenceSharp.UtilityServices {
 							return false;
 						}
 						var cultureNameBuilder = new StringBuilder();
-						var identifier = ESLexicalUtility.nextIdentifierFrom(stream);
+						var identifier = stream.nextIdentifier();
 						if (String.IsNullOrEmpty(identifier)) {
 							if (handleError == null) {
 								throw new PrimInvalidOperandException("The culture property of an AssemblyName requires a language name in RFC-1766 format as its value. Specifically, it must begin with an identifier.");
@@ -449,8 +456,8 @@ namespace EssenceSharp.UtilityServices {
 							return false;
 						}
 						cultureNameBuilder.Append(identifier);
-						while (ESLexicalUtility.nextMatches(stream, '-')) {
-							identifier = ESLexicalUtility.nextIdentifierFrom(stream);
+						while (stream.nextMatches('-')) {
+							identifier = stream.nextIdentifier();
 							if (String.IsNullOrEmpty(identifier)) {
 								if (handleError == null) {
 									throw new PrimInvalidOperandException("The culture property of an AssemblyName requires a language name in RFC-1766 format as its value. Specifically, it cannot end with a hyphen.");
@@ -480,7 +487,7 @@ namespace EssenceSharp.UtilityServices {
 						}
 						var publicKeyBuilder		= parseBytesFromHexadecimal(stream);
 						if (publicKeyBuilder == null) {
-							var value = ESLexicalUtility.nextIdentifierFrom(stream);
+							var value = stream.nextIdentifier();
 							if (!String.IsNullOrEmpty(value) && value == "null") {
 								publicKey = nullPublicKeyOrKeyToken;
 								break;
@@ -513,7 +520,7 @@ namespace EssenceSharp.UtilityServices {
 						}
 						var publicKeyTokenBuilder		= parseBytesFromHexadecimal(stream);
 						if (publicKeyTokenBuilder == null || publicKeyTokenBuilder.Count != 8) {
-							var value = ESLexicalUtility.nextIdentifierFrom(stream);
+							var value = stream.nextIdentifier();
 							if (!String.IsNullOrEmpty(value) && value == "null") {
 								publicKeyToken = nullPublicKeyOrKeyToken;
 								break;
@@ -555,25 +562,30 @@ namespace EssenceSharp.UtilityServices {
 			int nibbleIndex				= 0;
 
 			var c					= stream.Peek();
+			if (c < 0)				return null;
 			var ch					= (char)c;
-			var isValidDigit			= ESLexicalUtility.isHexadecimalDigit(ch);
+			var isValidDigit			= ch.isHexadecimalDigit();
 			if (!isValidDigit)			return null;
 			var bytes				= new List<byte>();
 			while (isValidDigit) {
 				var digit			= (char)stream.Read();
 				if (nibbleIndex == 0) {
-					byteValue		= (byte)ESLexicalUtility.digitValue(digit);
+					byteValue		= (byte)digit.digitValue();
 					nibbleIndex++;
 				} else {
-					byteValue		= (byte)((byte)(byteValue * 16) + (byte)ESLexicalUtility.digitValue(digit));
+					byteValue		= (byte)((byte)(byteValue * 16) + (byte)digit.digitValue());
 					bytes.Add(byteValue);
 					byteValue	= 0;
 					nibbleIndex	= 0;
 				}
 
 				c				= stream.Peek();
-				ch				= (char)c;
-				isValidDigit			= ESLexicalUtility.isHexadecimalDigit(ch);
+				if (c >= 0) { 
+					ch				= (char)c;
+					isValidDigit			= ch.isHexadecimalDigit();
+				} else {
+					isValidDigit			= false;
+				}
 			}
 			if (nibbleIndex == 1) {
 				bytes.Add((byte)(byteValue * 16));
@@ -649,9 +661,9 @@ namespace EssenceSharp.UtilityServices {
 				var limit = containingTypes.Length - 1;
 				for (var i = limit; i >= 0; i--) containingTypes[limit - i] = containers[i].Name;
 			}
-			namespacePath = ESLexicalUtility.elementsFromString(nsResidentType.Namespace, '.', null);
+			namespacePath = nsResidentType.Namespace.elementsFromString('.', null);
 			if (type.IsGenericType) {
-				namePrefix = ESLexicalUtility.nextIdentifierFrom(new StringReader(type.Name));
+				namePrefix = new StringReader(type.Name).nextIdentifier();
 				var myGenericArgs = type.GetGenericArguments();
 				genericArity = myGenericArgs.Length;
 				bool hasSameGenericTypeArgsAsContainer = false;

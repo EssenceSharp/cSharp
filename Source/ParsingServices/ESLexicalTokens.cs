@@ -103,23 +103,16 @@ namespace EssenceSharp.ParsingServices {
 			
 	public abstract class LexicalToken : ParseTreeNode {
 
-		protected uint	lineNumberStart		= 0;
-		protected uint	columnNumberStart	= 0;
-		protected uint	lineNumberEnd		= 0;
-		protected uint	columnNumberEnd		= 0;
-		
-		/*
-		public LexicalToken(uint lineNumber, uint columnNumber) {
-			this.lineNumberStart = lineNumber;
-			this.columnNumberStart = columnNumber;
-		}
-		*/
+		protected uint	lineNumberStart		= 1;
+		protected uint	columnNumberStart	= 1;
+		protected uint	lineNumberEnd		= 1;
+		protected uint	columnNumberEnd		= 1;
 
 		public LexicalToken(int occurrenceIndex, uint lineNumberStart, uint columnNumberStart, uint lineNumberEnd, uint columnNumberEnd) : base(occurrenceIndex) {
-			this.lineNumberStart	= lineNumberStart;
-			this.columnNumberStart	= columnNumberStart;
-			this.lineNumberEnd	= lineNumberEnd;
-			this.columnNumberEnd	= columnNumberEnd;
+			this.lineNumberStart	= Math.Max(lineNumberStart, 1);
+			this.columnNumberStart	= Math.Max(columnNumberStart, 1);
+			this.lineNumberEnd	= Math.Max(lineNumberEnd, 1);
+			this.columnNumberEnd	= Math.Max(columnNumberEnd, 1);
 		}
 		
 		public override uint LineNumberStart {
@@ -273,7 +266,7 @@ namespace EssenceSharp.ParsingServices {
 		public override void esPrintUsing(uint depth, Action<String> append, Action<uint> newLine) {
 			// Print out canonical Smalltalk literal representation
 			
-			append(ESLexicalUtility.charValueAsSmalltalk(IllegalChar));
+			append(IllegalChar.charValueInSmalltalkFormat());
 		}
 
 		public override T valueBy<T>(ParseTreeNodeOperation<T> operation) {
@@ -1105,11 +1098,11 @@ namespace EssenceSharp.ParsingServices {
 		}
 		
 		public long SmallIntegerValue {
-			get {return ESLexicalUtility.integerValueFromDigits(Radix, Digits) * Sign;}
+			get {return Digits.integerValueFromDigits(Radix) * Sign;}
 		}
 		
 		public override Object HostSystemValue {
-			get {return ESLexicalUtility.integerValueFromDigits(Radix, Digits);}
+			get {return Digits.integerValueFromDigits(Radix);}
 		}
 		
 		public override void esPrintUsing(uint depth, Action<String> append, Action<uint> newLine) {
@@ -1382,7 +1375,7 @@ namespace EssenceSharp.ParsingServices {
 		public override void esPrintUsing(uint depth, Action<String> append, Action<uint> newLine) {
 			// Print out canonical Smalltalk literal representation
 			
-			append(ESLexicalUtility.charValueAsSmalltalk(CharValue));
+			append(CharValue.charValueInSmalltalkFormat());
 		
 		}
 

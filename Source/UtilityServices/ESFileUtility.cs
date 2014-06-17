@@ -116,7 +116,7 @@ namespace EssenceSharp.UtilityServices {
 		public static String filenameWithoutExtensionsFrom(FileSystemInfo declarationFile) {
 			var stream = new StringReader(declarationFile.Name);
 			var sb = new StringBuilder();
-			ESLexicalUtility.appendFromOntoUntil(stream, sb, ch => ch == '.');
+			stream.appendOntoUntil(sb, ch => ch == '.');
 			return sb.ToString();
 		}
 

@@ -220,6 +220,10 @@ namespace EssenceSharp.Runtime.Binding {
 			return types;
 		}
 
+		public static bool isVoidType(this Type aType) {
+			return aType == voidType;
+		}
+
 		public static bool isEssenceSharpType(this Type aType) {
 			return esObjectType.IsAssignableFrom(aType);
 		}
@@ -1098,7 +1102,7 @@ namespace EssenceSharp.Runtime.Binding {
 						Expression.Constant(actualArgCount),
 						Expression.Constant(expectedFunctionType),
 						Expression.Constant(actualFunctionType),
-						nilConstant);
+						Expression.Convert(nilConstant, TypeGuru.exceptionType));
 		}
 
 		public static Expression expressionToSendDoesNotUnderstand(Expression self, ESBehavior esClass, SymbolRegistry symbolRegistry, Expression createMessageAction) {

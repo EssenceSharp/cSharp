@@ -29,6 +29,7 @@
 
 #region Using declarations
 using System;
+using System.Runtime.CompilerServices;
 using System.Reflection;
 using System.Dynamic;
 #if CLR2
@@ -418,6 +419,18 @@ namespace EssenceSharp.Runtime {
 		public override DynamicMetaObject GetMetaObject(Expression parameter) {
 			return new ESBlockDynamicMetaObject(parameter, BindingRestrictions.Empty, this, Class);
 		}
+		
+		public override int GetHashCode() {
+			return RuntimeHelpers.GetHashCode(this);
+		}
+
+		public override bool Equals(Object comparand) {
+			return this == comparand;
+		}      
+		
+		public override bool Equals(ESObject comparand) {
+			return this == comparand;
+		}    
 
 		public override T valueBy<T>(Operation<T> operation) {
 			return operation.applyToCompiledBlock(this);

@@ -64,7 +64,7 @@ namespace EssenceSharp.Runtime {
 			statusFlags ^= mutabilityFlagBit;
 		}
 		
-		public virtual ESObject shallowCopy() {
+		public override ESObject shallowCopy() {
 			var copy = (ESInitiallyMutableObject)base.shallowCopy();
 			copy.beMutable();
 			return copy;
@@ -212,7 +212,7 @@ namespace EssenceSharp.Runtime {
 
 	#region Indexed Slots Abstraction
 
-	public abstract class ESIndexedSlotsObject<ElementType> : ESNamedSlotsObject, IEnumerable {
+	public abstract class ESIndexedSlotsObject<ElementType> : ESNamedSlotsObject {
 		
 		#region Static variables and functions
 			
@@ -343,21 +343,6 @@ namespace EssenceSharp.Runtime {
 		protected abstract bool eachHasSameValue(ElementType left, ElementType right);
 		
 		#region Smalltalk API
-		
-		public virtual ElementType at(long slotIndex) {
-			if (slotIndex >= slots.Length || slotIndex < 0) {
-				Class.Kernel.throwIndexOutOfRangeException(slotIndex + 1, 1, slots.Length);
-			}
-			return (slots[slotIndex]);
-		}
-		
-		public virtual void atPut(long slotIndex, ElementType newValue) {
-			if (slotIndex >= slots.Length || slotIndex < 0) {
-				Class.Kernel.throwIndexOutOfRangeException(slotIndex + 1, 1, slots.Length);
-			}
-			if (IsImmutable) throw new ImmutableObjectException();
-			slots[slotIndex] = newValue;
-		}
 
 		public override long hash() {
 			long mySize = size();
@@ -392,8 +377,8 @@ namespace EssenceSharp.Runtime {
 		public ESIndexedSlotsObject<ElementType> copyWithSize(long unconstrainedNewSize) {
 			long oldSize = slots.Length;
 			long newSize = Math.Max(0, unconstrainedNewSize);
-			ElementType[] newSlots = new ElementType[newSize];
-			ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
+			var newSlots = new ElementType[newSize];
+			var copy = newWith(newSlots);
 			if (newSize > 0) {
 				if (oldSize > 0) {
 					Array.Copy(
@@ -472,18 +457,16 @@ namespace EssenceSharp.Runtime {
 			return newValue;
 		}
 		
-		public long nextIdentityIndexOf(ElementType element, long startIndex) {
-			long mySize = slots.Length;
-			for (var i = startIndex; i < mySize; i++) {
-				if (ReferenceEquals(element, slots[i])) return i;
-			}
-			return -1;
-		}
-		
-		public long prevIdentityIndexOf(ElementType element, long startIndex) {
-			long mySize = slots.Length;
-			for (var i = Math.Min(startIndex, mySize); i >= 0; i--) {
-				if (ReferenceEquals(element, slots[i])) return i;
+		public long nextIdentityIndexOf(ElementType element, long startIndex, long endIndex) {
+			if (slots.Length < 1) return -1;
+			if (startIndex <= endIndex) { 
+				for (var i = startIndex; i <= endIndex; i++) {
+					if (ReferenceEquals(element, slots[i])) return i;
+				}
+			} else {
+				for (var i = startIndex; i >= endIndex; i--) {
+					if (ReferenceEquals(element, slots[i])) return i;
+				}
 			}
 			return -1;
 		}
@@ -496,18 +479,16 @@ namespace EssenceSharp.Runtime {
 			return false;
 		}
 		
-		public long nextIndexOf(ElementType element, long startIndex) {
-			long mySize = slots.Length;
-			for (var i = startIndex; i < mySize - 1; i++) {
-				if (eachHasSameValue(element, slots[i])) return i;
-			}
-			return -1;
-		}
-		
-		public long prevIndexOf(ElementType element, long startIndex) {
-			long mySize = slots.Length;
-			for (var i = Math.Min(startIndex, mySize - 1); i >= 0; i--) {
-				if (eachHasSameValue(element, slots[i])) return i;
+		public long nextIndexOf(ElementType element, long startIndex, long endIndex) {
+			if (slots.Length < 1) return -1;
+			if (startIndex <= endIndex) { 
+				for (var i = startIndex; i <= endIndex; i++) {
+					if (eachHasSameValue(element, slots[i])) return i;
+				}
+			} else {
+				for (var i = startIndex; i >= endIndex; i--) {
+					if (eachHasSameValue(element, slots[i])) return i;
+				}
 			}
 			return -1;
 		}
@@ -520,18 +501,16 @@ namespace EssenceSharp.Runtime {
 			return false;
 		}
 		
-		public long nextIndexSuchThat(FuncNs.Func<Object, Object> predicate, long startIndex) {
-			long mySize = slots.Length;
-			for (var i = startIndex; i < mySize - 1; i++) {
-				if (asBoolean(predicate(slots[i]))) return i;
-			}
-			return -1;
-		}
-		
-		public long prevIndexSuchThat(FuncNs.Func<Object, Object> predicate, long startIndex) {
-			long mySize = slots.Length;
-			for (var i = Math.Min(startIndex, mySize - 1); i >= 0; i--) {
-				if (asBoolean(predicate(slots[i]))) return i;
+		public long nextIndexSuchThat(FuncNs.Func<Object, Object> predicate, long startIndex, long endIndex) {
+			if (slots.Length < 1) return -1;
+			if (startIndex <= endIndex) { 
+				for (var i = startIndex; i <= endIndex; i++) {
+					if ((bool)(predicate(slots[i]))) return i;
+				}
+			} else {
+				for (var i = startIndex; i >= endIndex; i--) {
+					if ((bool)(predicate(slots[i]))) return i;
+				}
 			}
 			return -1;
 		}
@@ -539,7 +518,7 @@ namespace EssenceSharp.Runtime {
 		public bool contains(FuncNs.Func<Object, Object> predicate) {
 			long mySize = slots.Length;
 			for (var i = 0; i < mySize; i++) {
-				if (asBoolean(predicate(slots[i]))) return true;
+				if ((bool)(predicate(slots[i]))) return true;
 			}
 			return false;
 		}
@@ -548,7 +527,7 @@ namespace EssenceSharp.Runtime {
 			if (IsImmutable) throw new ImmutableObjectException();
 			long oldLength = slots.Length;
 			long newLength = oldLength + 1;
-			ElementType[] newSlots = new ElementType[newLength];
+			var newSlots = new ElementType[newLength];
 			if (oldLength > 0) {
 				Array.Copy(
 					slots, 							// sourceArray
@@ -565,8 +544,8 @@ namespace EssenceSharp.Runtime {
 		public ESIndexedSlotsObject<ElementType> copyAppendingElement(ElementType suffix) {
 			long oldLength = slots.Length;
 			long newLength = oldLength + 1;
-			ElementType[] newSlots = new ElementType[newLength];
-			ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
+			var newSlots = new ElementType[newLength];
+			var copy = newWith(newSlots);
 			if (oldLength > 0) {
 				Array.Copy(
 					slots, 							// sourceArray
@@ -585,7 +564,7 @@ namespace EssenceSharp.Runtime {
 			if (IsImmutable) throw new ImmutableObjectException();
 			long oldLength = slots.Length;
 			long newLength = oldLength + suffixLength;
-			ElementType[] newSlots = new ElementType[newLength];
+			var newSlots = new ElementType[newLength];
 			if (oldLength > 0) {
 				Array.Copy(
 					slots, 							// sourceArray
@@ -609,8 +588,8 @@ namespace EssenceSharp.Runtime {
 			if (suffixLength == 0) return this;
 			long oldLength = slots.Length;
 			long newLength = oldLength + suffixLength;
-			ElementType[] newSlots = new ElementType[newLength];
-			ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
+			var newSlots = new ElementType[newLength];
+			var copy = newWith(newSlots);
 			if (oldLength > 0) {
 				Array.Copy(
 					slots, 							// sourceArray
@@ -634,8 +613,8 @@ namespace EssenceSharp.Runtime {
 			long newLength = oldLength + 1;
 			insertionIndex = Math.Min(Math.Max(0, insertionIndex), oldLength);
 			long prefixLength = insertionIndex;
-			long suffixLength = oldLength - prefixLength;
-			ElementType[] newSlots = new ElementType[newLength];
+			long suffixLength = oldLength - prefixLength - 1;
+			var newSlots = new ElementType[newLength];
 			if (oldLength > 0) {
 				if (prefixLength > 0) {
 					Array.Copy(
@@ -664,9 +643,9 @@ namespace EssenceSharp.Runtime {
 			long newLength = oldLength + 1;
 			insertionIndex = Math.Min(Math.Max(0, insertionIndex), oldLength);
 			long prefixLength = insertionIndex;
-			long suffixLength = oldLength - prefixLength;
-			ElementType[] newSlots = new ElementType[newLength];
-			ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
+			long suffixLength = oldLength - prefixLength - 1;
+			var newSlots = new ElementType[newLength];
+			var copy = newWith(newSlots);
 			if (oldLength > 0) {
 				if (prefixLength > 0) {
 					Array.Copy(
@@ -697,8 +676,8 @@ namespace EssenceSharp.Runtime {
 			long newLength = oldLength + infixLength;
 			insertionIndex = Math.Min(Math.Max(0, insertionIndex), oldLength);
 			long prefixLength = insertionIndex;
-			long suffixLength = oldLength - prefixLength;
-			ElementType[] newSlots = new ElementType[newLength];
+			long suffixLength = oldLength - prefixLength - 1;
+			var newSlots = new ElementType[newLength];
 			if (oldLength > 0) {
 				if (prefixLength > 0) {
 					Array.Copy(
@@ -734,9 +713,9 @@ namespace EssenceSharp.Runtime {
 			long newLength = oldLength + infixLength;
 			insertionIndex = Math.Min(Math.Max(0, insertionIndex), oldLength);
 			long prefixLength = insertionIndex;
-			long suffixLength = oldLength - prefixLength;
-			ElementType[] newSlots = new ElementType[newLength];
-			ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
+			long suffixLength = oldLength - prefixLength - 1;
+			var newSlots = new ElementType[newLength];
+			var copy = newWith(newSlots);
 			if (oldLength > 0) {
 				if (prefixLength > 0) {
 					Array.Copy(
@@ -769,7 +748,7 @@ namespace EssenceSharp.Runtime {
 			startIndex = Math.Min(Math.Max(0, startIndex), mySize);
 			endIndex = Math.Min(Math.Max(0, endIndex), mySize);
 			long length = Math.Min(Math.Max(0, endIndex - startIndex + 1), mySize - startIndex);
-			ElementType[] newSlots = new ElementType[length];
+			var newSlots = new ElementType[length];
 			ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
 			if (length > 0) {
 				Array.Copy(
@@ -822,10 +801,10 @@ namespace EssenceSharp.Runtime {
 			if (length > 0) {
 				long newLength = oldLength - length;
 				long prefixLength = startIndex;
-				long suffixLength = oldLength - prefixLength;
-				ElementType[] deletionSlots = new ElementType[length];
+				long suffixLength = oldLength - prefixLength - 1;
+				var deletionSlots = new ElementType[length];
 				deletion = newWith(deletionSlots);
-				ElementType[] newSlots = new ElementType[newLength];
+				var newSlots = new ElementType[newLength];
 				if (oldLength > 0) {
 					if (prefixLength > 0) {
 						Array.Copy(
@@ -868,8 +847,8 @@ namespace EssenceSharp.Runtime {
 			if (IsImmutable) throw new ImmutableObjectException();
 			long newLength = oldLength - 1;
 			long prefixLength = index;
-			long suffixLength = oldLength - prefixLength;
-			ElementType[] newSlots = new ElementType[newLength];
+			long suffixLength = oldLength - prefixLength - 1;
+			var newSlots = new ElementType[newLength];
 			if (oldLength > 0) {
 				if (prefixLength > 0) {
 					Array.Copy(
@@ -901,8 +880,8 @@ namespace EssenceSharp.Runtime {
 				if (IsImmutable) throw new ImmutableObjectException();
 				long newLength = oldLength - length;
 				long prefixLength = startIndex;
-				long suffixLength = oldLength - prefixLength;
-				ElementType[] newSlots = new ElementType[newLength];
+				long suffixLength = oldLength - prefixLength - 1;
+				var newSlots = new ElementType[newLength];
 				if (oldLength > 0) {
 					if (prefixLength > 0) {
 						Array.Copy(
@@ -934,9 +913,9 @@ namespace EssenceSharp.Runtime {
 			if (index >= oldLength) throw new PrimInvalidOperandException("Invalid index: Must be less than or equal to receiver size.");
 			long newLength = oldLength - 1;
 			long prefixLength = index;
-			long suffixLength = oldLength - prefixLength;
+			long suffixLength = oldLength - prefixLength - 1;
 			ElementType[] newSlots = new ElementType[newLength];
-			ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
+			var copy = newWith(newSlots);
 			if (oldLength > 0) {
 				if (prefixLength > 0) {
 					Array.Copy(
@@ -968,7 +947,7 @@ namespace EssenceSharp.Runtime {
 				long newLength = oldLength - length;
 				long prefixLength = startIndex;
 				long suffixLength = oldLength - endIndex - 1;
-				ElementType[] newSlots = new ElementType[length];
+				var newSlots = new ElementType[length];
 				copy = newWith(newSlots);
 				if (oldLength > 0) {
 					if (prefixLength > 0) {
@@ -996,101 +975,95 @@ namespace EssenceSharp.Runtime {
 			return copy;
 		}
 
-		public long identityRemoveNext(long startIndex, ElementType removal) {
-			long mySize = slots.Length;
-			for (var i = startIndex; i < mySize; i++) {
-				ElementType element = slots[i];
-				if (ReferenceEquals(removal, element)) {
-					removeFromTo(i, i);
-					return i;
+		public long identityRemoveNext(ElementType removal, long startIndex, long endIndex) {
+			if (slots.Length < 1) return -1;
+			if (startIndex <= endIndex) { 
+				for (var i = startIndex; i <= endIndex; i++) {
+					var element = slots[i];
+					if (ReferenceEquals(removal, element))  {
+						removeFromTo(i, i);
+						return i;
+					}
+				}
+			} else {
+				for (var i = startIndex; i >= endIndex; i--) {
+					var element = slots[i];
+					if (ReferenceEquals(removal, element))  {
+						removeFromTo(i, i);
+						return i;
+					}
 				}
 			}
 			return -1;
 		}
 
-		public Object copyIdentityRemovingNext(long startIndex, ElementType removal, FuncNs.Func<Object> notFoundAction) {
-			long mySize = slots.Length;
-			startIndex = Math.Min(startIndex, mySize - 1);
-			for (var i = startIndex; i < mySize; i++) {
-				ElementType element = slots[i];
-				if (ReferenceEquals(removal, element)) {
-					ElementType[] newSlots = new ElementType[mySize - 1];
-					ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
-					long prefixLength = i;
-					long suffixLength = mySize - i - 1;
-					if (prefixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							0,						// sourceIndex
-							newSlots, 					// destinationArray
-							0,						// destinationIndex
-							prefixLength);					// length
+		public Object copyIdentityRemovingNext(ElementType removal, long startIndex, long endIndex, FuncNs.Func<Object> notFoundAction) {
+			if (slots.Length < 1) return notFoundAction == null ? null : notFoundAction();
+			var mySize = slots.Length;
+			if (startIndex <= endIndex) { 
+				for (var i = startIndex; i <= endIndex; i++) {
+					var element = slots[i];
+					if (ReferenceEquals(removal, element)) {
+						var newSlots = new ElementType[mySize - 1];
+						var copy = newWith(newSlots);
+						long prefixLength = i;
+						long suffixLength = mySize - i - 1;
+						if (prefixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								0,						// sourceIndex
+								newSlots, 					// destinationArray
+								0,						// destinationIndex
+								prefixLength);					// length
+						}
+						if (suffixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								i + 1,						// sourceIndex
+								newSlots, 					// destinationArray
+								i,						// destinationIndex
+								suffixLength);					// length
+						}					
+						return copy;
 					}
-					if (suffixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							i + 1,						// sourceIndex
-							newSlots, 					// destinationArray
-							i,						// destinationIndex
-							suffixLength);					// length
-					}					
-					return copy;
-				}
-			}
-			return notFoundAction();
-		}
-
-		public long identityRemovePrev(long startIndex, ElementType removal) {
-			long mySize = slots.Length;
-			startIndex = Math.Min(startIndex, mySize - 1);
-			for (var i = startIndex; i >= 0; i--) {
-				ElementType element = slots[i];
-				if (ReferenceEquals(removal, element)) {
-					removeFromTo(i, i);
-					return i;
-				}
-			}
-			return -1;
-		}
-
-		public Object copyIdentityRemovingPrev(long startIndex, ElementType removal, FuncNs.Func<Object> notFoundAction) {
-			long mySize = slots.Length;
-			startIndex = Math.Min(startIndex, mySize - 1);
-			for (var i = startIndex; i >= 0; i--) {
-				ElementType element = slots[i];
-				if (ReferenceEquals(removal, element)) {
-					ElementType[] newSlots = new ElementType[mySize - 1];
-					ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
-					long prefixLength = i;
-					long suffixLength = mySize - i - 1;
-					if (prefixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							0,						// sourceIndex
-							newSlots, 					// destinationArray
-							0,						// destinationIndex
-							prefixLength);					// length
+				} 
+			} else {
+				for (var i = startIndex; i >= endIndex; i--) {
+					var element = slots[i];
+					if (ReferenceEquals(removal, element)) {
+						var newSlots = new ElementType[mySize - 1];
+						var copy = newWith(newSlots);
+						long prefixLength = i;
+						long suffixLength = mySize - i - 1;
+						if (prefixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								0,						// sourceIndex
+								newSlots, 					// destinationArray
+								0,						// destinationIndex
+								prefixLength);					// length
+						}
+						if (suffixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								i + 1,						// sourceIndex
+								newSlots, 					// destinationArray
+								i,						// destinationIndex
+								suffixLength);					// length
+						}					
+						return copy;
 					}
-					if (suffixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							i + 1,						// sourceIndex
-							newSlots, 					// destinationArray
-							i,						// destinationIndex
-							suffixLength);					// length
-					}					
-					return copy;
-				}
+				} 
 			}
-			return notFoundAction();
+			return notFoundAction == null ? null : notFoundAction();
 		}
 
 		public long identityRemoveAllOccurrencesOf(ElementType removal) {
-			List<ElementType> elementsRemaining = new List<ElementType>();
+			var elementsRemaining = new List<ElementType>();
 			long mySize = slots.Length;
 			long removalCount = 0;
 			for (var i = 0; i < mySize; i++) {
-				ElementType element = slots[i];
+				var element = slots[i];
 				if (ReferenceEquals(removal, element)) {
 					removalCount++;
 				} else {
@@ -1105,11 +1078,11 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ESIndexedSlotsObject<ElementType> copyIdentityRemovingAllOccurrencesOf(ElementType removal) {
-			List<ElementType> elementsRemaining = new List<ElementType>();
+			var elementsRemaining = new List<ElementType>();
 			long mySize = slots.Length;
 			long removalCount = 0;
 			for (var i = 0; i < mySize; i++) {
-				ElementType element = slots[i];
+				var element = slots[i];
 				if (ReferenceEquals(removal, element)) {
 					removalCount++;
 				} else {
@@ -1123,101 +1096,95 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		public long removeNext(long startIndex, ElementType removal) {
-			long mySize = slots.Length;
-			for (var i = startIndex; i < mySize; i++) {
-				ElementType element = slots[i];
-				if (eachHasSameValue(removal, element)) {
-					removeFromTo(i, i);
-					return i;
+		public long removeNext(ElementType removal, long startIndex, long endIndex) {
+			if (slots.Length < 1) return -1;
+			if (startIndex <= endIndex) { 
+				for (var i = startIndex; i <= endIndex; i++) {
+					var element = slots[i];
+					if (eachHasSameValue(removal, element))  {
+						removeFromTo(i, i);
+						return i;
+					}
+				}
+			} else {
+				for (var i = startIndex; i >= endIndex; i--) {
+					var element = slots[i];
+					if (eachHasSameValue(removal, element))  {
+						removeFromTo(i, i);
+						return i;
+					}
 				}
 			}
 			return -1;
 		}
 
-		public Object copyRemovingNext(long startIndex, ElementType removal, FuncNs.Func<Object> notFoundAction) {
-			long mySize = slots.Length;
-			startIndex = Math.Min(startIndex, mySize - 1);
-			for (var i = startIndex; i < mySize; i++) {
-				ElementType element = slots[i];
-				if (eachHasSameValue(removal, element)) {
-					ElementType[] newSlots = new ElementType[mySize - 1];
-					ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
-					long prefixLength = i;
-					long suffixLength = mySize - i - 1;
-					if (prefixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							0,						// sourceIndex
-							newSlots, 					// destinationArray
-							0,						// destinationIndex
-							prefixLength);					// length
+		public Object copyRemovingNext(ElementType removal, long startIndex, long endIndex, FuncNs.Func<Object> notFoundAction) {
+			if (slots.Length < 1) return notFoundAction == null ? null : notFoundAction();
+			var mySize = slots.Length;
+			if (startIndex <= endIndex) { 
+				for (var i = startIndex; i <= endIndex; i++) {
+					ElementType element = slots[i];
+					if (eachHasSameValue(removal, element)) {
+						ElementType[] newSlots = new ElementType[mySize - 1];
+						var copy = newWith(newSlots);
+						long prefixLength = i;
+						long suffixLength = mySize - i - 1;
+						if (prefixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								0,						// sourceIndex
+								newSlots, 					// destinationArray
+								0,						// destinationIndex
+								prefixLength);					// length
+						}
+						if (suffixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								i + 1,						// sourceIndex
+								newSlots, 					// destinationArray
+								i,						// destinationIndex
+								suffixLength);					// length
+						}					
+						return copy;
 					}
-					if (suffixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							i + 1,						// sourceIndex
-							newSlots, 					// destinationArray
-							i,						// destinationIndex
-							suffixLength);					// length
-					}					
-					return copy;
-				}
-			}
-			return notFoundAction();
-		}
-
-		public long removePrev(long startIndex, ElementType removal) {
-			long mySize = slots.Length;
-			startIndex = Math.Min(startIndex, mySize - 1);
-			for (var i = startIndex; i >= 0; i--) {
-				ElementType element = slots[i];
-				if (eachHasSameValue(removal, element)) {
-					removeFromTo(i, i);
-					return i;
-				}
-			}
-			return -1;
-		}
-
-		public Object copyRemovingPrev(long startIndex, ElementType removal, FuncNs.Func<Object> notFoundAction) {
-			long mySize = slots.Length;
-			startIndex = Math.Min(startIndex, mySize - 1);
-			for (var i = startIndex; i >= 0; i--) {
-				ElementType element = slots[i];
-				if (eachHasSameValue(removal, element)) {
-					ElementType[] newSlots = new ElementType[mySize - 1];
-					ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
-					long prefixLength = i;
-					long suffixLength = mySize - i - 1;
-					if (prefixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							0,						// sourceIndex
-							newSlots, 					// destinationArray
-							0,						// destinationIndex
-							prefixLength);					// length
+				} 
+			} else {
+				for (var i = startIndex; i >= endIndex; i--) {
+					var element = slots[i];
+					if (eachHasSameValue(removal, element)) {
+						var newSlots = new ElementType[mySize - 1];
+						var copy = newWith(newSlots);
+						long prefixLength = i;
+						long suffixLength = mySize - i - 1;
+						if (prefixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								0,						// sourceIndex
+								newSlots, 					// destinationArray
+								0,						// destinationIndex
+								prefixLength);					// length
+						}
+						if (suffixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								i + 1,						// sourceIndex
+								newSlots, 					// destinationArray
+								i,						// destinationIndex
+								suffixLength);					// length
+						}					
+						return copy;
 					}
-					if (suffixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							i + 1,						// sourceIndex
-							newSlots, 					// destinationArray
-							i,						// destinationIndex
-							suffixLength);					// length
-					}					
-					return copy;
-				}
+				} 
 			}
-			return notFoundAction();
+			return notFoundAction == null ? null : notFoundAction();
 		}
 
 		public long removeAllOccurrencesOf(ElementType removal) {
-			List<ElementType> elementsRemaining = new List<ElementType>();
+			var elementsRemaining = new List<ElementType>();
 			long mySize = slots.Length;
 			long removalCount = 0;
 			for (var i = 0; i < mySize; i++) {
-				ElementType element = slots[i];
+				var element = slots[i];
 				if (eachHasSameValue(removal, element)) {
 					removalCount++;
 				} else {
@@ -1232,11 +1199,11 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ESIndexedSlotsObject<ElementType> copyRemovingAllOccurrencesOf(ElementType removal) {
-			List<ElementType> elementsRemaining = new List<ElementType>();
+			var elementsRemaining = new List<ElementType>();
 			long mySize = slots.Length;
 			long removalCount = 0;
 			for (var i = 0; i < mySize; i++) {
-				ElementType element = slots[i];
+				var element = slots[i];
 				if (eachHasSameValue(removal, element)) {
 					removalCount++;
 				} else {
@@ -1250,93 +1217,87 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		public long removeNextSuchThat(long startIndex, FuncNs.Func<Object, Object> predicate) {
-			long mySize = slots.Length;
-			for (var i = startIndex; i < mySize; i++) {
-				ElementType element = slots[i];
-				if (asBoolean(predicate(element))) {
-					removeFromTo(i, i);
-					return i;
+		public long removeNextSuchThat(FuncNs.Func<Object, Object> predicate, long startIndex, long endIndex) {
+			if (slots.Length < 1) return -1;
+			if (startIndex <= endIndex) { 
+				for (var i = startIndex; i <= endIndex; i++) {
+					var element = slots[i];
+					if ((bool)(predicate(element)))  {
+						removeFromTo(i, i);
+						return i;
+					}
+				}
+			} else {
+				for (var i = startIndex; i >= endIndex; i--) {
+					var element = slots[i];
+					if ((bool)(predicate(element)))  {
+						removeFromTo(i, i);
+						return i;
+					}
 				}
 			}
 			return -1;
 		}
 
-		public Object copyRemovingNextSuchThat(long startIndex, FuncNs.Func<Object, Object> predicate, FuncNs.Func<Object> notFoundAction) {
-			long mySize = slots.Length;
-			startIndex = Math.Min(startIndex, mySize - 1);
-			for (var i = startIndex; i < mySize; i++) {
-				ElementType element = slots[i];
-				if (asBoolean(predicate(element))) {
-					ElementType[] newSlots = new ElementType[mySize - 1];
-					ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
-					long prefixLength = i;
-					long suffixLength = mySize - i - 1;
-					if (prefixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							0,						// sourceIndex
-							newSlots, 					// destinationArray
-							0,						// destinationIndex
-							prefixLength);					// length
+		public Object copyRemovingNextSuchThat(FuncNs.Func<Object, Object> predicate, long startIndex, long endIndex, FuncNs.Func<Object> notFoundAction) {
+			if (slots.Length < 1) return notFoundAction == null ? null : notFoundAction();
+			var mySize = slots.Length;
+			if (startIndex <= endIndex) { 
+				for (var i = startIndex; i <= endIndex; i++) {
+					var element = slots[i];
+					if ((bool)(predicate(element))) {
+						var newSlots = new ElementType[mySize - 1];
+						var copy = newWith(newSlots);
+						long prefixLength = i;
+						long suffixLength = mySize - i - 1;
+						if (prefixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								0,						// sourceIndex
+								newSlots, 					// destinationArray
+								0,						// destinationIndex
+								prefixLength);					// length
+						}
+						if (suffixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								i + 1,						// sourceIndex
+								newSlots, 					// destinationArray
+								i,						// destinationIndex
+								suffixLength);					// length
+						}					
+						return copy;
 					}
-					if (suffixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							i + 1,						// sourceIndex
-							newSlots, 					// destinationArray
-							i,						// destinationIndex
-							suffixLength);					// length
-					}					
-					return copy;
-				}
-			}
-			return notFoundAction();
-		}
-
-		public long removePrevSuchThat(long startIndex, FuncNs.Func<Object, Object> predicate) {
-			long mySize = slots.Length;
-			startIndex = Math.Min(startIndex, mySize - 1);
-			for (var i = startIndex; i >= 0; i--) {
-				ElementType element = slots[i];
-				if (asBoolean(predicate(element))) {
-					removeFromTo(i, i);
-					return i;
-				}
-			}
-			return -1;
-		}
-
-		public Object copyRemovingPrevSuchThat(long startIndex, FuncNs.Func<Object, Object> predicate, FuncNs.Func<Object> notFoundAction) {
-			long mySize = slots.Length;
-			startIndex = Math.Min(startIndex, mySize - 1);
-			for (var i = startIndex; i >= 0; i--) {
-				ElementType element = slots[i];
-				if (asBoolean(predicate(element))) {
-					ElementType[] newSlots = new ElementType[mySize - 1];
-					ESIndexedSlotsObject<ElementType> copy = newWith(newSlots);
-					long prefixLength = i;
-					long suffixLength = mySize - i - 1;
-					if (prefixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							0,						// sourceIndex
-							newSlots, 					// destinationArray
-							0,						// destinationIndex
-							prefixLength);					// length
+				} 
+			} else {
+				for (var i = startIndex; i >= endIndex; i--) {
+					var element = slots[i];
+					if ((bool)(predicate(element))) {
+						var newSlots = new ElementType[mySize - 1];
+						var copy = newWith(newSlots);
+						long prefixLength = i;
+						long suffixLength = mySize - i - 1;
+						if (prefixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								0,						// sourceIndex
+								newSlots, 					// destinationArray
+								0,						// destinationIndex
+								prefixLength);					// length
+						}
+						if (suffixLength > 0) {
+							Array.Copy(
+								slots, 						// sourceArray
+								i + 1,						// sourceIndex
+								newSlots, 					// destinationArray
+								i,						// destinationIndex
+								suffixLength);					// length
+						}					
+						return copy;
 					}
-					if (suffixLength > 0) {
-						Array.Copy(
-							slots, 						// sourceArray
-							i + 1,						// sourceIndex
-							newSlots, 					// destinationArray
-							i,						// destinationIndex
-							suffixLength);					// length
-					}					
-					return copy;
-				}
+				} 
 			}
-			return notFoundAction();
+			return notFoundAction == null ? null : notFoundAction();
 		}
 
 		public long removeAllOccurrencesSuchThat(FuncNs.Func<Object, Object> predicate) {
@@ -1344,8 +1305,8 @@ namespace EssenceSharp.Runtime {
 			long mySize = slots.Length;
 			long removalCount = 0;
 			for (var i = 0; i < mySize; i++) {
-				ElementType element = slots[i];
-				if (asBoolean(predicate(element))) {
+				var element = slots[i];
+				if ((bool)(predicate(element))) {
 					removalCount++;
 				} else {
 					elementsRemaining.Add(element);
@@ -1364,7 +1325,7 @@ namespace EssenceSharp.Runtime {
 			long removalCount = 0;
 			for (var i = 0; i < mySize; i++) {
 				ElementType element = slots[i];
-				if (asBoolean(predicate(element))) {
+				if ((bool)(predicate(element))) {
 					removalCount++;
 				} else {
 					elementsRemaining.Add(element);
@@ -1659,10 +1620,6 @@ namespace EssenceSharp.Runtime {
 			set {slots[slotIndex] = value;}
 		}
 		
-		public virtual IEnumerator GetEnumerator() {
-			return slots.GetEnumerator();
-		}
-		
 		#endregion
 		
 		public new abstract class Primitives : PrimitiveDomain {
@@ -1687,13 +1644,8 @@ namespace EssenceSharp.Runtime {
 				return ((ESIndexedSlotsObject<ElementType>)receiver).lastIfNone(asFunctor0(noSuchElementAction));
 			}
 
-			public Object _nextIndexSuchThatIfAbsent_(Object receiver, Object predicate, Object startIndex, Object noSuchElementAction) {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).nextIndexSuchThat(asFunctor1(predicate), asHostLong(startIndex) - 1);
-				return index >= 0 ? index + 1 : asFunctor0(noSuchElementAction)();
-			}
-
-			public Object _prevIndexSuchThatIfAbsent_(Object receiver, Object predicate, Object startIndex, Object noSuchElementAction) {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).prevIndexSuchThat(asFunctor1(predicate), asHostLong(startIndex) - 1);
+			public Object _nextIndexSuchThatIfAbsent_(Object receiver, Object predicate, Object startIndex, Object endIndex, Object noSuchElementAction) {
+				long index = ((ESIndexedSlotsObject<ElementType>)receiver).nextIndexSuchThat(asFunctor1(predicate), asHostLong(startIndex) - 1, asHostLong(endIndex) - 1);
 				return index >= 0 ? index + 1 : asFunctor0(noSuchElementAction)();
 			}
 
@@ -1773,22 +1725,13 @@ namespace EssenceSharp.Runtime {
 				return ((ESIndexedSlotsObject<ElementType>)receiver).copyRemovingFromTo(asHostLong(startIndex) - 1, asHostLong(endIndex) - 1);
 			}
 		
-			public Object _removeNextSuchThatIfAbsent_(Object receiver, Object startIndex, Object predicate, Object notFoundAction) {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).removeNextSuchThat(asHostLong(startIndex) - 1, asFunctor1(predicate));
+			public Object _removeNextSuchThatIfAbsent_(Object receiver, Object predicate, Object startIndex, Object endIndex, Object notFoundAction) {
+				long index = ((ESIndexedSlotsObject<ElementType>)receiver).removeNextSuchThat(asFunctor1(predicate), (long)startIndex - 1, (long)endIndex - 1);
 				return index >= 0 ? index + 1 : asFunctor0(notFoundAction)();
 			}
 		
-			public Object _copyRemovingNextSuchThatIfAbsent_(Object receiver, Object startIndex, Object predicate, Object notFoundAction) {
-				return ((ESIndexedSlotsObject<ElementType>)receiver).copyRemovingNextSuchThat(asHostLong(startIndex) - 1, asFunctor1(predicate), asFunctor0(notFoundAction));
-			}
-		
-			public Object _removePrevSuchThatIfAbsent_(Object receiver, Object startIndex, Object predicate, Object notFoundAction) {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).removePrevSuchThat(asHostLong(startIndex) - 1, asFunctor1(predicate));
-				return index >= 0 ? index + 1 : asFunctor0(notFoundAction)();
-			}
-		
-			public Object _copyRemovingPrevSuchThatIfAbsent_(Object receiver, Object startIndex, Object predicate, Object notFoundAction) {
-				return ((ESIndexedSlotsObject<ElementType>)receiver).copyRemovingPrevSuchThat(asHostLong(startIndex) - 1, asFunctor1(predicate), asFunctor0(notFoundAction));
+			public Object _copyRemovingNextSuchThatIfAbsent_(Object receiver, Object predicate, Object startIndex, Object endIndex, Object notFoundAction) {
+				return ((ESIndexedSlotsObject<ElementType>)receiver).copyRemovingNextSuchThat(asFunctor1(predicate), (long)startIndex - 1, (long)endIndex - 1, asFunctor0(notFoundAction));
 			}
 		
 			public Object _removeAllOccurrencesSuchThat_(Object receiver, Object predicate) {
@@ -1875,22 +1818,10 @@ namespace EssenceSharp.Runtime {
 			#endregion
 
 			#region Generic Primitives
-
-			public Object _atPut_<ElementTypeP>(Object receiver, Object slotIndex, Object newValue) 
-				where ElementTypeP : ElementType {
-				((ESIndexedSlotsObject<ElementType>)receiver).atPut(asHostLong(slotIndex) - 1, (ElementTypeP)newValue);
-				return newValue;
-			}
 			
-			public Object _nextIdentityIndexOfIfAbsent_<ElementTypeP>(Object receiver, Object element, Object startIndex, Object noSuchElementAction) 
+			public Object _nextIdentityIndexOfIfAbsent_<ElementTypeP>(Object receiver, Object element, Object startIndex, Object endIndex, Object noSuchElementAction) 
 				where ElementTypeP : ElementType {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).nextIdentityIndexOf((ElementTypeP)element, asHostLong(startIndex) - 1);
-				return index >= 0 ? index + 1 : asFunctor0(noSuchElementAction)();
-			}
-		
-			public Object _prevIdentityIndexOfIfAbsent_<ElementTypeP>(Object receiver, Object element, Object startIndex, Object noSuchElementAction) 
-				where ElementTypeP : ElementType {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).prevIdentityIndexOf((ElementTypeP)element, asHostLong(startIndex) - 1);
+				long index = ((ESIndexedSlotsObject<ElementType>)receiver).nextIdentityIndexOf((ElementTypeP)element, asHostLong(startIndex) - 1, asHostLong(endIndex) - 1);
 				return index >= 0 ? index + 1 : asFunctor0(noSuchElementAction)();
 			}
 
@@ -1909,26 +1840,15 @@ namespace EssenceSharp.Runtime {
 				return ((ESIndexedSlotsObject<ElementType>)receiver).copyAppendingElement((ElementTypeP)suffix);
 			}
 				
-			public Object _identityRemoveNextIfAbsent_<ElementTypeP>(Object receiver, Object startIndex, Object removal, Object notFoundAction) 
+			public Object _identityRemoveNextIfAbsent_<ElementTypeP>(Object receiver, Object removal, Object startIndex, Object endIndex, Object notFoundAction) 
 				where ElementTypeP : ElementType {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).identityRemoveNext(asHostLong(startIndex) - 1, (ElementTypeP)removal);
+				long index = ((ESIndexedSlotsObject<ElementType>)receiver).identityRemoveNext((ElementTypeP)removal, (long)startIndex - 1, (long)endIndex - 1);
 				return index >= 0 ? index + 1 : asFunctor0(notFoundAction)();
 			}
 		
-			public Object _copyIdentityRemovingNextIfAbsent_<ElementTypeP>(Object receiver, Object startIndex, Object removal, Object notFoundAction) 
+			public Object _copyIdentityRemovingNextIfAbsent_<ElementTypeP>(Object receiver, Object removal, Object startIndex, Object endIndex, Object notFoundAction) 
 				where ElementTypeP : ElementType {
-				return ((ESIndexedSlotsObject<ElementType>)receiver).copyIdentityRemovingNext(asHostLong(startIndex) - 1, (ElementTypeP)removal, asFunctor0(notFoundAction));
-			}
-		
-			public Object _identityRemovePrevIfAbsent_<ElementTypeP>(Object receiver, Object startIndex, Object removal, Object notFoundAction) 
-				where ElementTypeP : ElementType {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).identityRemovePrev(asHostLong(startIndex) - 1, (ElementTypeP)removal);
-				return index >= 0 ? index + 1 : asFunctor0(notFoundAction)();
-			}
-		
-			public Object _copyIdentityRemovingPrevIfAbsent_<ElementTypeP>(Object receiver, Object startIndex, Object removal, Object notFoundAction) 
-				where ElementTypeP : ElementType {
-				return ((ESIndexedSlotsObject<ElementType>)receiver).copyIdentityRemovingPrev(asHostLong(startIndex) - 1, (ElementTypeP)removal, asFunctor0(notFoundAction));
+				return ((ESIndexedSlotsObject<ElementType>)receiver).copyIdentityRemovingNext((ElementTypeP)removal, (long)startIndex - 1, (long)endIndex - 1, asFunctor0(notFoundAction));
 			}
 		
 			public Object _identityRemoveAllOccurrencesOf_<ElementTypeP>(Object receiver, Object removal) 
@@ -1966,15 +1886,9 @@ namespace EssenceSharp.Runtime {
 				}
 			}
 
-			public Object _nextIndexOfIfAbsent_<ElementTypeP>(Object receiver, Object element, Object startIndex, Object noSuchElementAction)
+			public Object _nextIndexOfIfAbsent_<ElementTypeP>(Object receiver, Object element, Object startIndex, Object endIndex, Object noSuchElementAction)
 				where ElementTypeP : ElementType {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).nextIndexOf((ElementTypeP)element, asHostLong(startIndex) - 1);
-				return index >= 0 ? index + 1 : asFunctor0(noSuchElementAction)();
-			}
-
-			public Object _prevIndexOfIfAbsent_<ElementTypeP>(Object receiver, Object element, Object startIndex, Object noSuchElementAction) 
-				where ElementTypeP : ElementType {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).prevIndexOf((ElementTypeP)element, asHostLong(startIndex) - 1);
+				long index = ((ESIndexedSlotsObject<ElementType>)receiver).nextIndexOf((ElementTypeP)element, asHostLong(startIndex) - 1, asHostLong(endIndex) - 1);
 				return index >= 0 ? index + 1 : asFunctor0(noSuchElementAction)();
 			}
 
@@ -1983,26 +1897,15 @@ namespace EssenceSharp.Runtime {
 				return ((ESIndexedSlotsObject<ElementType>)receiver).includes((ElementTypeP)element);
 			}
 		
-			public Object _removeNextIfAbsent_<ElementTypeP>(Object receiver, Object startIndex, Object removal, Object notFoundAction)  
+			public Object _removeNextIfAbsent_<ElementTypeP>(Object receiver, Object removal, Object startIndex, Object endIndex, Object notFoundAction)  
 				where ElementTypeP : ElementType {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).removeNext(asHostLong(startIndex) - 1, (ElementTypeP)removal);
+				long index = ((ESIndexedSlotsObject<ElementType>)receiver).removeNext((ElementTypeP)removal, (long)startIndex - 1, (long)endIndex - 1);
 				return index >= 0 ? index + 1 : asFunctor0(notFoundAction)();
 			}
 		
-			public Object _copyRemovingNextIfAbsent_<ElementTypeP>(Object receiver, Object startIndex, Object removal, Object notFoundAction)  
+			public Object _copyRemovingNextIfAbsent_<ElementTypeP>(Object receiver, Object removal, Object startIndex, Object endIndex, Object notFoundAction)  
 				where ElementTypeP : ElementType {
-				return ((ESIndexedSlotsObject<ElementType>)receiver).copyRemovingNext(asHostLong(startIndex) - 1, (ElementTypeP)removal, asFunctor0(notFoundAction));
-			}
-		
-			public Object _removePrevIfAbsent_<ElementTypeP>(Object receiver, Object startIndex, Object removal, Object notFoundAction)  
-				where ElementTypeP : ElementType {
-				long index = ((ESIndexedSlotsObject<ElementType>)receiver).removePrev(asHostLong(startIndex) - 1, (ElementTypeP)removal);
-				return index >= 0 ? index + 1 : asFunctor0(notFoundAction)();
-			}
-		
-			public Object _copyRemovingPrevIfAbsent_<ElementTypeP>(Object receiver, Object startIndex, Object removal, Object notFoundAction)  
-				where ElementTypeP : ElementType {
-				return ((ESIndexedSlotsObject<ElementType>)receiver).copyRemovingPrev(asHostLong(startIndex) - 1, (ElementTypeP)removal, asFunctor0(notFoundAction));
+				return ((ESIndexedSlotsObject<ElementType>)receiver).copyRemovingNext((ElementTypeP)removal, (long)startIndex - 1, (long)endIndex - 1, asFunctor0(notFoundAction));
 			}
 		
 			public Object _removeAllOccurrencesOf_<ElementTypeP>(Object receiver, Object removal)  
@@ -2025,7 +1928,7 @@ namespace EssenceSharp.Runtime {
 
 	#endregion
 
-	public class ESArray : ESIndexedSlotsObject<Object>, IEnumerable<Object> {
+	public class ESArray : ESIndexedSlotsObject<Object>, IEnumerable, IEnumerable<Object> {
 		
 		#region Static variables and functions
 		
@@ -2070,27 +1973,33 @@ namespace EssenceSharp.Runtime {
 			return (bool)areEqual(left, right);
 		}
 		
-		public override Object at(long slotIndex) {
-			if (slotIndex >= slots.Length || slotIndex < 0) {
-				return base.at(slotIndex);
+		protected bool elementsHaveSameValue(Object[] left, Object[] right) {
+			if (ReferenceEquals(left, right)) return true;
+			if (left == null) return right.Length == 0;
+			if (right == null) return left.Length == 0;
+			long leftLength = left.Length;
+			long rightLength = right.Length;
+			long sizeDiff = leftLength - rightLength;
+			if (sizeDiff != 0) return false;
+			for (var i = 0; i < leftLength; i++) {
+				var leftObject = left[i];
+				var rightObject = right[i];
+				if (leftObject == null) {
+					if (rightObject != null) return false;
+				} else if (rightObject == null) {
+					return false;
+				} else if (!(bool)areEqual(leftObject, rightObject)) {
+					return false;
+				}
 			}
-			return slots[slotIndex];
-		}
-		
-		public override void atPut(long slotIndex, Object newValue) {
-			if (slotIndex >= slots.Length || slotIndex < 0) {
-				base.atPut(slotIndex, newValue);
-				return;
-			}
-			if (IsImmutable) throw new ImmutableObjectException();
-			slots[slotIndex] = newValue;
+			return true;
 		}
 		
 		public override bool hasSameValueAs(ESObject other) {
 			if (ReferenceEquals(this, other)) return true;
-			ESIndexedSlotsObject<Object> stArray = other as ESIndexedSlotsObject<Object>;
-			if (stArray == null) return false;
-			return elementsHaveSameValue(IndexedSlots, stArray.IndexedSlots);
+			ESIndexedSlotsObject<Object> esArray = other as ESIndexedSlotsObject<Object>;
+			if (esArray == null) return false;
+			return elementsHaveSameValue(IndexedSlots, esArray.IndexedSlots);
 		}
 
 		public void elementsDo(FuncNs.Func<Object, Object> enumerator) {
@@ -2126,15 +2035,19 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 		
+		IEnumerator IEnumerable.GetEnumerator() {
+			return slots.GetEnumerator();
+		}
+		
 		public IEnumerator<Object> GetEnumerator() {
-			return new ESArrayEnumerator(this);
+			return new ESIndexedObjectSlotsObjectEnumerator(this);
 		}
 
-		public class ESArrayEnumerator : IEnumerator<Object> {
-			private ESArray esArray;
+		public class ESIndexedObjectSlotsObjectEnumerator : IEnumerator<Object> {
+			private ESIndexedSlotsObject<Object> esArray;
 			private int index;
 
-			internal ESArrayEnumerator(ESArray esArray) {
+			internal ESIndexedObjectSlotsObjectEnumerator(ESIndexedSlotsObject<Object> esArray) {
 				this.esArray = esArray;
 				index = -1;
 			}
@@ -2154,15 +2067,14 @@ namespace EssenceSharp.Runtime {
 			}
 
 			public Object Current {
-				get {return esArray.at(index);}
+				get {return esArray[index];}
 			}
 
 			Object IEnumerator.Current {
 				get {return Current;}
 			}
 
-		}
-		
+		}		
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
 			printNamedInstanceVariablesUsing(depth, append, newLine);
 			append(" size: ");
@@ -2187,8 +2099,20 @@ namespace EssenceSharp.Runtime {
 
 			#region Primitive Definitions
 		
-			public Object _at_(Object receiver, Object slotIndex) {
-				return ((ESIndexedSlotsObject<Object>)receiver).at(asHostLong(slotIndex) - 1);
+			public Object _at_(Object receiver, Object slotIndexObject) {
+				var array = (ESIndexedSlotsObject<Object>)receiver;
+				var slots = array.IndexedSlots;
+				var slotIndex = ((long)slotIndexObject) - 1;
+				return slots[slotIndex];
+			}
+
+			public Object _atPut_(Object receiver, Object slotIndexObject, Object newValue) {
+				var array = (ESIndexedSlotsObject<Object>)receiver;
+				if (array.IsImmutable) throw new ImmutableObjectException();
+				var slots = array.IndexedSlots;
+				var slotIndex = ((long)slotIndexObject) - 1;
+				slots[slotIndex] = newValue;
+				return newValue;
 			}
 		
 			public Object _atFirstPutOrPrepend_(Object receiver, Object newValue) {
@@ -2205,12 +2129,12 @@ namespace EssenceSharp.Runtime {
 			}
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
-				((ESArray)receiver).elementsFromToDo(asHostLong(startIndex), asHostLong(endIndex), asFunctor1(enumerator));
+				((ESArray)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, asFunctor1(enumerator));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
-				((ESArray)receiver).elementsFromToByDo(asHostLong(startIndex), asHostLong(endIndex), asHostLong(step), asFunctor1(enumerator));
+				((ESArray)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, (long)step, asFunctor1(enumerator));
 				return receiver;
 			}
 
@@ -2227,28 +2151,22 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("atFirstPutOrAdd:",					new FuncNs.Func<Object, Object, Object>(_atFirstPutOrPrepend_));
 				publishPrimitive("atLastPutOrAdd:",					new FuncNs.Func<Object, Object, Object>(_atLastPutOrAppend_));
 
-				publishPrimitive("at:put:",						new FuncNs.Func<Object, Object, Object, Object>(_atPut_<Object>));
-				publishPrimitive("nextIdentityIndexOf:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<Object>));
-				publishPrimitive("prevIdentityIndexOf:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_prevIdentityIndexOfIfAbsent_<Object>));
+				publishPrimitive("at:put:",						new FuncNs.Func<Object, Object, Object, Object>(_atPut_));
+				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<Object>));
 				publishPrimitive("identityIncludes:",					new FuncNs.Func<Object, Object, Object>(_identityIncludes_<Object>));
 				publishPrimitive("add:",						new FuncNs.Func<Object, Object, Object>(_appendElement_<Object>));
 				publishPrimitive("copyWith:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<Object>));
-				publishPrimitive("identityRemoveNext:startingAt:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<Object>));	
-				publishPrimitive("copyIdentityRemovingNext:startingAt:ifAbsent:",	new FuncNs.Func<Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<Object>));	
-				publishPrimitive("identityRemovePrev:startingAt:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object>(_identityRemovePrevIfAbsent_<Object>));	
-				publishPrimitive("copyIdentityRemovingPrev:startingAt:ifAbsent:",	new FuncNs.Func<Object, Object, Object, Object, Object>(_copyIdentityRemovingPrevIfAbsent_<Object>));	
+				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<Object>));	
+				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<Object>));	
 				publishPrimitive("identityRemoveAll:",					new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<Object>));	
 				publishPrimitive("copyIdentityRemovingAll:",				new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<Object>));	
-				publishPrimitive("insert:at:",						new FuncNs.Func<Object, Object, Object, Object>(_insertElementAt_<Object>));
-				publishPrimitive("copyInserting:at:",					new FuncNs.Func<Object, Object, Object, Object>(_copyInstertingElementAt_<Object>));
+				publishPrimitive("add:beforeIndex:",					new FuncNs.Func<Object, Object, Object, Object>(_insertElementAt_<Object>));
+				publishPrimitive("copyAdding:beforeIndex:",				new FuncNs.Func<Object, Object, Object, Object>(_copyInstertingElementAt_<Object>));
 
-				publishPrimitive("nextIndexOf:startingAt:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_nextIndexOfIfAbsent_<Object>));
-				publishPrimitive("prevIndexOf:startingAt:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_prevIndexOfIfAbsent_<Object>));
+				publishPrimitive("nextIndexOf:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexOfIfAbsent_<Object>));
 				publishPrimitive("includes:",						new FuncNs.Func<Object, Object, Object>(_includes_<Object>));
-				publishPrimitive("removeNext:startingAt:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_removeNextIfAbsent_<Object>));	
-				publishPrimitive("copyRemovingNext:startingAt:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object>(_copyRemovingNextIfAbsent_<Object>));	
-				publishPrimitive("removePrev:startingAt:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_removePrevIfAbsent_<Object>));
-				publishPrimitive("copyRemovingPrev:startingAt:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object>(_copyRemovingPrevIfAbsent_<Object>));
+				publishPrimitive("removeNext:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_removeNextIfAbsent_<Object>));	
+				publishPrimitive("copyRemovingNext:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyRemovingNextIfAbsent_<Object>));	
 				publishPrimitive("removeAll:",						new FuncNs.Func<Object, Object, Object>(_removeAllOccurrencesOf_<Object>));
 				publishPrimitive("copyRemovingAll:", /* #copyWithout: */		new FuncNs.Func<Object, Object, Object>(_copyRemovingAllOccurrencesOf_<Object>));
 
@@ -2256,11 +2174,10 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("copyWithSize:",					new FuncNs.Func<Object, Object, Object>(_copyWithSize_));
 				publishPrimitive("firstIfNone:",					new FuncNs.Func<Object, Object, Object>(_firstIfNone_));
 				publishPrimitive("lastIfNone:",						new FuncNs.Func<Object, Object, Object>(_lastIfNone_));
-				publishPrimitive("nextIndexSuchThat:startingAt:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
-				publishPrimitive("prevIndexSuchThat:startingAt:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object>(_prevIndexSuchThatIfAbsent_));
+				publishPrimitive("findFirst:from:to:ifAbsent:",				new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
 				publishPrimitive("contains:",						new FuncNs.Func<Object, Object, Object>(_contains_));
 				publishPrimitive("addAll:",						new FuncNs.Func<Object, Object, Object>(_appendAll_));
-				publishPrimitive(",",							new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
+				publishPrimitive("copyAddingAll:",					new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
 				publishPrimitive("copyFrom:to:",					new FuncNs.Func<Object, Object, Object, Object>(_copyFromTo_));
 				publishPrimitive("copyTo:",						new FuncNs.Func<Object, Object, Object>(_prefixTo_));
 				publishPrimitive("copyFrom:",						new FuncNs.Func<Object, Object, Object>(_suffixFrom_));
@@ -2274,16 +2191,15 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("removeFrom:to:",					new FuncNs.Func<Object, Object, Object, Object>(_removeFromTo_));		// "Delete range"
 				publishPrimitive("copyAndRemoveFrom:to:",				new FuncNs.Func<Object, Object, Object, Object>(_copyAndRemoveFromTo_));	// "Cut range"
 				publishPrimitive("copyRemovingFrom:to:",				new FuncNs.Func<Object, Object, Object, Object>(_copyRemovingFromTo_));	// "Copy without range"
-				publishPrimitive("removeNextSuchThat:startingAt:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object>(_removeNextSuchThatIfAbsent_));
-				publishPrimitive("copyRemovingNextSuchThat:startingAt:ifAbsent:",	new FuncNs.Func<Object, Object, Object, Object, Object>(_copyRemovingNextSuchThatIfAbsent_));
-				publishPrimitive("removePrevSuchThat:startingAt:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object>(_removePrevSuchThatIfAbsent_));
-				publishPrimitive("copyRemovingPrevSuchThat:startingAt:ifAbsent:",	new FuncNs.Func<Object, Object, Object, Object, Object>(_copyRemovingPrevSuchThatIfAbsent_));
+				publishPrimitive("removeNextSuchThat:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_removeNextSuchThatIfAbsent_));
+				publishPrimitive("copyRemovingNextSuchThat:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyRemovingNextSuchThatIfAbsent_));
 				publishPrimitive("removeAllSuchThat:",					new FuncNs.Func<Object, Object, Object>(_removeAllOccurrencesSuchThat_));
 				publishPrimitive("copyRemovingAllSuchThat:",				new FuncNs.Func<Object, Object, Object>(_copyRemovingAllSuchThat_));
-				publishPrimitive("insertAll:at:",					new FuncNs.Func<Object, Object, Object, Object>(_insertAllAt_));
-				publishPrimitive("copyInsertingAll:at:",				new FuncNs.Func<Object, Object, Object, Object>(_copyInsertingAllAt_));
+				publishPrimitive("addAll:beforeIndex:",					new FuncNs.Func<Object, Object, Object, Object>(_insertAllAt_));
+				publishPrimitive("copyAddingAll:beforeIndex:",				new FuncNs.Func<Object, Object, Object, Object>(_copyInsertingAllAt_));
 				publishPrimitive("moveFrom:to:by:",					new FuncNs.Func<Object, Object, Object, Object, Object>(_moveFromToBy_)); // Cut then paste range
 				publishPrimitive("copyMovingFrom:to:by:",				new FuncNs.Func<Object, Object, Object, Object, Object>(_copyMovingFromToBy_)); // Cut then paste range
+				publishPrimitive("replaceFrom:to:with:startingAt:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_replaceFromToWithStartingAt_)); 
 				publishPrimitive("copyReplacingFrom:to:with:startingAt:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyReplacingFromToWithStartingAt_)); 
 				publishPrimitive("reverse",						new FuncNs.Func<Object, Object>(_reverse_)); 
 				publishPrimitive("copyReversed",					new FuncNs.Func<Object, Object>(_copyReversed_)); 

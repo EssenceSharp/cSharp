@@ -452,6 +452,10 @@ namespace EssenceSharp.Runtime {
 			return comparand.Equals(this);
 		}
 
+		public override int GetHashCode() {
+			return source.GetHashCode();
+		}
+
 	}
 
 	public class ESSpecifImportSpec : ESImportSpec {
@@ -586,7 +590,7 @@ namespace EssenceSharp.Runtime {
 		public virtual ESPathname pathname() {
 			ESPathname pn = null;
 			int index = 0;
-			fromRootDo(delegate (long depth, ESNamespace pathElement) {
+			fromRootDo((long depth, ESNamespace pathElement) => {
 				if (pn == null) {
 					pn = Class.Kernel.newPathname(depth - 1);
 				} else {

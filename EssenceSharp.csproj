@@ -200,7 +200,7 @@
     <Compile Include="Source\Runtime\Binding\ESGetVariableValueBinder.cs" />
     <Compile Include="Source\Runtime\Binding\ESNamedVariableBinder.cs" />
     <Compile Include="Source\Runtime\Binding\ESetVariableValueBinder.cs" />
-    <Compile Include="Source\Runtime\Collections.cs" />
+    <Compile Include="Source\Runtime\SystemPrimitives.cs" />
     <Compile Include="Source\Runtime\EnumerationTypes.cs" />
     <Compile Include="Source\Runtime\ESDictionaries.cs" />
     <Compile Include="Source\Runtime\ESKernel.cs" />

@@ -185,7 +185,7 @@ namespace EssenceSharp.ParsingServices {
 		public char QualifiedNameSeparatorChar {
 			// Cannot be an identifier char, a whitespace char or a control char
 			get {return qualifiedNameSeparatorChar;}
-			set {qualifiedNameSeparatorChar = ESLexicalUtility.isIdentifierChar(value) || Char.IsWhiteSpace(value) || Char.IsControl(value) ? defaultQualifiedNameSeparator : value;}
+			set {qualifiedNameSeparatorChar = value.isIdentifierChar() || Char.IsWhiteSpace(value) || Char.IsControl(value) ? defaultQualifiedNameSeparator : value;}
 		}
 		
 		public bool SupportsDynamicArrayLiterals {

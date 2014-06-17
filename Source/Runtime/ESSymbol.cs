@@ -195,11 +195,11 @@ namespace EssenceSharp.Runtime {
 		public void keywordsDo(System.Action<String> enumerator1) {
 			if (Type != SymbolType.Keyword) return;
 			var stream = new StringReader(PrimitiveValue);
-			var keywordString = ESLexicalUtility.nextIdentifierFrom(stream);
+			var keywordString = stream.nextIdentifier();
 			do {
 				enumerator1(keywordString);
-				ESLexicalUtility.nextMatches(stream, ':');
-				keywordString = ESLexicalUtility.nextIdentifierFrom(stream);
+				stream.nextMatches(':');
+				keywordString = stream.nextIdentifier();
 			} while (keywordString != null && keywordString.Length > 0);
 		}
 
@@ -240,10 +240,6 @@ namespace EssenceSharp.Runtime {
 		
 		public int compareTo(ESString comparand) {
 			return ESString.compare<char>(IndexedSlots, comparand.IndexedSlots);
-		}
-		
-		public override void atPut(long slotIndex, char newValue) {
-			throw new ImmutableObjectException("Symbols are immuable");
 		}
 
 		public override ESIndexedSlotsObject<char> newWithSize(long size) {
@@ -291,6 +287,14 @@ namespace EssenceSharp.Runtime {
 			// Foreign code wants/needs the String hash code....
 			return stringValue.GetHashCode();
 		}
+
+		public override bool Equals(Object comparand) {
+			return this == comparand;
+		}      
+		
+		public override bool Equals(ESObject comparand) {
+			return this == comparand;
+		}    
 		
 		public override int CompareTo(Object comparand) {
 			if (comparand == null) {
@@ -323,10 +327,6 @@ namespace EssenceSharp.Runtime {
 		}
 
 		#endregion
-		
-		public String encodedAsFilename() {
-			return ESLexicalUtility.encodedAsFilename(PrimitiveValue);
-		}
 
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
 			append("#");
@@ -423,7 +423,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public ESSymbol symbolForFilenameEncodedString(String filename) {
-			return symbolFor(ESLexicalUtility.decodedFromFilename(filename));
+			return symbolFor(filename.decodedFromFilename());
 		}
 				
 		public ESSymbol symbolFor(String value, char? qualifiedNameSeparatorChar) {
@@ -433,7 +433,7 @@ namespace EssenceSharp.Runtime {
 			long numArgs;
 			long pathElementCount;
 			SymbolType type;
-			ESLexicalUtility.classifySymbol(value, qualifiedNameSeparatorChar, out type, out numArgs, out pathElementCount);
+			value.classifySymbol(qualifiedNameSeparatorChar, out type, out numArgs, out pathElementCount);
 			return symbolFor(value, type, numArgs, qualifiedNameSeparatorChar, pathElementCount);
 		}
 		
@@ -469,6 +469,7 @@ namespace EssenceSharp.Runtime {
 			// Smalltalk selector characters				Semantics enumeration constant				Semantics in C# (using LINQ expressions, if possible)
 			//															'x' is always the message receiver; y is the first argument, etc.
 
+			doesNotUnderstandSelector.CanonicalSemantics			= CanonicalSelectorSemantics.DoesNotUnderstand;		// (x, y) => ..untranslatable..
 			symbolFor("==").CanonicalSemantics				= CanonicalSelectorSemantics.IsIdenticalTo;		// (x, y) => ReferenceEquals(x, y)
 			symbolFor("~~").CanonicalSemantics				= CanonicalSelectorSemantics.IsNotIdenticalTo;		// (x, y) => !ReferenceEquals(x, y)
 			symbolFor("identityHash").CanonicalSemantics			= CanonicalSelectorSemantics.IdentityHash;		// (x)    => x.GetHashCode() -- but the hash code is based solely on the object's identity, and not based on its logical value
@@ -565,11 +566,11 @@ namespace EssenceSharp.Runtime {
 			symbolFor("+").CanonicalSemantics				= CanonicalSelectorSemantics.Plus;			// (x, y) => x + y
 			symbolFor("-").CanonicalSemantics				= CanonicalSelectorSemantics.Minus;			// (x, y) => x - y
 			symbolFor("*").CanonicalSemantics				= CanonicalSelectorSemantics.Times;			// (x, y) => x * y
-			symbolFor("/").CanonicalSemantics				= CanonicalSelectorSemantics.DivideToRational;		// (x, y) => x is integer && y is integer ? new Fraction(x, y) : x / y
+			symbolFor(@"/").CanonicalSemantics				= CanonicalSelectorSemantics.DivideToRational;		// (x, y) => x is integer && y is integer ? new Fraction(x, y) : x / y
 			symbolFor("quo:").CanonicalSemantics				= CanonicalSelectorSemantics.DivideToInteger;		// (x, y) => (long)(x / y) -- This is called 'div' in some languages.
-			symbolFor("//").CanonicalSemantics				= CanonicalSelectorSemantics.DivideFlooredToInteger;	// (x, y) => (long)Math.Floor((double)x / y)
+			symbolFor(@"//").CanonicalSemantics				= CanonicalSelectorSemantics.DivideFlooredToInteger;	// (x, y) => (long)Math.Floor((double)x / y)
 			symbolFor("rem:").CanonicalSemantics				= CanonicalSelectorSemantics.DivisionRemainder;		// (x, y) => x % y
-			symbolFor("\\").CanonicalSemantics				= CanonicalSelectorSemantics.DivisionResidual;		// (x, y) => x - ((long)Math.Floor((double)x / y) * y)
+			symbolFor(@"\\").CanonicalSemantics				= CanonicalSelectorSemantics.DivisionResidual;		// (x, y) => x - ((long)Math.Floor((double)x / y) * y)
 			symbolFor("raisedToInteger:").CanonicalSemantics		= CanonicalSelectorSemantics.RaisedToInteger;		// (x, y) => var result = 1; for (var i = 0; i < y; i++) result *= x; result
 			symbolFor("raisedTo:").CanonicalSemantics			= CanonicalSelectorSemantics.RaisedTo;			// (x, y) => Math.Pow(x, y)
 			symbolFor("**").CanonicalSemantics				= CanonicalSelectorSemantics.RaisedTo;			// (x, y) => Math.Pow(x, y)

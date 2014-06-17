@@ -436,7 +436,7 @@ namespace EssenceSharp.Runtime.Binding {
 				}
 			} else {
 				methodInfo = null;
-				typedArguments = null;
+				typedArguments = emptyArgList;
 				return false;
 			}
 		}
@@ -2745,8 +2745,17 @@ namespace EssenceSharp.Runtime.Binding {
 					} else {
 						index = typedIndexMo.Expression;
 					}
-					typedValue = valueGuru.metaObjectToConvertTo(methodInfo.ReturnType);
-					performOperationExpression = Expression.Call(methodInfo.IsStatic ? null : target.asExpressionWithFormalType(), methodInfo, new Expression[]{index, typedValue.Expression});
+					if (methodInfo.ReturnType.isVoidType()) {
+						var parameters = methodInfo.GetParameters();
+						var valueParameter = parameters[1];
+						typedValue = valueGuru.metaObjectToConvertTo(valueParameter.ParameterType);
+						performOperationExpression = Expression.Block(
+							Expression.Call(methodInfo.IsStatic ? null : target.asExpressionWithFormalType(), methodInfo, new Expression[]{index, typedValue.Expression}),
+							target.Expression);
+					} else {
+						typedValue = valueGuru.metaObjectToConvertTo(methodInfo.ReturnType);
+						performOperationExpression = Expression.Call(methodInfo.IsStatic ? null : target.asExpressionWithFormalType(), methodInfo, new Expression[]{index, typedValue.Expression});
+					}
 				}
 
 				if (performOperationExpression.Type != TypeGuru.objectType) performOperationExpression = performOperationExpression.withType(TypeGuru.objectType);

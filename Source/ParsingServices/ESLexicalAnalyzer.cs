@@ -823,8 +823,8 @@ namespace EssenceSharp.ParsingServices {
 			bool nonZeroDigitScanned = !initialCharIsZero && !Char.IsControl(initialChar);
 			if (nonZeroDigitScanned) digits.Append(initialChar);
 			int count = 0;
-			advanceWhile(delegate (char ch) {
-							long digitVal = ESLexicalUtility.decimalDigitValue(ch);
+			advanceWhile((char ch) => {
+							long digitVal = ch.decimalDigitValue();
 							bool isDigit = digitVal >= 0; 
 							if (isDigit) {
 								if (ignoreLeadingZeros) {
@@ -850,8 +850,8 @@ namespace EssenceSharp.ParsingServices {
 			bool nonZeroDigitScanned = !initialCharIsZero && !Char.IsControl(initialChar);
 			if (nonZeroDigitScanned) digits.Append(initialChar);
 			int count = 0;
-			advanceWhile(delegate (char ch) {
-							long digitVal = ESLexicalUtility.digitValue(ch);
+			advanceWhile((char ch) => {
+							long digitVal = ch.digitValue();
 							bool isDigit = digitVal >= 0 && digitVal < numberBase; 
 							if (isDigit) {
 								if (ignoreLeadingZeros) {
@@ -877,8 +877,8 @@ namespace EssenceSharp.ParsingServices {
 			bool nonZeroDigitScanned = !initialValueIsZero;
 			long value = outerValue;
 			int count = initialCount;
-			advanceWhile(delegate (char ch) {
-							long digitVal = ESLexicalUtility.decimalDigitValue(ch);
+			advanceWhile((char ch) => {
+							long digitVal = ch.decimalDigitValue();
 							bool isDigit = digitVal >= 0; 
 							if (isDigit) {
 								nonZeroDigitScanned = nonZeroDigitScanned || ch != '0';
@@ -897,8 +897,8 @@ namespace EssenceSharp.ParsingServices {
 			bool nonZeroDigitScanned = !initialValueIsZero;
 			long value = outerValue;
 			int count = initialCount;
-			advanceWhile(delegate (char ch) {
-							long digitVal = ESLexicalUtility.digitValue(ch);
+			advanceWhile((char ch) => {
+							long digitVal = ch.digitValue();
 							bool isDigit = digitVal >= 0 && digitVal < numberBase; 
 							if (isDigit) {
 								nonZeroDigitScanned = nonZeroDigitScanned || ch != '0';
@@ -935,7 +935,7 @@ namespace EssenceSharp.ParsingServices {
 						
 					case 'r':
 						// Radix Integers
-						uint radix = (uint)ESLexicalUtility.integerValueFromDecimalDigits(decimalPrefix);
+						uint radix = (uint)decimalPrefix.integerValueFromDecimalDigits();
 						if (radix <= 36) {
 							advanceChar();
 							digits.Length = 0;
@@ -964,7 +964,7 @@ namespace EssenceSharp.ParsingServices {
 						digits.Length = 0;
 						scaleCount = scanDecimalInteger((char)0, true, digits);
 						if (scaleCount > 0) {
-							scale = (uint)ESLexicalUtility.integerValueFromDecimalDigits(digits.ToString());
+							scale = (uint)digits.ToString().integerValueFromDecimalDigits();
 							return newScaledDecimalLiteralToken(decimalPrefix, null, scale, sign, initialLineNumber, initialColumnNumber);
 						} else {
 							return newScaledDecimalLiteralToken(decimalPrefix, null, sign, initialLineNumber, initialColumnNumber);
@@ -987,7 +987,7 @@ namespace EssenceSharp.ParsingServices {
 										digits.Length = 0;
 										scaleCount = scanDecimalInteger((char)0, true, digits);
 										if (scaleCount > 0) {
-											scale = (uint)ESLexicalUtility.integerValueFromDecimalDigits(digits.ToString());
+											scale = (uint)digits.ToString().integerValueFromDecimalDigits();
 											return newScaledDecimalLiteralToken(decimalPrefix, decimalSuffix, scale, sign, initialLineNumber, initialColumnNumber);
 										} else {
 											return newScaledDecimalLiteralToken(decimalPrefix, decimalSuffix, sign, initialLineNumber, initialColumnNumber);
@@ -996,8 +996,8 @@ namespace EssenceSharp.ParsingServices {
 									case 'E':
 									case 'e':
 										advanceChar();
-										prefixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalPrefix);
-										suffixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalSuffix);
+										prefixValue = decimalPrefix.integerValueFromDecimalDigits();
+										suffixValue = decimalSuffix.integerValueFromDecimalDigits();
 										exponentCount = parseDecimalInteger(0, ref integerExponent);										
 										if (exponentCount > 0) {
 											return newSinglePrecisionLiteralToken(sign * ((float)prefixValue + ((float)suffixValue / (float)Math.Pow(10.0f, suffixCount))), integerExponent, initialLineNumber, initialColumnNumber);
@@ -1008,8 +1008,8 @@ namespace EssenceSharp.ParsingServices {
 									case 'D':
 									case 'd':
 										advanceChar();
-										prefixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalPrefix);
-										suffixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalSuffix);
+										prefixValue = decimalPrefix.integerValueFromDecimalDigits();
+										suffixValue = decimalSuffix.integerValueFromDecimalDigits();
 										exponentCount = parseDecimalInteger(0, ref integerExponent);
 										if (exponentCount > 0) {
 											return newDoublePrecisionLiteralToken(sign * ((double)prefixValue + ((double)suffixValue / Math.Pow(10.0d, suffixCount))), integerExponent, initialLineNumber, initialColumnNumber);
@@ -1020,8 +1020,8 @@ namespace EssenceSharp.ParsingServices {
 									case 'Q':
 									case 'q':
 										advanceChar();
-										prefixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalPrefix);
-										suffixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalSuffix);
+										prefixValue = decimalPrefix.integerValueFromDecimalDigits();
+										suffixValue = decimalSuffix.integerValueFromDecimalDigits();
 										exponentCount = parseDecimalInteger(0, ref integerExponent);
 										if (exponentCount > 0) {
 											return newQuadPrecisionLiteralToken(sign * ((decimal)prefixValue + ((decimal)suffixValue / (decimal)Math.Pow(10.0d, suffixCount))), (int)integerExponent, initialLineNumber, initialColumnNumber);
@@ -1030,13 +1030,13 @@ namespace EssenceSharp.ParsingServices {
 										}
 										
 									default:
-										prefixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalPrefix);
-										suffixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalSuffix);
+										prefixValue = decimalPrefix.integerValueFromDecimalDigits();
+										suffixValue = decimalSuffix.integerValueFromDecimalDigits();
 										return newSinglePrecisionLiteralToken(sign * ((float)prefixValue + ((float)suffixValue / (float)Math.Pow(10.0f, suffixCount))), initialLineNumber, initialColumnNumber);
 								}
 							} else {
-								prefixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalPrefix);
-								suffixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalSuffix);
+								prefixValue = decimalPrefix.integerValueFromDecimalDigits();
+								suffixValue = decimalSuffix.integerValueFromDecimalDigits();
 								return newSinglePrecisionLiteralToken(sign * ((float)prefixValue + ((float)suffixValue / (float)Math.Pow(10.0f, suffixCount))), initialLineNumber, initialColumnNumber);
 							}
 						} else {
@@ -1049,7 +1049,7 @@ namespace EssenceSharp.ParsingServices {
 						// Single-precision floating point numbers (no decimal)
 						
 						advanceChar();
-						prefixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalPrefix);
+						prefixValue = decimalPrefix.integerValueFromDecimalDigits();
 						exponentCount = parseDecimalInteger(0, ref integerExponent);
 						if (exponentCount > 0) {
 							return newSinglePrecisionLiteralToken(sign * (float)prefixValue, (int)integerExponent, initialLineNumber, initialColumnNumber);
@@ -1062,7 +1062,7 @@ namespace EssenceSharp.ParsingServices {
 						// Double-precision floating point numbers (no decimal)
 						
 						advanceChar();
-						prefixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalPrefix);
+						prefixValue = decimalPrefix.integerValueFromDecimalDigits();
 						exponentCount = parseDecimalInteger(0, ref integerExponent);
 						if (exponentCount > 0) {
 							return newDoublePrecisionLiteralToken(sign * (double)prefixValue, integerExponent, initialLineNumber, initialColumnNumber);
@@ -1075,7 +1075,7 @@ namespace EssenceSharp.ParsingServices {
 						// Quad-precision floating point numbers (no decimal)
 						
 						advanceChar();
-						prefixValue = ESLexicalUtility.integerValueFromDecimalDigits(decimalPrefix);
+						prefixValue = decimalPrefix.integerValueFromDecimalDigits();
 						suffixCount = parseDecimalInteger(0, ref integerExponent);
 						if (suffixCount > 0) {
 							return newQuadPrecisionLiteralToken(sign * (decimal)prefixValue, (int)integerExponent, initialLineNumber, initialColumnNumber);
@@ -1173,8 +1173,9 @@ namespace EssenceSharp.ParsingServices {
 							initialLineNumber, 
 							initialColumnNumber);
 					} else {
-						if (SupportsThisContextPseudoVariable && prefix != null && prefix.Length == 1) {
-							if (parseThisContextPseudoVariable(out thisContextToken, true,  prefix, initialLineNumber, initialColumnNumber)) {
+						if (SupportsThisContextPseudoVariable && (prefix == null || prefix.Length == 1)) {
+							if (prefix == null) prefix = new StringBuilder();
+							if (parseThisContextPseudoVariable(out thisContextToken, prefix.Length < 1,  prefix, initialLineNumber, initialColumnNumber)) {
 								return newInvalidTokenToken(
 									thisContextToken,
 									"ReservedIdentifierCannotBeDeclaredAsVariableOrParameter", 
@@ -1182,7 +1183,10 @@ namespace EssenceSharp.ParsingServices {
 									initialColumnNumber);
 							}
 						}
-						if (prefix == null) prefix = new StringBuilder();
+						if (prefix == null) {
+							prefix = new StringBuilder();
+							prefix.Append("t");
+						}
 						appendOntoWhile(prefix, ESLexicalUtility.isIdentifierChar);
 						return newBlockParameterToken(prefix.ToString(), initialLineNumber, initialColumnNumber);
 					}
@@ -1259,7 +1263,7 @@ namespace EssenceSharp.ParsingServices {
 		protected LexicalToken basicParseBinaryMessageSelector(char initialChar, Functor3<LexicalToken, String, uint, uint> createSTToken, uint initialLineNumber, uint initialColumnNumber) {
 			char finalChar = (char)0;
 			if (peek(ref finalChar)) {
-				if (ESLexicalUtility.isBinaryMessageSelectorChar(finalChar)) {
+				if (finalChar.isBinaryMessageSelectorChar()) {
 					uint numberTokenLineNumber = LineNumber;
 					uint numberTokenColumnNumber = ColumnNumber;
 					advanceChar();
@@ -1407,7 +1411,7 @@ namespace EssenceSharp.ParsingServices {
 						ch = (char)0;
 						switch (QualifiedNameSeparatorChar) {
 							default:
-								if (peek(ref ch) && ESLexicalUtility.isIdentifierChar(ch)) {
+								if (peek(ref ch) && ch.isIdentifierChar()) {
 									prefix.Append(QualifiedNameSeparatorChar);
 									qualifiedPathElementSeparatorCount++;
 									parseAnotherKeywordOrPathElement = true;
@@ -1515,7 +1519,7 @@ namespace EssenceSharp.ParsingServices {
 					if (nextMatches('s')) {
 						if (nextMatches('e')) {
 							char ch = (char)0;
-							if (!peek(ref ch) || !ESLexicalUtility.isIdentifierChar(ch)) {
+							if (!peek(ref ch) || !ch.isIdentifierChar()) {
 								prefix = null;
 								falseToken = newFalseToken(initialLineNumber, initialColumnNumber);
 								return true;
@@ -1567,7 +1571,7 @@ namespace EssenceSharp.ParsingServices {
 			if (nextMatches('i')) {
 				if (nextMatches('l')) {
 					char ch = (char)0;
-					if (!peek(ref ch) || !ESLexicalUtility.isIdentifierChar(ch)) {
+					if (!peek(ref ch) || !ch.isIdentifierChar()) {
 						prefix = null;
 						nilToken = newNilToken(initialLineNumber, initialColumnNumber);
 						return true;
@@ -1615,7 +1619,7 @@ namespace EssenceSharp.ParsingServices {
 						advanceChar();
 						if (nextMatches('l')) {
 							if (nextMatches('f')) {
-								if (!peek(ref ch) || !ESLexicalUtility.isIdentifierChar(ch)) {
+								if (!peek(ref ch) || !ch.isIdentifierChar()) {
 									prefix = null;
 									pseudoVariableToken = newSelfToken(initialLineNumber, initialColumnNumber);
 									return true;
@@ -1637,7 +1641,7 @@ namespace EssenceSharp.ParsingServices {
 						if (nextMatches('p')) {
 							if (nextMatches('e')) {
 								if (nextMatches('r')) {
-									if (!peek(ref ch) || !ESLexicalUtility.isIdentifierChar(ch)) {
+									if (!peek(ref ch) || !ch.isIdentifierChar()) {
 										prefix = null;
 										pseudoVariableToken = newSuperToken(initialLineNumber, initialColumnNumber);
 										return true;
@@ -1686,7 +1690,7 @@ namespace EssenceSharp.ParsingServices {
 				if (nextMatches('u')) {
 					if (nextMatches('e')) {
 						char ch = (char)0;
-						if (!peek(ref ch) || !ESLexicalUtility.isIdentifierChar(ch)) {
+						if (!peek(ref ch) || !ch.isIdentifierChar()) {
 							trueToken = newTrueToken(initialLineNumber, initialColumnNumber);
 							prefix = null;
 							return true;
@@ -1725,7 +1729,7 @@ namespace EssenceSharp.ParsingServices {
 												if (nextMatches('x')) {
 													if (nextMatches('t')) {
 														char ch = (char)0;
-														if (!peek(ref ch) || !ESLexicalUtility.isIdentifierChar(ch)) {
+														if (!peek(ref ch) || !ch.isIdentifierChar()) {
 															prefix = null;
 															thisContextToken = newThisContextToken(initialLineNumber, initialColumnNumber);
 															return true;
@@ -1777,9 +1781,10 @@ namespace EssenceSharp.ParsingServices {
 			if (parseTrueLiteralConstant(out trueToken, !SupportsThisContextPseudoVariable, out prefix, initialLineNumber, initialColumnNumber)) {
 				return trueToken;
 			}
-			if (SupportsThisContextPseudoVariable && prefix != null && prefix.Length == 1) {
+			if (SupportsThisContextPseudoVariable && (prefix == null || prefix.Length == 1)) {
 				ThisContextToken thisContextToken= null;
-				if (parseThisContextPseudoVariable(out thisContextToken, false,  prefix, initialLineNumber, initialColumnNumber)) {
+				if (prefix == null) prefix = new StringBuilder();
+				if (parseThisContextPseudoVariable(out thisContextToken, prefix.Length < 1,  prefix, initialLineNumber, initialColumnNumber)) {
 					return thisContextToken;				
 				}
 			}

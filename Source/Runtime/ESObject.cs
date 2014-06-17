@@ -29,6 +29,8 @@
 
 #region Using declarations
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Dynamic;
@@ -45,13 +47,60 @@ using EssenceSharp.Exceptions.System.PrimitiveFailures;
 
 namespace EssenceSharp.Runtime {
 
+	public class ObjectIdentityComparator : IEqualityComparer<Object> {
+
+		public new bool Equals(Object left, Object right) {
+			return left == right;
+		}
+
+		public int GetHashCode(Object anObject) {
+			return RuntimeHelpers.GetHashCode(anObject);
+		}
+
+	}
+
+	public class ObjectEqualityComparator : IEqualityComparer<Object> {
+
+		protected FuncNs.Func<Object, Object, Object> areEqual;
+		protected FuncNs.Func<Object, Object> hashCodeOf;
+
+		public ObjectEqualityComparator(ESKernel kernel) {
+
+			ESBlock equalsBlock;
+			kernel.compile(new StringReader(":left :right | left = right"), kernel.SmalltalkNamespace, null, out equalsBlock);
+			areEqual = equalsBlock.F2;
+
+			ESBlock hashBlock;
+			kernel.compile(new StringReader(":anObject | anObject hash"), kernel.SmalltalkNamespace, null, out hashBlock);
+			hashCodeOf = hashBlock.F1;
+
+		}
+
+		public new bool Equals(Object left, Object right) {
+			return (bool)areEqual(left, right);
+		}
+
+		public int GetHashCode(Object anObject) {
+			return (int)hashCodeOf(anObject);
+		}
+
+		public FuncNs.Func<Object, Object, Object> EqualityFunctor {
+			get { return areEqual;}
+		} 
+
+		public FuncNs.Func<Object, Object> HashFunctor {
+			get { return hashCodeOf;}
+		} 
+
+	}
+
 	public class ESObject : EssenceSharpObject, IDynamicMetaObjectProvider, IEquatable<ESObject>, ICloneable {
 		
 		#region Static variables and methods
 
 		#region Utilities
-			
-		public bool elementsAreIdentical(Object[] left, Object[] right) {
+
+		public static bool elementsAreIdentical(Object[] left, Object[] right) {
 			if (ReferenceEquals(left, right)) return true;
 			if (left == null) return right.Length == 0;
 			if (right == null) return left.Length == 0;
@@ -61,34 +110,6 @@ namespace EssenceSharp.Runtime {
 			if (sizeDiff != 0) return false;
 			for (var i = 0; i < leftLength; i++) {
 				if (!ReferenceEquals(left[i], right[i])) return false;
-			}
-			return true;
-		}
-		
-		public bool elementsHaveSameValue(Object[] left, Object[] right) {
-			if (ReferenceEquals(left, right)) return true;
-			if (left == null) return right.Length == 0;
-			if (right == null) return left.Length == 0;
-			long leftLength = left.Length;
-			long rightLength = right.Length;
-			long sizeDiff = leftLength - rightLength;
-			if (sizeDiff != 0) return false;
-			for (var i = 0; i < leftLength; i++) {
-				Object leftObject = left[i];
-				Object rightObject = right[i];
-				if (leftObject == null) {
-					if (rightObject != null) return false;
-				} else if (rightObject == null) {
-					return false;
-				} else {
-					ESObject leftST = leftObject as ESObject;
-					ESObject rightST = rightObject as ESObject;
-					if (leftST == null || rightST == null) {
-						if (!leftObject.Equals(rightObject)) return false;
-					} else {
-						if (!leftST.hasSameValueAs(rightST)) return false;
-					}
-				}
 			}
 			return true;
 		}
@@ -207,9 +228,23 @@ namespace EssenceSharp.Runtime {
 			return (decimal)value;
 		}
 
+		public static char[] asHostCharArray(Object value) {
+			var esValue = value as ESObject;
+			if (esValue == null) {
+				var stringValue = value as String;
+				if (stringValue == null) return (char[])value;
+				return stringValue.ToCharArray();
+			}
+			return esValue.asHostCharArray();
+		}
+
 		public static String asHostString(Object value) {
 			ESObject esValue = value as ESObject;
-			return ReferenceEquals(esValue, null) ? (String)value : esValue.asHostString();
+			return esValue == null ? (String)value : esValue.asHostString();
+		}
+				
+		public virtual char[] asHostCharArray() {
+			return ((ESIndexedSlotsObject<char>)this).IndexedSlots;
 		}
 				
 		public virtual String asHostString() {
@@ -218,7 +253,7 @@ namespace EssenceSharp.Runtime {
 
 		public static ElementType[] asHostArray<ElementType>(Object value) {
 			ESIndexedSlotsObject<ElementType> esValue = value as ESIndexedSlotsObject<ElementType>;
-			return ReferenceEquals(esValue, null) ? (ElementType[] )value : ((ESIndexedSlotsObject<ElementType>)esValue).IndexedSlots;
+			return esValue == null ? (ElementType[] )value : ((ESIndexedSlotsObject<ElementType>)esValue).IndexedSlots;
 		}
 
 		public ElementType[] asHostArray<ElementType>() {
@@ -715,19 +750,15 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override int GetHashCode() {
-			return (int)hash();
+			return Class.instanceHashCode(this);
 		}
 
-		public override bool Equals(Object generalOther) {
-			// Not used by compiled Smalltalk code. The intent is to enable interoperability of STObjects with non-Smalltalk code.
-			if (ReferenceEquals(this, generalOther)) return true;
-			ESObject other = generalOther as ESObject;
-			if (other == null) return false;
-			return other.hasSameValueAs(this);
+		public override bool Equals(Object comparand) {
+			return Class.instanceHasSameValueAs(this, comparand);
 		}      
 		
-		public bool Equals(ESObject other) {
-			return other.hasSameValueAs(this);
+		public virtual bool Equals(ESObject comparand) {
+			return Class.instanceHasSameValueAs(this, comparand);
 		}      
 		
  		public static bool operator false(ESObject receiver) {
@@ -786,12 +817,12 @@ namespace EssenceSharp.Runtime {
 				return kernel.classOf(receiver).includesBehavior((ESBehavior)aBehavior);
 			}
 		
-			public static Object _hasSameIdentityAs_(Object receiver, Object other) {
-				return ReferenceEquals(receiver, other);
+			public static Object _hasSameIdentityAs_(Object receiver, Object comparand) {
+				return ReferenceEquals(receiver, comparand);
 			}
 		
 			public static Object _hasSameValueAs_(Object receiver, Object comparand) {
-				return ((ESObject)receiver).hasSameValueAs((ESObject)comparand);
+				return ReferenceEquals(receiver, comparand);
 			}
 		
 			public static Object _identityHash_(Object receiver) {
@@ -799,7 +830,7 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public static Object _hash_(Object receiver) {
-				return ((ESObject)receiver).hash();
+				return RuntimeHelpers.GetHashCode(receiver);
 			}
 
 			public static Object _ifNotNil_(Object receiver, Object notNilAction) {

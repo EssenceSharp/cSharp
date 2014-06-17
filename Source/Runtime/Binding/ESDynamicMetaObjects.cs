@@ -77,7 +77,7 @@ namespace EssenceSharp.Runtime.Binding {
 				long syntacicalNumArgs;
 				long ignored;
 				messageName = messageName.usingCapitalizationScheme(CapitalizationScheme.InitialLowerCase);
-				ESLexicalUtility.classifySymbol(messageName, null, out symbolType, out syntacicalNumArgs, out ignored);
+				messageName.classifySymbol(null, out symbolType, out syntacicalNumArgs, out ignored);
 				switch (symbolType) {
 					case SymbolType.Identifier:
 						switch (numArgs) {
@@ -124,10 +124,6 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public DynamicMetaObject metaObjectToSendDoesNotUnderstand(ESSymbol selector, DynamicMetaObject[] args) {
 			return ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Expression, ValueClass, selector, args).asDynamicMetaObject(DefaultBindingRestrictions, Value);
-			return new DynamicMetaObject(
-					ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Expression, ValueClass, selector, args), 
-					DefaultBindingRestrictions,
-					Value);
 		}
 
 		public DynamicMetaObject metaObjectToThrowInvalidFunctionCallException(ESSymbol selector, DynamicMetaObject[] args, String messageText, Type expectedFunctionType, Type actualFunctionType) {

@@ -284,7 +284,7 @@ namespace EssenceSharp.ClientServices {
 			bool? beVerbose = null;
 			bool? provideHelp = null;
 			var stream = new StringReader(arg);
-			if (expectedSyntax == ArgumentSyntax.Any && ESLexicalUtility.nextSatisfies(stream, ch => ch == '-' || ch == '/')) {
+			if (expectedSyntax == ArgumentSyntax.Any && stream.nextSatisfies(ch => ch == '-' || ch == '/')) {
 				int c;
 				char ch;
 				c = stream.Read();
@@ -334,14 +334,13 @@ namespace EssenceSharp.ClientServices {
 			} else if (expectedSyntax == ArgumentSyntax.QualifiedIdentierList || expectedSyntax == ArgumentSyntax.IdentifierList) {
 				var acceptQualifiedNameSyntax = expectedSyntax == ArgumentSyntax.QualifiedIdentierList;
 				var values = new List<String>();
-				var identifier = acceptQualifiedNameSyntax ? ESLexicalUtility.nextQualifiedIdentifierFrom(stream) : ESLexicalUtility.nextIdentifierFrom(stream);
+				var identifier = acceptQualifiedNameSyntax ? stream.nextQualifiedIdentifier() : stream.nextIdentifier();
 				while (identifier != null && identifier.Length > 0) {
 					values.Add(identifier);
-					if (ESLexicalUtility.nextSatisfies(stream, opCh => opCh == ',' || opCh == ';')) {
-						identifier = acceptQualifiedNameSyntax ? ESLexicalUtility.nextQualifiedIdentifierFrom(stream) : ESLexicalUtility.nextIdentifierFrom(stream);
+					if (stream.nextSatisfies(opCh => opCh == ',' || opCh == ';')) {
+						identifier = acceptQualifiedNameSyntax ? stream.nextQualifiedIdentifier() : stream.nextIdentifier();
 					} else {
 						int c;
-						char ch;
 						c = stream.Peek();
 						if (c == -1) {
 							break;
@@ -351,8 +350,8 @@ namespace EssenceSharp.ClientServices {
 					}
 				}
 				return values.Count > 0 ? new Argument(values.ToArray()) : new Argument(OptionSemantics.Illegal, arg);
-			} else if (ESLexicalUtility.nextMatches(stream, '"')) {
-				var value = ESLexicalUtility.nextFromUntil(stream, opCh => opCh == '"');
+			} else if (stream.nextMatches('"')) {
+				var value = stream.nextUntil(opCh => opCh == '"');
 				return new Argument(OptionSemantics.QuotedOperand, value);
 			} else { 
 				return new Argument(arg);

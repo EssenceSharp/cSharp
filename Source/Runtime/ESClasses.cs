@@ -33,6 +33,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Dynamic;
 #if CLR2
 using Microsoft.Scripting.Ast;
@@ -300,12 +301,15 @@ namespace EssenceSharp.Runtime {
 		protected System.Collections.Generic.HashSet<ESBehavior>			subclasses				= null;
 		protected IDictionary<ESSymbol, ESMethod> 					methodDictionary 			= null;
 		protected IDictionary<long, IDictionary<String, ESMethod>>			hostSystemMethodDictionary		= null;
+		protected ObjectEqualityComparator						instanceEqualityComparator		= null;
+		protected FuncNs.Func<Object, Object, Object>					instanceEqualityFunctor			= null;
+		protected FuncNs.Func<Object, Object>						instanceHashFunctor			= null;
 		protected Type									instanceType				= null;
 		protected bool									isInstanceTypeLocked			= false;
+
 		protected ObjectStateArchitecture 						instanceArchitecture			= ObjectStateArchitecture.NamedSlots;
 		protected bool									constraintsMustBeSatisfied		= false;
 		protected bool									isInstanceArchitectureLocked		= false;
-
 		protected ESSymbol[]								instanceVariableNames			= emptyInstanceVariableNames;
 		protected Dictionary<ESSymbol, long>						instanceVariableIndexes			= emptyInstanceVariableIndexes;
 			
@@ -320,7 +324,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ESBehavior(ESBehavior metaClass, ESKernel kernel) : this(metaClass) {
-			this.kernel = kernel;
+			Kernel = kernel;
 		}
 			
 		protected ESBehavior(ESBehavior metaClass, ObjectStateArchitecture instanceArchitecture, ESBehavior superclass) 
@@ -332,7 +336,7 @@ namespace EssenceSharp.Runtime {
 			
 		public ESBehavior(ESBehavior metaClass, ESKernel kernel, ObjectStateArchitecture instanceArchitecture, ESBehavior superclass) 
 					: this(metaClass, instanceArchitecture, superclass) {
-			this.kernel = kernel;
+			Kernel = kernel;
 		}
 			
 		protected ESBehavior(ESBehavior metaClass, ObjectStateArchitecture instanceArchitecture, ESSymbol[] instanceVarnames, ESBehavior superclass) 
@@ -371,7 +375,22 @@ namespace EssenceSharp.Runtime {
 
 		internal ESKernel Kernel {
 			get {return kernel;}
-			set {kernel = value;}
+			set {
+				if (kernel == value) return;
+				if (kernel != null) unbindFromKernel();
+				kernel = value;
+				if (kernel != null) bindToKernel();
+			}
+		}
+
+		protected virtual void unbindFromKernel() {
+			// By default, do nothing
+		}
+
+		protected virtual void bindToKernel() {
+			instanceEqualityComparator = kernel.newObjectEqualityComparator();
+			instanceEqualityFunctor = instanceEqualityComparator.EqualityFunctor;
+			instanceHashFunctor = instanceEqualityComparator.HashFunctor;
 		}
 		
 		protected IDictionary<ESSymbol, ESMethod> newMethodDictionary() {
@@ -380,6 +399,14 @@ namespace EssenceSharp.Runtime {
 
 		protected IDictionary<long, IDictionary<String, ESMethod>> newHostSystemMethodDictionary() {
 			return new Dictionary<long, IDictionary<String, ESMethod>>();
+		}
+
+		public IEqualityComparer<Object> ObjectIdentityComparator {
+			get {return kernel.ObjectIdentityComparator;}
+		}
+
+		public IEqualityComparer<Object> InstanceEqualityComparator {
+			get {return instanceEqualityComparator;}
 		}
 
 		protected override String AnonymousName {
@@ -603,6 +630,16 @@ namespace EssenceSharp.Runtime {
 			set {	if (assembly == value) return;
 				assembly = value;
 				if (instanceType != null && assembly != instanceType.Assembly) invalidateInstanceType();}
+		}
+
+		public bool instanceHasSameValueAs(Object instance, Object comparand) {
+			if (instanceEqualityFunctor == null) return ReferenceEquals(instance, comparand);
+			return (bool)instanceEqualityFunctor(instance, comparand);
+		}
+
+		public int instanceHashCode(Object instance) {
+			if (instanceHashFunctor == null) return RuntimeHelpers.GetHashCode(instance);
+			return (int)instanceHashFunctor(instance);
 		}
 
 		public void validate() {
@@ -1351,7 +1388,7 @@ namespace EssenceSharp.Runtime {
 
 					case ObjectStateArchitecture.Symbol:
 						isInstanceArchitectureLocked = true;
-						return kernel.SymbolRegistry.symbolFor(asHostString(arg));
+						return kernel.symbolFor(asHostString(arg));
 
 					case ObjectStateArchitecture.HostSystemObject:
 					Type hostType = InstanceType;
@@ -1522,7 +1559,19 @@ namespace EssenceSharp.Runtime {
 		public override DynamicMetaObject GetMetaObject(Expression parameter) {
 			return new ESBehaviorDynamicMetaObject(parameter, BindingRestrictions.Empty, this, Class);
 		}
+		
+		public override int GetHashCode() {
+			return RuntimeHelpers.GetHashCode(this);
+		}
 
+		public override bool Equals(Object comparand) {
+			return this == comparand;
+		}      
+		
+		public override bool Equals(ESObject comparand) {
+			return this == comparand;
+		}    
+  
 		public override T valueBy<T>(Operation<T> operation) {
 		    return operation.applyToBehavior(this);
 		}
@@ -1578,6 +1627,14 @@ namespace EssenceSharp.Runtime {
 
 			public Object _inheritsFrom_(Object receiver, Object aBehavior) {
 				return ((ESBehavior)receiver).inheritsFrom((ESBehavior)aBehavior);
+			}
+
+			public Object _instanceEqualityComparer_(Object receiver) {
+				return ((ESBehavior)receiver).InstanceEqualityComparator;
+			}
+
+			public Object _newObjectEqualityComparer_(Object receiver) {
+				return ((ESBehavior)receiver).Kernel.newObjectEqualityComparator();
 			}
 
 			public Object _basicCompiledMethodAt_(Object receiver, Object selector) {
@@ -1745,6 +1802,8 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("removeSubclass:",					new FuncNs.Func<Object, Object, Object>(_removeSubclass_));
 				publishPrimitive("includesBehavior:",					new FuncNs.Func<Object, Object, Object>(_includesBehavior_));
 				publishPrimitive("inheritsFrom:",					new FuncNs.Func<Object, Object, Object>(_inheritsFrom_));
+				publishPrimitive("instanceEqualityComparer",				new FuncNs.Func<Object, Object>(_instanceEqualityComparer_));
+				publishPrimitive("newObjectEqualityComparer",				new FuncNs.Func<Object, Object>(_newObjectEqualityComparer_));
 
 				publishPrimitive("basicCompiledMethodAt:",				new FuncNs.Func<Object, Object, Object>(_basicCompiledMethodAt_));
 				publishPrimitive("compiledMethodAt:",					new FuncNs.Func<Object, Object, Object>(_compiledMethodAt_));
@@ -1848,7 +1907,7 @@ namespace EssenceSharp.Runtime {
 			if (metaClass == null) return;
 			var metalass = metaClass as ESMetaclass;
 			if (metalass == null) throw new PrimInvalidOperandException("The class of a Class must be a Metaclass.");
-			kernel = metalass.Kernel;
+			Kernel = metalass.Kernel;
 			base.setClass(metalass);
 			metalass.adopt(this);
 		}
@@ -1962,8 +2021,8 @@ namespace EssenceSharp.Runtime {
 		public override ESSymbol Name {
 			get {if (name == null) {
 					name = HasCanonicalInstance ?
-								kernel.SymbolRegistry.symbolFor(CanonicalInstance.Name.PrimitiveValue + " class") :
-								kernel.SymbolRegistry.symbolFor(AnonymousName);
+								kernel.symbolFor(CanonicalInstance.Name.PrimitiveValue + " class") :
+								kernel.symbolFor(AnonymousName);
 				}
 				return name;}
 		}

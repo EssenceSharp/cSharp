@@ -98,7 +98,7 @@ namespace EssenceSharp.ClientServices {
 
 		public void addLibrary(String userLibraryName) {
 			try { 
-				var libraryName = ESLexicalUtility.nextQualifiedIdentifierFrom(new StringReader(userLibraryName));
+				var libraryName = new StringReader(userLibraryName).nextQualifiedIdentifier();
 				optionsBuilder.loadLibrary(libraryName);
 			} catch {
 				errors.Add("Library names must use qualified identifer syntax: " + userLibraryName);
@@ -108,7 +108,7 @@ namespace EssenceSharp.ClientServices {
 		protected void setEnvironmentName(String envName) {
 			if (currentExecutive == null) {
 				try { 
-					environmentName = ESLexicalUtility.nextQualifiedIdentifierFrom(new StringReader(envName));
+					environmentName = new StringReader(envName).nextQualifiedIdentifier();
 				} catch {
 					errors.Add("Invalid syntax for the name of the evaluation namespace.");
 				}
@@ -227,7 +227,7 @@ namespace EssenceSharp.ClientServices {
 
 		protected void setEnvironmentName(String envName) {
 			try { 
-				environmentName = ESLexicalUtility.nextQualifiedIdentifierFrom(new StringReader(envName));
+				environmentName = new StringReader(envName).nextQualifiedIdentifier();
 			} catch {
 				errors.Add("Invalid syntax for the name of the evaluation namespace.");
 			}

@@ -43,19 +43,19 @@ using EssenceSharp.Exceptions;
 
 namespace EssenceSharp.UtilityServices {
 		
-	public class ESLexicalUtility {
+	public static class ESLexicalUtility {
 
-		public static String compose(String[] path, String separatorString) {
+		public static String compose(this String[] path, String separatorString) {
 			var sb = new StringBuilder();
 			printOn(path, sb, separatorString);
 			return sb.ToString();
 		}
 
-		public static void printOn(String[] path, StringBuilder sb, String separatorString) {
+		public static void printOn(this String[] path, StringBuilder sb, String separatorString) {
 			printOn(path, sb, separatorString, null);
 		}
 
-		public static void printOn(String[] path, StringBuilder sb, String separatorString, Functor1<String> transformer) {
+		public static void printOn(this String[] path, StringBuilder sb, String separatorString, Functor1<String> transformer) {
 			if (path == null) return;
 			long size = path.Length;
 			if (size < 1) return;
@@ -84,8 +84,8 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 
-		protected static readonly Dictionary<char, String> pseudonymForSymbolChar = new Dictionary<char, String>();
-		protected static readonly Dictionary<String, char> symbolCharForPseudonym = new Dictionary<String, char>();
+		private static readonly Dictionary<char, String> pseudonymForSymbolChar = new Dictionary<char, String>();
+		private static readonly Dictionary<String, char> symbolCharForPseudonym = new Dictionary<String, char>();
 
 		static ESLexicalUtility() {
 
@@ -125,7 +125,7 @@ namespace EssenceSharp.UtilityServices {
 
 		}
 
-		public static String encodedAsFilename(String symbolString) {
+		public static String encodedAsFilename(this String symbolString) {
 			StringBuilder sb = new StringBuilder();
 			foreach (var ch in symbolString) {
 				String pseudonym;
@@ -138,17 +138,17 @@ namespace EssenceSharp.UtilityServices {
 			return sb.ToString();
 		}
 
-		public static String decodedFromFilename(String filename) {
+		public static String decodedFromFilename(this String filename) {
 			var stream = new StringReader(filename);
 			StringBuilder decodedStringBuilder = new StringBuilder();
 			StringBuilder pseudonymBuilder;
 			int next;
 			do {
-				appendFromOntoUntil(stream, decodedStringBuilder, ch => ch == '[');
+				appendOntoUntil(stream, decodedStringBuilder, ch => ch == '[');
 				next = stream.Read();
 				if (next == -1) return decodedStringBuilder.ToString();
 				pseudonymBuilder = new StringBuilder();
-				appendFromOntoUntil(stream, pseudonymBuilder, ch => ch == ']');
+				appendOntoUntil(stream, pseudonymBuilder, ch => ch == ']');
 				next = stream.Read();
 				if (next == -1) {
 					decodedStringBuilder.Append(pseudonymBuilder);
@@ -167,7 +167,7 @@ namespace EssenceSharp.UtilityServices {
 			return decodedStringBuilder.ToString();
 		}
 
-		public static bool peekFor(TextReader stream, char ch) {
+		public static bool peekFor(this TextReader stream, char ch) {
 			int c = stream.Peek();
 			if ((char)c == ch) {
 				stream.Read();
@@ -177,7 +177,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 			
-		public static bool peekFor(TextReader stream, Predicate<char> chTest) {
+		public static bool peekFor(this TextReader stream, Predicate<char> chTest) {
 			int c = stream.Peek();
 			if (chTest((char)c)) {
 				stream.Read();
@@ -187,7 +187,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static bool nextMatches(TextReader stream, char ch) {
+		public static bool nextMatches(this TextReader stream, char ch) {
 			int c = stream.Peek();
 			if (c == ch) {
 				stream.Read();
@@ -197,7 +197,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static bool nextSatisfies(TextReader stream, Predicate<char> charTest) {
+		public static bool nextSatisfies(this TextReader stream, Predicate<char> charTest) {
 			int c = stream.Peek();
 			if (charTest((char)c)) {
 				stream.Read();
@@ -207,7 +207,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 			
-		public static int skipOverUntil(TextReader stream, Predicate<char> chTest) {
+		public static int skipOverUntil(this TextReader stream, Predicate<char> chTest) {
 			int count = 0;
 			int c = stream.Peek();
 			while (c != -1) {
@@ -219,7 +219,7 @@ namespace EssenceSharp.UtilityServices {
 			return count;
 		}
 			
-		public static int skipOverWhile(TextReader stream, Predicate<char> chTest) {
+		public static int skipOverWhile(this TextReader stream, Predicate<char> chTest) {
 			int count = 0;
 			int c = stream.Peek();
 			while (c != -1) {
@@ -231,20 +231,20 @@ namespace EssenceSharp.UtilityServices {
 			return count;
 		}
 			
-		public static int skipWhiteSpace(TextReader stream) {
+		public static int skipWhiteSpace(this TextReader stream) {
 			return skipOverWhile(stream, Char.IsWhiteSpace);
 		}
 			
-		public static int skipSeparators(TextReader stream) {
+		public static int skipSeparators(this TextReader stream) {
 			return skipOverWhile(stream,  Char.IsSeparator);
 		}
 			
-		public static bool skipToNextLineOf(TextReader stream) {
+		public static bool skipToNextLineOf(this TextReader stream) {
 			stream.ReadLine(); 
 			return stream.Peek() != -1;
 		}
 			
-		public static int appendFromOntoUntil(TextReader stream, StringBuilder target, Predicate<char> chTest) {
+		public static int appendOntoUntil(this TextReader stream, StringBuilder target, Predicate<char> chTest) {
 			int count = 0;
 			int c = stream.Peek();
 			while (c != -1) {
@@ -256,7 +256,7 @@ namespace EssenceSharp.UtilityServices {
 			return count;
 		}
 			
-		public static int appendFromOntoWhile(TextReader stream, StringBuilder target, Predicate<char> chTest) {
+		public static int appendOntoWhile(this TextReader stream, StringBuilder target, Predicate<char> chTest) {
 			int count = 0;
 			int c = stream.Peek();
 			while (c != -1) {
@@ -268,27 +268,27 @@ namespace EssenceSharp.UtilityServices {
 			return count;
 		}
 			
-		public static String nextFromUntil(TextReader stream, Predicate<char> chTest) {
+		public static String nextUntil(this TextReader stream, Predicate<char> chTest) {
 			StringBuilder target = new StringBuilder();
-			if (appendFromOntoUntil(stream, target, chTest) > 0) return target.ToString();
+			if (appendOntoUntil(stream, target, chTest) > 0) return target.ToString();
 			return null;
 		}
 			
-		public static String nextFromWhile(TextReader stream, Predicate<char> chTest) {
+		public static String nextWhile(this TextReader stream, Predicate<char> chTest) {
 			StringBuilder target = new StringBuilder();
-			if (appendFromOntoWhile(stream, target, chTest) > 0) return target.ToString();
+			if (appendOntoWhile(stream, target, chTest) > 0) return target.ToString();
 			return null;
 		}
 			
-		public static String nextNonBlankFrom(TextReader stream) {
+		public static String nextNonBlank(this TextReader stream) {
 			int c;
 			skipWhiteSpace(stream);
 			c = stream.Peek();
 			if (c == -1) return null;
-			return nextFromUntil(stream, Char.IsWhiteSpace);
+			return nextUntil(stream, Char.IsWhiteSpace);
 		}
 			
-		public static String nextTokenFrom(TextReader stream, Predicate<char> isTokenPrefix, Predicate<char> isTokenInitialChar, Predicate<char> isTokenContinuationChar) {
+		public static String nextToken(this TextReader stream, Predicate<char> isTokenPrefix, Predicate<char> isTokenInitialChar, Predicate<char> isTokenContinuationChar) {
 			int c;
 			StringBuilder target;
 				
@@ -296,27 +296,27 @@ namespace EssenceSharp.UtilityServices {
 			c = stream.Peek();
 			if (c == -1) return null;
 			if (isTokenInitialChar == null) {
-				return nextFromWhile(stream, isTokenContinuationChar);
+				return nextWhile(stream, isTokenContinuationChar);
 			} else if (isTokenInitialChar((char)c)) {
 				target = new StringBuilder();
 				target.Append((char)stream.Read());
-				appendFromOntoWhile(stream, target, isTokenContinuationChar);
+				appendOntoWhile(stream, target, isTokenContinuationChar);
 				return target.ToString();
 			} else return "";
 		}
 			
-		public static String nextIdentifierFrom(TextReader stream) {
+		public static String nextIdentifier(this TextReader stream) {
 			return 
-				nextTokenFrom(
+				nextToken(
 					stream, 
 					Char.IsWhiteSpace, 
 					isInitialIdentifierChar, 
 					isIdentifierChar);
 		}
 			
-		public static String nextQualifiedIdentifierFrom(TextReader stream) {
+		public static String nextQualifiedIdentifier(this TextReader stream) {
 
-			var element = nextIdentifierFrom(stream);
+			var element = nextIdentifier(stream);
 			if (element == null) return element; 
 			
 			List<String>	qualifiedNameElements	= null;
@@ -331,7 +331,7 @@ namespace EssenceSharp.UtilityServices {
 						throw new InvalidArgumentException("Qualified identifier path element cannot have a length of zero. Check for unintentional duplication of the separator character ('.'). Prefix = " + prefix);
 					}
 					qualifiedNameElements.Add(element);
-					element = ESLexicalUtility.nextIdentifierFrom(stream);
+					element = stream.nextIdentifier();
 					if (element == null) {
 						var prefix = compose(qualifiedNameElements.ToArray(), ".");
 						throw new InvalidArgumentException("Qualified identifier name cannot end with a period. Prefix = " + prefix);
@@ -344,19 +344,18 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 
-		public static long? nextIntegerFrom(TextReader stream) {
+		public static long? nextInteger(this TextReader stream) {
 			String token =
-				nextTokenFrom(
-					stream, 
+				stream.nextToken(
 					Char.IsWhiteSpace, 
 					aChar => aChar == '-' || Char.IsDigit(aChar), 
 					Char.IsDigit);
 			return String.IsNullOrEmpty(token) ? null : (long?)long.Parse(token, NumberStyles.AllowLeadingSign);
 		}
 
-		public static ulong? nextUnsignedIntegerFrom(TextReader stream) {
+		public static ulong? nextUnsignedInteger(this TextReader stream) {
 			String token =
-				nextTokenFrom(
+				nextToken(
 					stream, 
 					Char.IsWhiteSpace, 
 					Char.IsDigit, 
@@ -364,7 +363,7 @@ namespace EssenceSharp.UtilityServices {
 			return String.IsNullOrEmpty(token) ? null : (ulong?)ulong.Parse(token, NumberStyles.AllowLeadingWhite);
 		}
 			
-		public static double? nextRealNumberFrom(TextReader stream) {
+		public static double? nextRealNumber(this TextReader stream) {
 			int c;
 			char ch;
 			StringBuilder token;
@@ -375,20 +374,20 @@ namespace EssenceSharp.UtilityServices {
 			token = new StringBuilder();
 			ch = (char)c;
 			if (ch == '-' || ch == '+') token.Append((char)stream.Read());
-			if (appendFromOntoWhile(stream, token, Char.IsDigit) > 0) {
+			if (appendOntoWhile(stream, token, Char.IsDigit) > 0) {
 				if (peekFor(stream, '.')) {
 					token.Append('.');
-					appendFromOntoWhile(stream, token, Char.IsDigit);
+					appendOntoWhile(stream, token, Char.IsDigit);
 					if (peekFor(stream, 'E')) {
 						token.Append('E');
-						appendFromOntoWhile(stream, token, Char.IsDigit);
+						appendOntoWhile(stream, token, Char.IsDigit);
 					}
 				}
 				return (double?)double.Parse(token.ToString(), NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint | NumberStyles.AllowExponent);
 			} return null;
 		}
 
-		public static bool anySatisfy(String value, Predicate<char> chTest) {
+		public static bool anySatisfy(this String value, Predicate<char> chTest) {
 			if (value == null) return false;
 			foreach (var ch in value) {
 				if (chTest(ch)) return true;
@@ -396,7 +395,7 @@ namespace EssenceSharp.UtilityServices {
 			return false;
 		}
 		
-		public static bool allSatisfy(String value, Predicate<char> chTest) {
+		public static bool allSatisfy(this String value, Predicate<char> chTest) {
 			if (value == null) return false;
 			foreach (var ch in value) {
 				if (!chTest(ch)) return false;
@@ -404,7 +403,7 @@ namespace EssenceSharp.UtilityServices {
 			return true;
 		}
 		
-		public static String charValueAsSmalltalk(char value) {
+		public static String charValueInSmalltalkFormat(this char value) {
 			if (Char.IsLetterOrDigit(value) || Char.IsPunctuation(value)) {
 				return "$" + new String(value, 1);
 			} else {
@@ -431,7 +430,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static int decimalDigitValue(char ch) {
+		public static int decimalDigitValue(this char ch) {
 			switch (ch) {
 					
 				case '0':
@@ -459,7 +458,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static bool isDigit(char ch, int numberBase) {
+		public static bool isDigit(this char ch, int numberBase) {
 			switch (ch) {
 					
 				case '0':
@@ -567,7 +566,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 
-		public static bool isHexadecimalDigit(char ch) {
+		public static bool isHexadecimalDigit(this char ch) {
 			switch (ch) {
 				case '0':
 				case '1':
@@ -597,7 +596,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static int digitValue(char ch) {
+		public static int digitValue(this char ch) {
 			switch (ch) {
 					
 				case '0':
@@ -705,7 +704,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static long integerValueFromDecimalDigits(String digits) {
+		public static long integerValueFromDecimalDigits(this String digits) {
 			// UNCHECKED!!!  Assumes all digits are between '0' and '9' (inclusive)
 			long value = 0;
 			foreach (char ch in digits) {
@@ -715,7 +714,7 @@ namespace EssenceSharp.UtilityServices {
 			return value;
 		}
 		
-		public static long integerValueFromDigits(uint numberBase, String digits) {
+		public static long integerValueFromDigits(this String digits, uint numberBase) {
 			// UNCHECKED!!!  Assumes all digits are between '0' and (char)(numberBase - 1) (inclusive), AND that numberBase > 1 and <= 36.
 			long value = 0;
 			foreach (char ch in digits) {
@@ -725,7 +724,7 @@ namespace EssenceSharp.UtilityServices {
 			return value;
 		}
 		
-		public static bool isBinaryMessageSelectorChar(char ch) {
+		public static bool isBinaryMessageSelectorChar(this char ch) {
 			switch (ch) {
 				case '~':
 				case '!':
@@ -749,7 +748,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static bool isAmbiguousBinaryMessageSelectorChar(char ch) {
+		public static bool isAmbiguousBinaryMessageSelectorChar(this char ch) {
 			switch (ch) {
 				case '-': // Ambiguous: could also be the first character of a negative number
 				case '|': // Ambiguous: Could also be a variable declaration section enclosing character.
@@ -759,7 +758,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static bool isUnambiguousBinaryMessageSelectorChar(char ch) {
+		public static bool isUnambiguousBinaryMessageSelectorChar(this char ch) {
 			switch (ch) {
 				case '~':
 				case '!':
@@ -781,7 +780,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static bool isInitialIdentifierChar(char ch) {
+		public static bool isInitialIdentifierChar(this char ch) {
 			switch (ch) {
 				case '_':
 				case 'A':
@@ -842,7 +841,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static bool isIdentifierChar(char ch) {
+		public static bool isIdentifierChar(this char ch) {
 			switch (ch) {
 				case '_':
 				case 'A':
@@ -914,11 +913,11 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 
-		public static String[]  elementsFromString(String pathString, char separatorChar, FuncNs.Func<Object, Object> transformer) {
+		public static String[]  elementsFromString(this String pathString, char separatorChar, FuncNs.Func<Object, Object> transformer) {
 			return elementsFromStream(new StringReader(pathString), separatorChar, transformer);
 		}
 
-		public static String[] elementsFromStream(TextReader stream, char separatorChar, FuncNs.Func<Object, Object> transformer) {
+		public static String[] elementsFromStream(this TextReader stream, char separatorChar, FuncNs.Func<Object, Object> transformer) {
 			List<String> segments = new List<string>();
 			StringBuilder segment = new StringBuilder();
 			while(true) {
@@ -937,13 +936,13 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 
-		public static String[]  elementsFromString(String pathString, char[] separatorChars, FuncNs.Func<Object, Object> transformer) {
+		public static String[]  elementsFromString(this String pathString, char[] separatorChars, FuncNs.Func<Object, Object> transformer) {
 			return elementsFromStream(new StringReader(pathString), separatorChars, transformer);
 		}
 
-		public static String[] elementsFromStream(TextReader stream, char[] separatorChars, FuncNs.Func<Object, Object> transformer) {
+		public static String[] elementsFromStream(this TextReader stream, char[] separatorChars, FuncNs.Func<Object, Object> transformer) {
 			if (separatorChars == null || separatorChars.Length < 1) {
-				var value = ESLexicalUtility.nextFromWhile(stream, ch => true);
+				var value = stream.nextWhile(ch => true);
 				return new String[]{transformer == null ? value : (String)transformer(value)};
 			}
 			if (separatorChars.Length < 2) return elementsFromStream(stream, separatorChars[0], transformer);
@@ -965,7 +964,7 @@ namespace EssenceSharp.UtilityServices {
 			}
 		}
 		
-		public static void classifySymbol(String value, char? pathElementSeparatorChar, out SymbolType type, out long numArgs, out long pathElementCount) {
+		public static void classifySymbol(this String value, char? pathElementSeparatorChar, out SymbolType type, out long numArgs, out long pathElementCount) {
 			/* Note: Neither "Blue Book" Smalltalk-80 nor ANSI Smalltalk define any syntax for qualified names. In spite of that, at least two significant
 			 * Smalltalk dialects have done so: VisualWorks and Smalltalk-X (there may be others; I'm not an expert in every dialect.) Unfortunately,
 			 * the syntax that each uses is different: VisualWorks uses industry-standared dotted pathnames (e.g., "Core.Collections.IdentityDictionary"),
