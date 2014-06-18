@@ -66,10 +66,6 @@ namespace EssenceSharp.Runtime {
 			set {arguments = value;}
 		}
 		
-		public override long hash() {
-			return selector == null ? base.hash() : selector.hash();
-		}
-		
 		public override bool hasSameValueAs(ESObject other) {
 			if (ReferenceEquals(this, other)) return true;
 			ESMessage messageComparand = other as ESMessage;

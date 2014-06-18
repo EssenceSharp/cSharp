@@ -87,6 +87,7 @@ namespace EssenceSharp.Runtime {
 		protected ESClass			canonicalSequenceableCollectionClass	= new ESClass(ObjectStateArchitecture.Abstract);
 		protected ESClass			canonicalArrayedCollectionClass		= new ESClass(ObjectStateArchitecture.Abstract);
 		protected ESClass			canonicalArrayClass			= new ESClass(ObjectStateArchitecture.IndexedObjectSlots);
+		protected ESClass			canonicalPrimitiveValueArrayClass	= new ESClass(ObjectStateArchitecture.Abstract);
 		protected ESClass			canonicalByteArrayClass			= new ESClass(ObjectStateArchitecture.IndexedByteSlots);
 		protected ESClass			canonicalStringClass			= new ESClass(ObjectStateArchitecture.IndexedCharSlots);
 		protected ESClass			canonicalSymbolClass			= new ESClass(ObjectStateArchitecture.Symbol);
@@ -245,6 +246,10 @@ namespace EssenceSharp.Runtime {
 
 		public ESClass ArrayClass {
 			get {return canonicalArrayClass;}
+		}
+
+		public ESClass PrimitiveValueArrayClass {
+			get {return canonicalPrimitiveValueArrayClass;}
 		}
 
 		public ESClass ByteArrayClass {
@@ -994,80 +999,80 @@ namespace EssenceSharp.Runtime {
 		#region Conversions to Essence Sharp objects
 
 		public ESByteArray asESByteArray(Object value) {
-			ESByteArray esValue = value as ESByteArray;
+			var esValue = value as ESByteArray;
 			return esValue ?? newByteArray((byte[])value);
 		}
 
 		public ESString esStringFromNonESObject(Object value) {
-			String stringValue = value as String;
+			var stringValue = value as String;
 			if (stringValue != null) return newString(stringValue.ToCharArray());
-			return newString((char[])value);
+			var charArrayValue = value as char[];
+			if (charArrayValue != null) return newString(charArrayValue);
+			return newString(new char[]{(char)value});
 		}
 
 		public ESString asESString(Object value) {
-			ESObject esValue = value as ESObject;
+			var esValue = value as ESObject;
 			if (esValue != null) return esValue.asESString();
-			String stringValue = value as String;
-			if (stringValue != null) return newString(stringValue.ToCharArray());
-			return newString((char[])value);
+			return esStringFromNonESObject(value);
 		}
 
 		public ESHalfWordArray asESHalfWordArray(Object value) {
-			ESHalfWordArray esValue = value as ESHalfWordArray;
+			var esValue = value as ESHalfWordArray;
 			return esValue ?? newHalfWordArray((ushort[])value);
 		}
 
 		public ESWordArray asESWordArray(Object value) {
-			ESWordArray esValue = value as ESWordArray;
+			var esValue = value as ESWordArray;
 			return esValue ?? newWordArray((uint[])value);
 		}
 
 		public ESLongWordArray asESLongWordArray(Object value) {
-			ESLongWordArray esValue = value as ESLongWordArray;
+			var esValue = value as ESLongWordArray;
 			return esValue ?? newLongWordArray((ulong[])value);
 		}
 
 		public ESFloatArray asESFloatArray(Object value) {
-			ESFloatArray esValue = value as ESFloatArray;
+			var esValue = value as ESFloatArray;
 			return esValue ?? newFloatArray((float[])value);
 		}
 
 		public ESDoubleArray asESDoubleArray(Object value) {
-			ESDoubleArray esValue = value as ESDoubleArray;
+			var esValue = value as ESDoubleArray;
 			return esValue ?? newDoubleArray((double[])value);
 		}
 
 		public ESQuadArray asESQuadArray(Object value) {
-			ESQuadArray esValue = value as ESQuadArray;
+			var esValue = value as ESQuadArray;
 			return esValue ?? newQuadArray((decimal[])value);
 		}
 
 		public ESArray asESArray(Object value) {
-			ESArray esValue = value as ESArray;
+			var esValue = value as ESArray;
 			return esValue ?? newArray((Object[])value);
 		}
 
 		public ESSymbol esSymbolFromNonESObject(Object value) {
-			String stringValue = value as String;
+			var stringValue = value as String;
 			if (stringValue != null) return SymbolRegistry.symbolFor(stringValue);
-			return SymbolRegistry.symbolFor((char[])value);
+			var charArrayValue = value as char[];
+			if (charArrayValue != null) return SymbolRegistry.symbolFor(charArrayValue);
+			return SymbolRegistry.symbolFor(new char[]{(char)value});
 		}
 
 		public ESSymbol asESSymbol(Object value) {
-			ESObject esValue = value as ESObject;
+			var esValue = value as ESObject;
 			if (esValue != null) return esValue.asESSymbol();
-			String stringValue = value as String;
-			if (stringValue != null) return SymbolRegistry.symbolFor(stringValue);
-			return SymbolRegistry.symbolFor((char[])value);
+			return esSymbolFromNonESObject(value);
 		}
 
 		public ESPathname asESPathname(Object value) {
-			ESObject esValue = value as ESObject;
+			var esValue = value as ESObject;
 			return esValue == null ? newPathname((String[])value) : (ESPathname)esValue.asESPathname();
 		}
 
 		public ESNamespace asESNamespace(Object value) {
-			ESObject esValue = value as ESObject;
+			var esValue = value as ESObject;
 			if (esValue == null) throw new PrimInvalidOperandException("Must be a Namespace");
 			return esValue.asESNamespace();
 		}
@@ -1297,7 +1302,7 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Binding Essence# Namespace To CLR Namespace / Assembly
+		#region Binding Essence# Namespaces To CLR Namespace / Assembly
 
 		public void bindNamespaceToAssemblyNamed(String qualifiedNamespaceName, AssemblyName assemblyName) {
 			assemblyNameBindings[qualifiedNamespaceName] = assemblyName;
@@ -1469,15 +1474,15 @@ namespace EssenceSharp.Runtime {
 						nameBuilder.Append(containingTypeName);
 						var typeNameInPath = nameBuilder.ToString();
 						nameBuilder.Append('+');
-						environment = findOrCreateClassForHostSystemType(environment, containingTypeName, assembly, typeNameInPath);
+						environment = findOrCreateClassForHostSystemType(environment, containingTypeName, typeNameInPath, assembly);
 					});
 			}
 
-			return findOrCreateClassForHostSystemType(environment, typeName.NameWithGenericArguments, assembly, typeName.FullName);
+			return findOrCreateClassForHostSystemType(environment, typeName.NameWithGenericArguments, typeName.FullName, assembly);
 
 		}
 
-		private ESClass findOrCreateClassForHostSystemType(ESNamespace environment, String nameInEnvironment, Assembly assembly, String qualifiedTypeName) {
+		private ESClass findOrCreateClassForHostSystemType(ESNamespace environment, String nameInEnvironment, String qualifiedTypeName, Assembly assembly) {
 			ESClass hostSystemClass;
 			Type hostSystemType = null;
 			if (assembly != null) hostSystemType = assembly.GetType(qualifiedTypeName, false);
@@ -1884,6 +1889,7 @@ namespace EssenceSharp.Runtime {
 			canonicalSequenceableCollectionClass.setClass(newMetaclass());
 			canonicalArrayedCollectionClass.setClass(newMetaclass());
 			canonicalArrayClass.setClass(newMetaclass());
+			canonicalPrimitiveValueArrayClass.setClass(newMetaclass());
 			canonicalByteArrayClass.setClass(newMetaclass());
 			canonicalStringClass.setClass(newMetaclass());
 			canonicalSymbolClass.setClass(newMetaclass());
@@ -1952,6 +1958,7 @@ namespace EssenceSharp.Runtime {
 			canonicalSequenceableCollectionClass.setName(SymbolRegistry.symbolFor("SequenceableCollection"));
 			canonicalArrayedCollectionClass.setName(SymbolRegistry.symbolFor("ArrayedCollection"));
 			canonicalArrayClass.setName(SymbolRegistry.symbolFor("Array"));
+			canonicalPrimitiveValueArrayClass.setName(SymbolRegistry.symbolFor("PrimitiveValueArray"));
 			canonicalByteArrayClass.setName(SymbolRegistry.symbolFor("ByteArray"));
 			canonicalStringClass.setName(SymbolRegistry.symbolFor("String"));
 			canonicalSymbolClass.setName(SymbolRegistry.symbolFor("Symbol"));
@@ -2003,16 +2010,17 @@ namespace EssenceSharp.Runtime {
 			canonicalSequenceableCollectionClass.Superclass = canonicalCollectionClass;
 			canonicalArrayedCollectionClass.Superclass = canonicalSequenceableCollectionClass;
 			canonicalArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalByteArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalStringClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalPrimitiveValueArrayClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalByteArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
+			canonicalStringClass.Superclass = canonicalPrimitiveValueArrayClass;
 			canonicalSymbolClass.Superclass = canonicalStringClass;
-			canonicalHalfWordArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalWordArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalLongWordArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalFloatArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalDoubleArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalQuadArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalPathnameClass.Superclass = canonicalArrayedCollectionClass;
+			canonicalHalfWordArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
+			canonicalWordArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
+			canonicalLongWordArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
+			canonicalFloatArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
+			canonicalDoubleArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
+			canonicalQuadArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
+			canonicalPathnameClass.Superclass = canonicalPrimitiveValueArrayClass;
 
 			canonicalPrimitiveValueClass.Superclass = null;
 			canonicalUndefinedObjectClass.Superclass = canonicalPrimitiveValueClass;
@@ -2054,6 +2062,7 @@ namespace EssenceSharp.Runtime {
 			canonicalSequenceableCollectionClass.setEnvironment(SmalltalkNamespace);
 			canonicalArrayedCollectionClass.setEnvironment(SmalltalkNamespace);
 			canonicalArrayClass.setEnvironment(SmalltalkNamespace);
+			canonicalPrimitiveValueArrayClass.setEnvironment(SmalltalkNamespace);
 			canonicalByteArrayClass.setEnvironment(SmalltalkNamespace);
 			canonicalStringClass.setEnvironment(SmalltalkNamespace);
 			canonicalSymbolClass.setEnvironment(SmalltalkNamespace);

@@ -55,7 +55,7 @@ namespace EssenceSharp.Runtime {
 
 		#region Static variables and methods
 
-		#region InstanceArchitecture Constraints
+		#region Instance Architecture Queries
 
 		public static bool instancesArchitectureForbidsNamedSlots(ObjectStateArchitecture instanceArchitecture) {
 			switch (instanceArchitecture) {
@@ -175,7 +175,7 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		public static bool isAdoptedType(ObjectStateArchitecture instanceArchitecture) {
+		public static bool isClassOfAdoptedType(ObjectStateArchitecture instanceArchitecture) {
 			switch (instanceArchitecture) {
 
 				case ObjectStateArchitecture.Nil:
@@ -193,6 +193,10 @@ namespace EssenceSharp.Runtime {
 					return false;
 
 			}
+		}
+
+		public static bool isClassOfHostSystemType(ObjectStateArchitecture instanceArchitecture) {
+			return instanceArchitecture == ObjectStateArchitecture.HostSystemObject || isClassOfAdoptedType(instanceArchitecture);
 		}
 
 		#endregion
@@ -512,7 +516,7 @@ namespace EssenceSharp.Runtime {
 			isBoundToHostSystemNamespace = instanceArchitecture == ObjectStateArchitecture.HostSystemObject;
 			if (instanceType == null) return;
 			assembly = instanceType.Assembly;
-			if (!isAdoptedType(InstanceArchitecture) && !instanceType.isEssenceSharpType()) InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
+			if (!isClassOfAdoptedType(InstanceArchitecture) && !instanceType.isEssenceSharpType()) InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
 			basicBindToInstanceType();
 		}
 
@@ -1984,7 +1988,7 @@ namespace EssenceSharp.Runtime {
 		public override bool IsHostSystemMetaclass {
 			get {	var baseClass = CanonicalInstance;
 				if (baseClass == null) return false;
-				return baseClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject;}
+				return isClassOfHostSystemType(baseClass.InstanceArchitecture);}
 		}
 		
 		public ESClass CanonicalInstance {
@@ -2078,7 +2082,7 @@ namespace EssenceSharp.Runtime {
 		protected override Type ReflectionType {
 			get {	var baseClass = CanonicalInstance;
 				if (baseClass == null) return InstanceType;
-				return baseClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
+				return isClassOfHostSystemType(baseClass.InstanceArchitecture) ?
 					baseClass.InstanceType :
 					InstanceType;}
 		}

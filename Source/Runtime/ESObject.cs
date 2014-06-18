@@ -114,6 +114,28 @@ namespace EssenceSharp.Runtime {
 			return true;
 		}
 		
+		public static bool elementsHaveSameValue(Object[] left, Object[] right) {
+			if (left == right) return true;
+			if (left == null) return right.Length == 0;
+			if (right == null) return left.Length == 0;
+			long leftLength = left.Length;
+			long rightLength = right.Length;
+			long sizeDiff = leftLength - rightLength;
+			if (sizeDiff != 0) return false;
+			for (var i = 0; i < leftLength; i++) {
+				var leftObject = left[i];
+				var rightObject = right[i];
+				if (leftObject == null) {
+					if (rightObject != null) return false;
+				} else if (rightObject == null) {
+					return false;
+				} else if (!leftObject.Equals(rightObject)) {
+					return false;
+				}
+			}
+			return true;
+		}		
+		
 		public static int compare<ComparableElementType>(ComparableElementType[] left, ComparableElementType[] right) where ComparableElementType : ESObject, IComparable {
 			if (ReferenceEquals(left, right)) return 0;
 			if (left == null) return -Math.Sign(right.Length);
@@ -503,14 +525,6 @@ namespace EssenceSharp.Runtime {
 			get {return _class;}
 		}
 
-		public BindingHandle asImmutableBindingHandle() {
-			return new DirectBindingHandle(this, true);
-		}
-	
-		public BindingHandle asMutableBindingHandle() {
-			return new DirectBindingHandle(this, false);
-		}
-
 		public virtual bool IsNil {
 			get {return false;}
 		}
@@ -578,15 +592,13 @@ namespace EssenceSharp.Runtime {
 		public bool isKindOf(ESBehavior aBehavior) {
 			return Class.includesBehavior(aBehavior);
 		}
-		
-		public long identityHash() {
-			return base.GetHashCode();
-		}
 
+		/*
 		public virtual long hash() {
 			return base.GetHashCode();
 		}
-	
+		*/
+
 		public virtual bool hasSameValueAs(ESObject other) {
 			return ReferenceEquals(this, other);
 		}
@@ -617,6 +629,14 @@ namespace EssenceSharp.Runtime {
 			ESObject immutableCopy = copy();
 			immutableCopy.beImmutable();
 			return immutableCopy;
+		}
+
+		public BindingHandle asImmutableBindingHandle() {
+			return new DirectBindingHandle(this, true);
+		}
+	
+		public BindingHandle asMutableBindingHandle() {
+			return new DirectBindingHandle(this, false);
 		}
 
 		#endregion

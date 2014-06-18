@@ -2133,6 +2133,8 @@ namespace EssenceSharp.Runtime.Binding {
 					return receiver.BindConvert(canonicalConvertBinderFor(esClass, TypeGuru.doubleType));
 				case CanonicalSelectorSemantics.AsQuad:
 					return receiver.BindConvert(canonicalConvertBinderFor(esClass, TypeGuru.decimalType));
+
+				// Ad-hoc conversions:
 				case CanonicalSelectorSemantics.AsString:
 					return metaObjectForForeignObjectOperation(receiver, esClass, ExpressionTreeGuru.expressionToCreateESStringFromNonESObject(kernel, receiver.Expression));
 				case CanonicalSelectorSemantics.AsSymbol:

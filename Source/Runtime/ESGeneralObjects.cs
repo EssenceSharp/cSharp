@@ -215,19 +215,22 @@ namespace EssenceSharp.Runtime {
 	public abstract class ESIndexedSlotsObject<ElementType> : ESNamedSlotsObject {
 		
 		#region Static variables and functions
-			
-		public bool elementsAreIdentical(ElementType[] left, ElementType[] right) {
-			if (ReferenceEquals(left, right)) return true;
-			if (left == null) return right.Length == 0;
-			if (right == null) return left.Length == 0;
-			long leftLength = left.Length;
-			long rightLength = right.Length;
-			long sizeDiff = leftLength - rightLength;
-			if (sizeDiff != 0) return false;
-			for (var i = 0; i < leftLength; i++) {
-				if (!ReferenceEquals(left[i], right[i])) return false;
+
+		public static Object _hash_(Object receiver) {
+			var esArray = (ESIndexedSlotsObject<ElementType>)receiver;
+			var slots = esArray.IndexedSlots;
+			long mySize = slots.Length;
+			long code = mySize;
+			if (mySize > 0) {
+				code += slots[mySize - 1].GetHashCode();
+				if (mySize > 1) {
+					code += slots[0].GetHashCode();
+					if (mySize > 2) {
+						code += slots[mySize / 2].GetHashCode();
+					}
+				}
 			}
-			return true;
+			return code;
 		}
 		
 		public static bool equatableElementsHaveSameValue<EquatableElementType>(EquatableElementType[] left, EquatableElementType[] right) where EquatableElementType : ElementType, IEquatable<ElementType> {
@@ -306,6 +309,10 @@ namespace EssenceSharp.Runtime {
 			// By default, do nothing
 		}
 
+		public override int GetHashCode() {
+			return (int)(long)_hash_(this);
+		}
+
 		public virtual ESIndexedSlotsObject<ElementType> newWithSize(long size) {
 			ESIndexedSlotsObject<ElementType> copy = (ESIndexedSlotsObject<ElementType>)shallowCopy();
 			copy.setSize(0);
@@ -339,25 +346,24 @@ namespace EssenceSharp.Runtime {
 			copy.postCopy();
 			return copy;
 		}
+			
+		public bool elementsAreIdentical(ElementType[] left, ElementType[] right) {
+			if (ReferenceEquals(left, right)) return true;
+			if (left == null) return right.Length == 0;
+			if (right == null) return left.Length == 0;
+			long leftLength = left.Length;
+			long rightLength = right.Length;
+			long sizeDiff = leftLength - rightLength;
+			if (sizeDiff != 0) return false;
+			for (var i = 0; i < leftLength; i++) {
+				if (!ReferenceEquals(left[i], right[i])) return false;
+			}
+			return true;
+		}
 
 		protected abstract bool eachHasSameValue(ElementType left, ElementType right);
 		
 		#region Smalltalk API
-
-		public override long hash() {
-			long mySize = size();
-			long code = mySize;
-			if (mySize > 0) {
-				code += slots[mySize - 1].GetHashCode();
-				if (mySize > 1) {
-					code += slots[0].GetHashCode();
-					if (mySize > 2) {
-						code += slots[mySize / 2].GetHashCode();
-					}
-				}
-			}
-			return code;
-		}
 
 		public override long size() {
 			return slots.Length;
@@ -1972,35 +1978,6 @@ namespace EssenceSharp.Runtime {
 			if (right == null) return false;
 			return (bool)areEqual(left, right);
 		}
-		
-		protected bool elementsHaveSameValue(Object[] left, Object[] right) {
-			if (ReferenceEquals(left, right)) return true;
-			if (left == null) return right.Length == 0;
-			if (right == null) return left.Length == 0;
-			long leftLength = left.Length;
-			long rightLength = right.Length;
-			long sizeDiff = leftLength - rightLength;
-			if (sizeDiff != 0) return false;
-			for (var i = 0; i < leftLength; i++) {
-				var leftObject = left[i];
-				var rightObject = right[i];
-				if (leftObject == null) {
-					if (rightObject != null) return false;
-				} else if (rightObject == null) {
-					return false;
-				} else if (!(bool)areEqual(leftObject, rightObject)) {
-					return false;
-				}
-			}
-			return true;
-		}
-		
-		public override bool hasSameValueAs(ESObject other) {
-			if (ReferenceEquals(this, other)) return true;
-			ESIndexedSlotsObject<Object> esArray = other as ESIndexedSlotsObject<Object>;
-			if (esArray == null) return false;
-			return elementsHaveSameValue(IndexedSlots, esArray.IndexedSlots);
-		}
 
 		public void elementsDo(FuncNs.Func<Object, Object> enumerator) {
 			long mySize = slots.Length;
@@ -2098,7 +2075,7 @@ namespace EssenceSharp.Runtime {
 			}
 
 			#region Primitive Definitions
-		
+
 			public Object _at_(Object receiver, Object slotIndexObject) {
 				var array = (ESIndexedSlotsObject<Object>)receiver;
 				var slots = array.IndexedSlots;
@@ -2141,6 +2118,8 @@ namespace EssenceSharp.Runtime {
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
 
 				publishPrimitive("at:",							new FuncNs.Func<Object, Object, Object>(_at_));
 

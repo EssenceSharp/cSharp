@@ -57,29 +57,22 @@ namespace EssenceSharp.Runtime {
 			return left.Equals(right);
 		}
 		
-		public override bool hasSameValueAs(ESObject other) {
-			if (ReferenceEquals(this, other)) return true;
-			ESIndexedSlotsObject<ValueType> stArray = other as ESIndexedSlotsObject<ValueType>;
-			if (stArray == null) return false;
-			return compare<ValueType>(IndexedSlots, stArray.IndexedSlots) == 0;
-		}
-		
-		public int compareTo(ESIndexedSlotsObject<ValueType> comparand) {
+		public virtual int compareTo(ESIndexedSlotsObject<ValueType> comparand) {
 			return ESIndexedComparableSlotsObject<ValueType>.compare(IndexedSlots, comparand.IndexedSlots);
 		}
 
-		protected abstract int foreignCompareTo(Object comparand);
+		protected abstract int foreignCompareTo(Object comparandObject);
 		
-		public virtual int CompareTo(Object comparand) {
-			if (comparand == null) {
-				Class.Kernel.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparand);
+		public virtual int CompareTo(Object comparandObject) {
+			if (comparandObject == null) {
+				Class.Kernel.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparandObject);
 			}
-			if (ReferenceEquals(this, comparand)) return 0;
-			ESIndexedSlotsObject<ValueType> stArray = comparand as ESIndexedSlotsObject<ValueType>;
-			if (stArray == null) {
-				return foreignCompareTo(comparand);
+			if (this == comparandObject) return 0;
+			var comparand = comparandObject as ESIndexedComparableSlotsObject<ValueType>;
+			if (comparand == null) {
+				return foreignCompareTo(comparandObject);
 			} else {
-				return compareTo(stArray);
+				return compareTo(comparand);
 			}
 		}	
 		
@@ -122,7 +115,41 @@ namespace EssenceSharp.Runtime {
 				get {return Current;}
 			}
 
-		}				
+		}
+
+		public override bool Equals(Object comparand) {
+			return (bool)_hasSameValueAs_(this, comparand);
+		}
+
+		public override bool Equals(ESObject comparand) {
+			return (bool)_hasSameValueAs_(this, comparand);
+		}
+
+		public static Object _hasSameValueAs_(Object receiver, Object comparandObject) {
+			if (receiver == comparandObject) return true;
+			var esArray = (ESIndexedComparableSlotsObject<ValueType>)receiver;
+			var comparand = comparandObject as ESIndexedComparableSlotsObject<ValueType>;
+			if (comparand == null) {
+				return esArray.foreignCompareTo(comparandObject) == 0;
+			} else {
+				return esArray.compareTo(comparand) == 0;
+			}
+		}
+
+		public static Object _compareTo_(Object receiver, Object comparandObject) {
+			if (receiver == comparandObject) return 0;
+			var esArray = (ESIndexedComparableSlotsObject<ValueType>)receiver;
+			if (comparandObject == null) {
+				esArray.Class.Kernel.throwInvalidArgumentException(esArray.Class, "CompareTo", "comparand", comparandObject);
+			}
+			var comparand = comparandObject as ESIndexedComparableSlotsObject<ValueType>;
+			if (comparand == null) {
+				return esArray.foreignCompareTo(comparandObject);
+			} else {
+				return esArray.compareTo(comparand);
+			}
+		}
+
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
 			if (Class.InstSize > 0) {
 				base.printElementsUsing(depth, append, newLine);
@@ -147,7 +174,7 @@ namespace EssenceSharp.Runtime {
 				append(".....");
 			}
 		}
-		
+
 	}
 	
 	public class ESByteArray : ESIndexedComparableSlotsObject<byte> {
@@ -239,19 +266,23 @@ namespace EssenceSharp.Runtime {
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<byte>)receiver).elementsFromToDo(asHostLong(startIndex), asHostLong(endIndex), value => f1((long)value));
+				((ESIndexedComparableSlotsObject<byte>)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1((long)value));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<byte>)receiver).elementsFromToByDo(asHostLong(startIndex), asHostLong(endIndex), asHostLong(step), value => f1((long)value));
+				((ESIndexedComparableSlotsObject<byte>)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1((long)value));
 				return receiver;
 			}
 
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
+				publishPrimitive("=",							new FuncNs.Func<Object, Object, Object>(_hasSameValueAs_));
+				publishPrimitive("compareTo:",						new FuncNs.Func<Object, Object, Object>(_compareTo_));
 
 				publishPrimitive("at:",							new FuncNs.Func<Object, Object, Object>(_at_));
 
@@ -402,36 +433,8 @@ namespace EssenceSharp.Runtime {
 					delegate() {throw new PrimitiveFailException("Specified namespace is not accessible");}));
 		}
 
-		public override bool hasSameValueAs(ESObject comparand) {
-			if (ReferenceEquals(this, comparand)) return true;
-			ESIndexedComparableSlotsObject<char> stArray = comparand as ESIndexedComparableSlotsObject<char>;
-			if (stArray == null) {
-				ESSymbol symbolComparand = comparand as ESSymbol;
-				if (symbolComparand == null) return foreignCompareTo(comparand) == 0;
-				return compareTo(symbolComparand) == 0;
-			} else {
-				return compareTo(stArray) == 0;
-			}
-		}
-
-		public virtual int compareTo(ESSymbol comparand) {
-			return compare<char>(IndexedSlots, comparand.IndexedSlots);
-		}
-
-		public virtual int compareTo(String comparand) {
-			return compare<char>(IndexedSlots, comparand.ToCharArray());
-		}
-
-		public virtual int compareTo(char[] comparand) {
-			return compare<char>(IndexedSlots, comparand);
-		}
-
-		public virtual int compareTo(ESIndexedComparableSlotsObject<char> comparand) {
-			return compare<char>(IndexedSlots, comparand.IndexedSlots);
-		}
-		
 		protected override int foreignCompareTo(Object comparand) {
-			String stringComparand = comparand as String;
+			var stringComparand = comparand as String;
 			if (stringComparand == null) {
 				char[] primArray = comparand as char[];
 				if (primArray == null) {
@@ -439,27 +442,12 @@ namespace EssenceSharp.Runtime {
 					if (comparable == null) Class.Kernel.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparand);
 					return -Math.Sign(comparable.CompareTo(IndexedSlots));
 				} else {
-					return compareTo(primArray);
+					return compare<char>(IndexedSlots, primArray);
 				}
 			} else {
-				return compareTo(stringComparand);
+				return asHostString().CompareTo(stringComparand);
 			}
 		}
-		
-		public override int CompareTo(Object comparand) {
-			if (comparand == null) {
-				Class.Kernel.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparand);
-			}
-			if (ReferenceEquals(this, comparand)) return 0;
-			var stArray = comparand as ESIndexedComparableSlotsObject<char>;
-			if (stArray == null) {
-				ESSymbol symbolComparand = comparand as ESSymbol;
-				if (symbolComparand == null) return foreignCompareTo(comparand);
-				return compareTo(symbolComparand);
-			} else {
-				return compareTo(stArray);
-			}
-		}	
 		
 		public virtual ESBindingReference bindingInNamespaceIfAbsent(ESNamespace environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, Functor0<ESBindingReference> ifAbsentAction) {
 			var binding = environment.bindingAt(asHostString(), requestorRights, importTransitivity, null);
@@ -528,13 +516,13 @@ namespace EssenceSharp.Runtime {
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESString)receiver).elementsFromToDo(asHostLong(startIndex), asHostLong(endIndex), value => f1(value));
+				((ESString)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1(value));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESString)receiver).elementsFromToByDo(asHostLong(startIndex), asHostLong(endIndex), asHostLong(step), value => f1(value));
+				((ESString)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1(value));
 				return receiver;
 			}
 		
@@ -599,6 +587,10 @@ namespace EssenceSharp.Runtime {
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
+				publishPrimitive("=",								new FuncNs.Func<Object, Object, Object>(_hasSameValueAs_));
+				publishPrimitive("compareTo:",							new FuncNs.Func<Object, Object, Object>(_compareTo_));
 
 				publishPrimitive("at:",								new FuncNs.Func<Object, Object, Object>(_at_));
 
@@ -767,19 +759,23 @@ namespace EssenceSharp.Runtime {
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<ushort>)receiver).elementsFromToDo(asHostLong(startIndex), asHostLong(endIndex), value => f1((long)value));
+				((ESIndexedComparableSlotsObject<ushort>)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1((long)value));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<ushort>)receiver).elementsFromToByDo(asHostLong(startIndex), asHostLong(endIndex), asHostLong(step), value => f1((long)value));
+				((ESIndexedComparableSlotsObject<ushort>)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1((long)value));
 				return receiver;
 			}
 
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
+				publishPrimitive("=",							new FuncNs.Func<Object, Object, Object>(_hasSameValueAs_));
+				publishPrimitive("compareTo:",						new FuncNs.Func<Object, Object, Object>(_compareTo_));
 
 				publishPrimitive("at:",							new FuncNs.Func<Object, Object, Object>(_at_));
 
@@ -939,19 +935,23 @@ namespace EssenceSharp.Runtime {
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<uint>)receiver).elementsFromToDo(asHostLong(startIndex), asHostLong(endIndex), value => f1((long)value));
+				((ESIndexedComparableSlotsObject<uint>)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1((long)value));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<uint>)receiver).elementsFromToByDo(asHostLong(startIndex), asHostLong(endIndex), asHostLong(step), value => f1((long)value));
+				((ESIndexedComparableSlotsObject<uint>)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1((long)value));
 				return receiver;
 			}
 
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
+				publishPrimitive("=",							new FuncNs.Func<Object, Object, Object>(_hasSameValueAs_));
+				publishPrimitive("compareTo:",						new FuncNs.Func<Object, Object, Object>(_compareTo_));
 
 				publishPrimitive("at:",							new FuncNs.Func<Object, Object, Object>(_at_));
 
@@ -1111,19 +1111,23 @@ namespace EssenceSharp.Runtime {
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<ulong>)receiver).elementsFromToDo(asHostLong(startIndex), asHostLong(endIndex), value => f1((long)value));
+				((ESIndexedComparableSlotsObject<ulong>)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1((long)value));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<ulong>)receiver).elementsFromToByDo(asHostLong(startIndex), asHostLong(endIndex), asHostLong(step), value => f1((long)value));
+				((ESIndexedComparableSlotsObject<ulong>)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1((long)value));
 				return receiver;
 			}
 
 			#endregion	
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
+				publishPrimitive("=",							new FuncNs.Func<Object, Object, Object>(_hasSameValueAs_));
+				publishPrimitive("compareTo:",						new FuncNs.Func<Object, Object, Object>(_compareTo_));
 
 				publishPrimitive("at:",							new FuncNs.Func<Object, Object, Object>(_at_));
 
@@ -1283,19 +1287,23 @@ namespace EssenceSharp.Runtime {
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<float>)receiver).elementsFromToDo(asHostLong(startIndex), asHostLong(endIndex), value => f1((float)value));
+				((ESIndexedComparableSlotsObject<float>)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1((float)value));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<float>)receiver).elementsFromToByDo(asHostLong(startIndex), asHostLong(endIndex), asHostLong(step), value => f1((float)value));
+				((ESIndexedComparableSlotsObject<float>)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1((float)value));
 				return receiver;
 			}
 
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
+				publishPrimitive("=",							new FuncNs.Func<Object, Object, Object>(_hasSameValueAs_));
+				publishPrimitive("compareTo:",						new FuncNs.Func<Object, Object, Object>(_compareTo_));
 
 				publishPrimitive("at:",							new FuncNs.Func<Object, Object, Object>(_at_));
 
@@ -1455,19 +1463,23 @@ namespace EssenceSharp.Runtime {
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<double>)receiver).elementsFromToDo(asHostLong(startIndex), asHostLong(endIndex), value => f1((double)value));
+				((ESIndexedComparableSlotsObject<double>)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1((double)value));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<double>)receiver).elementsFromToByDo(asHostLong(startIndex), asHostLong(endIndex), asHostLong(step), value => f1((double)value));
+				((ESIndexedComparableSlotsObject<double>)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1((double)value));
 				return receiver;
 			}
 
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
+				publishPrimitive("=",							new FuncNs.Func<Object, Object, Object>(_hasSameValueAs_));
+				publishPrimitive("compareTo:",						new FuncNs.Func<Object, Object, Object>(_compareTo_));
 
 				publishPrimitive("at:",							new FuncNs.Func<Object, Object, Object>(_at_));
 
@@ -1627,19 +1639,23 @@ namespace EssenceSharp.Runtime {
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<decimal>)receiver).elementsFromToDo(asHostLong(startIndex), asHostLong(endIndex), value => f1((double)value));
+				((ESIndexedComparableSlotsObject<decimal>)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1((double)value));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESIndexedComparableSlotsObject<decimal>)receiver).elementsFromToByDo(asHostLong(startIndex), asHostLong(endIndex), asHostLong(step), value => f1((double)value));
+				((ESIndexedComparableSlotsObject<decimal>)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1((double)value));
 				return receiver;
 			}
 
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
+				publishPrimitive("=",							new FuncNs.Func<Object, Object, Object>(_hasSameValueAs_));
+				publishPrimitive("compareTo:",						new FuncNs.Func<Object, Object, Object>(_compareTo_));
 
 				publishPrimitive("at:",							new FuncNs.Func<Object, Object, Object>(_at_));
 
@@ -2044,13 +2060,13 @@ namespace EssenceSharp.Runtime {
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESPathname)receiver).elementsFromToDo(asHostLong(startIndex), asHostLong(endIndex), value => f1(kernel.asESSymbol(value)));
+				((ESPathname)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1(kernel.asESSymbol(value)));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESPathname)receiver).elementsFromToByDo(asHostLong(startIndex), asHostLong(endIndex), asHostLong(step), value => f1(kernel.asESSymbol(value)));
+				((ESPathname)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1(kernel.asESSymbol(value)));
 				return receiver;
 			}
 		
@@ -2080,6 +2096,10 @@ namespace EssenceSharp.Runtime {
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
+				publishPrimitive("=",							new FuncNs.Func<Object, Object, Object>(_hasSameValueAs_));
+				publishPrimitive("compareTo:",						new FuncNs.Func<Object, Object, Object>(_compareTo_));
 
 				publishPrimitive("at:",							new FuncNs.Func<Object, Object, Object>(_at_));
 

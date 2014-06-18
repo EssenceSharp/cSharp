@@ -203,45 +203,6 @@ namespace EssenceSharp.Runtime {
 			} while (keywordString != null && keywordString.Length > 0);
 		}
 
-		public override long hash() {
-			// INTENTIONALLY does NOT return the same value as GetHashCode()
-			long mySize = size();
-			long code = mySize;
-			if (mySize > 0) {
-				code += slots[mySize - 1].GetHashCode();
-				if (mySize > 1) {
-					code += slots[0].GetHashCode();
-					if (mySize > 2) {
-						code += slots[mySize / 2].GetHashCode();
-					}
-				}
-			}
-			return code;
-		}
-		
-		public override bool hasSameValueAs(ESObject other) {
-			if (ReferenceEquals(this, other)) return true;
-			ESString charArray = other as ESString;
-			if (charArray == null) return false;
-			return ESString.compare<char>(IndexedSlots, charArray.IndexedSlots) == 0;
-		}
-		
-		public override int compareTo(ESSymbol comparand) {
-			return Math.Sign(stringValue.CompareTo(comparand.PrimitiveValue));
-		}
-		
-		public override int compareTo(String comparand) {
-			return Math.Sign(stringValue.CompareTo(comparand));
-		}
-		
-		public override int compareTo(char[] comparand) {
-			return ESString.compare<char>(IndexedSlots, comparand);
-		}
-		
-		public int compareTo(ESString comparand) {
-			return ESString.compare<char>(IndexedSlots, comparand.IndexedSlots);
-		}
-
 		public override ESIndexedSlotsObject<char> newWithSize(long size) {
 			return Class.Kernel.newString(size);
 		}
@@ -281,49 +242,6 @@ namespace EssenceSharp.Runtime {
 		
 		public override IEnumerator<char> GetEnumerator() {
 			return stringValue.GetEnumerator();
-		}
-		
-		public override int GetHashCode() {
-			// Foreign code wants/needs the String hash code....
-			return stringValue.GetHashCode();
-		}
-
-		public override bool Equals(Object comparand) {
-			return this == comparand;
-		}      
-		
-		public override bool Equals(ESObject comparand) {
-			return this == comparand;
-		}    
-		
-		public override int CompareTo(Object comparand) {
-			if (comparand == null) {
-				Class.Kernel.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparand);
-			}
-			if (ReferenceEquals(this, comparand)) return 0;
-			ESSymbol symbolComparand = comparand as ESSymbol;
-			if (symbolComparand == null) {
-				ESString stCharArrayComparand = comparand as ESString;
-				if (stCharArrayComparand == null) {
-					char[] charArrayComparand = comparand as char[];
-					if (charArrayComparand == null) {
-						String stringComparand = comparand as String;
-						if (stringComparand == null) {
-							IComparable generalComparand = comparand as IComparable;
-							if (generalComparand == null) Class.Kernel.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparand);;
-							return -Math.Sign(generalComparand.CompareTo(stringValue));
-						} else {
-							return compareTo(stringComparand);
-						}
-					} else {
-						return compareTo(charArrayComparand);
-					}
-				} else {
-					return compareTo(stCharArrayComparand);
-				}
-			} else {
-				return compareTo(symbolComparand);
-			}
 		}
 
 		#endregion
