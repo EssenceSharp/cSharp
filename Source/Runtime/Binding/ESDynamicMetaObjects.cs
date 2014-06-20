@@ -48,6 +48,55 @@ namespace EssenceSharp.Runtime.Binding {
 
 	public class ESDynamicMetaObject : DynamicMetaObject {
 
+		#region Static variables and methods
+
+		public static DynamicMetaObject[] argArrayFor(DynamicMetaObject arg) {
+			return new DynamicMetaObject[]{arg.withCanonicalArgumentType()};
+		}
+
+		public static DynamicMetaObject[] argArrayFor(DynamicMetaObject arg0, DynamicMetaObject arg1) {
+			return new DynamicMetaObject[]{arg0.withCanonicalArgumentType(), arg1.withCanonicalArgumentType()};
+		}
+
+		public static DynamicMetaObject[] argArrayFor(DynamicMetaObject[] argsPrefix, DynamicMetaObject argSuffix) {
+			var argList = new List<DynamicMetaObject>(argsPrefix.Length + 1);
+			foreach (var mo in argsPrefix) argList.Add(mo.withCanonicalArgumentType());
+			argList.Add(argSuffix.withCanonicalArgumentType());
+			return argList.ToArray();
+		}
+
+		public static DynamicMetaObject[] argArrayFor(DynamicMetaObject argPrefix, DynamicMetaObject[] argsSuffix) {
+			var argList = new List<DynamicMetaObject>(argsSuffix.Length + 1);
+			argList.Add(argPrefix.withCanonicalArgumentType());
+			foreach (var mo in argsSuffix) argList.Add(mo.withCanonicalArgumentType());
+			return argList.ToArray();
+		}
+
+		public static DynamicMetaObject[] argArrayFor(DynamicMetaObject argPrefix, DynamicMetaObject[] argsInfix, DynamicMetaObject argSuffix) {
+			var argList = new List<DynamicMetaObject>(argsInfix.Length + 2);
+			argList.Add(argPrefix.withCanonicalArgumentType());
+			foreach (var mo in argsInfix) argList.Add(mo.withCanonicalArgumentType());
+			argList.Add(argSuffix.withCanonicalArgumentType());
+			return argList.ToArray();
+		}
+
+		public static DynamicMetaObject[] argArrayFor(DynamicMetaObject[] args) {
+			var argList = new List<DynamicMetaObject>(args.Length + 2);
+			foreach (var mo in args) argList.Add(mo.withCanonicalArgumentType());
+			return argList.ToArray();
+		}
+
+		public static Expression[] expressionArrayFor(DynamicMetaObject[] metaObjects) {
+			var expressionArray = new Expression[metaObjects.Length];
+			int i = 0;
+			foreach (var metaObject in metaObjects) {
+				expressionArray[i++] = metaObject.Expression.withCanonicalArgumentType();
+			}
+			return expressionArray;
+		}
+
+		#endregion
+
 		protected ESBehavior valueClass = null;
 
 		public ESDynamicMetaObject(Expression expression, BindingRestrictions restrictions, Object value, ESBehavior valueClass) : base(expression, restrictions, value) {
@@ -60,6 +109,10 @@ namespace EssenceSharp.Runtime.Binding {
 					valueClass = ((ESObject)Value).Class;
 				}
 				return valueClass;}
+		}
+
+		public virtual bool IsBlock {
+			get {return false;}
 		}
 
 		public BindingRestrictions DefaultBindingRestrictions {
@@ -138,7 +191,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value) {
 			DynamicMetaObject messageSendMO;
-			if (createMetaObjectToSendMessage(binder.Name, DynamicBindingGuru.argArrayFor(value), out messageSendMO)) return messageSendMO;
+			if (createMetaObjectToSendMessage(binder.Name, argArrayFor(value), out messageSendMO)) return messageSendMO;
 			return binder.FallbackSetMember(this, messageSendMO, value);
 		}
 
@@ -152,19 +205,19 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public override DynamicMetaObject BindGetIndex(GetIndexBinder binder, DynamicMetaObject[] indexes) {
 			DynamicMetaObject messageSendMO;
-			if (createMetaObjectToSendMessage("at:", DynamicBindingGuru.argArrayFor(indexes[0]), out messageSendMO)) return messageSendMO;
+			if (createMetaObjectToSendMessage("at:", argArrayFor(indexes), out messageSendMO)) return messageSendMO;
 			return binder.FallbackGetIndex(this, indexes, messageSendMO);
 		}
 
 		public override DynamicMetaObject BindSetIndex(SetIndexBinder binder, DynamicMetaObject[] indexes, DynamicMetaObject value) {
 			DynamicMetaObject messageSendMO;
-			if (createMetaObjectToSendMessage("at:put:", DynamicBindingGuru.argArrayFor(indexes[0], value), out messageSendMO)) return messageSendMO;
+			if (createMetaObjectToSendMessage("at:put:", argArrayFor(indexes[0], value), out messageSendMO)) return messageSendMO;
 			return binder.FallbackSetIndex(this, indexes, value, messageSendMO);
 		}
 
 		public override DynamicMetaObject BindDeleteIndex(DeleteIndexBinder binder, DynamicMetaObject[] indexes) {
 			DynamicMetaObject messageSendMO;
-			if (createMetaObjectToSendMessage("removeAt:", DynamicBindingGuru.argArrayFor(indexes[0]), out messageSendMO)) return messageSendMO;
+			if (createMetaObjectToSendMessage("removeAt:", argArrayFor(indexes[0]), out messageSendMO)) return messageSendMO;
 			return binder.FallbackDeleteIndex(this, indexes, messageSendMO);
 		}
 
@@ -196,12 +249,12 @@ namespace EssenceSharp.Runtime.Binding {
 				case ExpressionType.IsTrue:
 					value = Expression.Constant(true);
 					arg = value.asDynamicMetaObject(BindingRestrictions.Empty, true);
-					if (createMetaObjectToSendMessage("=", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("=", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.IsFalse:
  					value = Expression.Constant(false);
 					arg = value.asDynamicMetaObject(BindingRestrictions.Empty, false);
-					if (createMetaObjectToSendMessage("=", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("=", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				default:
 				case ExpressionType.Extension:
@@ -228,55 +281,55 @@ namespace EssenceSharp.Runtime.Binding {
 
 			switch (binder.Operation) {
 				case ExpressionType.Add:
-					if (createMetaObjectToSendMessage("+", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("+", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.And:
-					if (createMetaObjectToSendMessage("&", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("&", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.Divide:
-					if (createMetaObjectToSendMessage("/", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("/", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.Equal:
-					if (createMetaObjectToSendMessage("=", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("=", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.ExclusiveOr:
-					if (createMetaObjectToSendMessage("xor:", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("xor:", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.GreaterThan:
-					if (createMetaObjectToSendMessage(">", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage(">", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.GreaterThanOrEqual:
-					if (createMetaObjectToSendMessage(">=", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage(">=", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.LeftShift:
-					if (createMetaObjectToSendMessage("<<", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("<<", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.LessThan:
-					if (createMetaObjectToSendMessage("<", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("<", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.LessThanOrEqual:
-					if (createMetaObjectToSendMessage("<=", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("<=", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.Modulo:
-					if (createMetaObjectToSendMessage("rem:", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("rem:", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.Multiply:
-					if (createMetaObjectToSendMessage("*", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("*", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.NotEqual:
-					if (createMetaObjectToSendMessage("~=", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("~=", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.Or:
-					if (createMetaObjectToSendMessage("|", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("|", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.Power:
-					if (createMetaObjectToSendMessage("**", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("**", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.RightShift:
-					if (createMetaObjectToSendMessage(">>", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage(">>", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				case ExpressionType.Subtract:
-					if (createMetaObjectToSendMessage("-", DynamicBindingGuru.argArrayFor(arg), out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("-", argArrayFor(arg), out messageSendMO)) return messageSendMO;
 					break;
 				default:
 				case ExpressionType.AddAssign:
@@ -342,7 +395,7 @@ namespace EssenceSharp.Runtime.Binding {
 			}
 
 			if (messageSendMO == null) {
-				messageSendMO = metaObjectToSendDoesNotUnderstand(selector, DynamicBindingGuru.argArrayFor(arg));
+				messageSendMO = metaObjectToSendDoesNotUnderstand(selector, argArrayFor(arg));
 			}
 
 			return binder.FallbackBinaryOperation(this, arg, messageSendMO);
@@ -365,7 +418,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args) {
 			DynamicMetaObject messageSendMO;
-			if (createMetaObjectToSendMessage(binder.Name, args, out messageSendMO)) return messageSendMO;
+			if (createMetaObjectToSendMessage(binder.Name, argArrayFor(args), out messageSendMO)) return messageSendMO;
 			return binder.FallbackInvokeMember(this, args, messageSendMO);
 		}
 
@@ -410,6 +463,10 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public ESBlockDynamicMetaObject(Expression expression, BindingRestrictions restrictions, object value, ESBehavior valueClass) : base(expression, restrictions, value, valueClass) {}
 
+		public override bool IsBlock {
+			get {return true;}
+		}
+
 		public override DynamicMetaObject BindInvoke(InvokeBinder binder, DynamicMetaObject[] args) {
 			var block = (ESBlock)Value;
 			Expression invokeExpression = null;
@@ -429,100 +486,100 @@ namespace EssenceSharp.Runtime.Binding {
 					invokeExpression = Expression.Invoke(Expression.Constant(block.F0));
 					break;
 				case 1:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F1), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F1), expressionArrayFor(args));
 					break;
 				case 2:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F2), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F2), expressionArrayFor(args));
 					break;
 				case 3:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F3), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F3), expressionArrayFor(args));
 					break;
 				case 4:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F4), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F4), expressionArrayFor(args));
 					break;
 				case 5:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F5), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F5), expressionArrayFor(args));
 					break;
 				case 6:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F6), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F6), expressionArrayFor(args));
 					break;
 				case 7:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F7), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F7), expressionArrayFor(args));
 					break;
 				case 8:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F8), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F8), expressionArrayFor(args));
 					break;
 				case 9:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F9), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F9), expressionArrayFor(args));
 					break;
 				case 10:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F10), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F10), expressionArrayFor(args));
 					break;
 				case 11:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F11), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F11), expressionArrayFor(args));
 					break;
 				case 12:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F12), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F12), expressionArrayFor(args));
 					break;
 				case 13:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F13), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F13), expressionArrayFor(args));
 					break;
 				case 14:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F14), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F14), expressionArrayFor(args));
 					break;
 				case 15:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F15), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F15), expressionArrayFor(args));
 					break;
 				case 16:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F16), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F16), expressionArrayFor(args));
 					break;
 				case 17:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F17), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F17), expressionArrayFor(args));
 					break;
 				case 18:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F18), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F18), expressionArrayFor(args));
 					break;
 				case 19:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F19), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F19), expressionArrayFor(args));
 					break;
 				case 20:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F20), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F20), expressionArrayFor(args));
 					break;
 				case 21:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F21), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F21), expressionArrayFor(args));
 					break;
 				case 22:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F22), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F22), expressionArrayFor(args));
 					break;
 				case 23:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F23), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F23), expressionArrayFor(args));
 					break;
 				case 24:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F24), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F24), expressionArrayFor(args));
 					break;
 				case 25:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F25), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F25), expressionArrayFor(args));
 					break;
 				case 26:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F26), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F26), expressionArrayFor(args));
 					break;
 				case 27:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F27), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F27), expressionArrayFor(args));
 					break;
 				case 28:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F28), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F28), expressionArrayFor(args));
 					break;
 				case 29:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F29), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F29), expressionArrayFor(args));
 					break;
 				case 30:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F30), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F30), expressionArrayFor(args));
 					break;
 				case 31:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F31), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F31), expressionArrayFor(args));
 					break;
 				case 32:
-					invokeExpression = Expression.Invoke(Expression.Constant(block.F32), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(block.F32), expressionArrayFor(args));
 					break;
 			}
 
@@ -552,103 +609,103 @@ namespace EssenceSharp.Runtime.Binding {
 			}
 			switch (method.NumArgs) {
 				case 1:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F1), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F1), expressionArrayFor(args));
 					break;
 				case 2:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F2), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F2), expressionArrayFor(args));
 					break;
 				case 3:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F3), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F3), expressionArrayFor(args));
 					break;
 				case 4:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F4), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F4), expressionArrayFor(args));
 					break;
 				case 5:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F5), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F5), expressionArrayFor(args));
 					break;
 				case 6:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F6), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F6), expressionArrayFor(args));
 					break;
 				case 7:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F7), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F7), expressionArrayFor(args));
 					break;
 				case 8:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F8), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F8), expressionArrayFor(args));
 					break;
 				case 9:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F9), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F9), expressionArrayFor(args));
 					break;
 				case 10:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F10), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F10), expressionArrayFor(args));
 					break;
 				case 11:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F11), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F11), expressionArrayFor(args));
 					break;
 				case 12:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F12), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F12), expressionArrayFor(args));
 					break;
 				case 13:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F13), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F13), expressionArrayFor(args));
 					break;
 				case 14:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F14), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F14), expressionArrayFor(args));
 					break;
 				case 15:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F15), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F15), expressionArrayFor(args));
 					break;
 				case 16:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F16), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F16), expressionArrayFor(args));
 					break;
 				case 17:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F17), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F17), expressionArrayFor(args));
 					break;
 				case 18:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F18), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F18), expressionArrayFor(args));
 					break;
 				case 19:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F19), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F19), expressionArrayFor(args));
 					break;
 				case 20:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F20), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F20), expressionArrayFor(args));
 					break;
 				case 21:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F21), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F21), expressionArrayFor(args));
 					break;
 				case 22:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F22), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F22), expressionArrayFor(args));
 					break;
 				case 23:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F23), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F23), expressionArrayFor(args));
 					break;
 				case 24:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F24), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F24), expressionArrayFor(args));
 					break;
 				case 25:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F25), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F25), expressionArrayFor(args));
 					break;
 				case 26:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F26), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F26), expressionArrayFor(args));
 					break;
 				case 27:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F27), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F27), expressionArrayFor(args));
 					break;
 				case 28:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F28), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F28), expressionArrayFor(args));
 					break;
 				case 29:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F29), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F29), expressionArrayFor(args));
 					break;
 				case 30:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F30), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F30), expressionArrayFor(args));
 					break;
 				case 31:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F31), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F31), expressionArrayFor(args));
 					break;
 				case 32:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F32), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F32), expressionArrayFor(args));
 					break;
 				case 33:
-					invokeExpression = Expression.Invoke(Expression.Constant(method.F33), DynamicBindingGuru.expressionArrayFor(args, TypeGuru.objectType));
+					invokeExpression = Expression.Invoke(Expression.Constant(method.F33), expressionArrayFor(args));
 					break;
 			}
 
@@ -672,14 +729,14 @@ namespace EssenceSharp.Runtime.Binding {
 					selector = "new";
 					break;
 				case 1: 
-					if (createMetaObjectToSendMessage("new:", args, out messageSendMO)) return messageSendMO;
+					if (createMetaObjectToSendMessage("new:", argArrayFor(args), out messageSendMO)) return messageSendMO;
 					selector = "value:";
 					break;
 				default:
 					selector = kernel.selectorToEvaluatBlockWithNumArgs(numArgs).PrimitiveValue;
 					break;
 			}
-			if (createMetaObjectToSendMessage(selector, args, out messageSendMO)) return messageSendMO;
+			if (createMetaObjectToSendMessage(selector,  argArrayFor(args), out messageSendMO)) return messageSendMO;
 			return binder.FallbackCreateInstance(this, args, metaObjectToSendDoesNotUnderstand(kernel.symbolFor(selector), args));
 		}
 

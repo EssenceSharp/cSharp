@@ -144,6 +144,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public static readonly Type			esBehaviorType			= typeof(ESBehavior);
 		public static readonly Type			esClassType			= typeof(ESClass);
 		public static readonly Type			esMetaclassType			= typeof(ESMetaclass);
+		public static readonly Type			esCompiledCodeType		= typeof(ESCompiledCode);
 		public static readonly Type			esBlockType			= typeof(ESBlock);
 		public static readonly Type			esMethodType			= typeof(ESMethod);
 		public static readonly Type			esAssociationType		= typeof(ESAssociation);
@@ -324,6 +325,26 @@ namespace EssenceSharp.Runtime.Binding {
 			return false;
 		}
 
+		public static bool isNonCanonicalSmallInteger(this Type aType) {
+			if (aType == null) return false;
+			if (aType.IsEnum) return false;
+			switch (Type.GetTypeCode(aType)) {
+				case TypeCode.Byte:
+				case TypeCode.SByte:
+				case TypeCode.UInt16:
+				case TypeCode.Int16:
+				case TypeCode.UInt32:
+				case TypeCode.Int32:
+					return true;
+				case TypeCode.Object:
+					if (aType.IsGenericType && aType.GetGenericTypeDefinition() == nullableType) {
+						return Nullable.GetUnderlyingType(aType).isSmallInteger();
+					}
+					return false;
+			}
+			return false;
+		}
+
 		public static bool isInteger(this Type aType) {
 			if (aType == null) return false;
 			if (aType.IsEnum) return false;
@@ -446,6 +467,54 @@ namespace EssenceSharp.Runtime.Binding {
 
 	public static class ExpressionTreeExtensionMethods {
 
+		public static Expression withType(this Expression expression, Type targetType) {
+			var expressionType = expression.Type; 
+			if (targetType == expressionType) return expression;
+			if (targetType.IsValueType && expressionType.IsClass) {
+				try { 
+					return targetType.isNonCanonicalSmallInteger() ? 
+						Expression.Convert(Expression.Unbox(expression, TypeGuru.longType), targetType) :
+						Expression.Unbox(expression, targetType);
+				} catch {
+					// Do nothing
+				}
+			}
+			return Expression.Convert(expression, targetType);
+		}
+
+		public static Expression withType(this Expression expression, Type dynamicType, Type targetType) {
+			var expressionType = expression.Type; 
+			if (expressionType.IsClass && dynamicType.IsValueType) {
+				expression = Expression.Unbox(expression, dynamicType);
+				expressionType = dynamicType;
+			}
+			if (targetType == expressionType) return expression;
+			return Expression.Convert(expression, targetType);
+		}
+
+		public static Expression withType(this Expression expression, Type targetType, MethodInfo conversionOperator) {
+			var expressionType = expression.Type; 
+			if (expressionType == targetType) return expression;
+			return Expression.Convert(expression, targetType, conversionOperator);
+		}
+
+		public static Expression withCanonicalIntegerType(this Expression expression) {
+			var expressionType = expression.Type; 
+			return expressionType.isNonCanonicalSmallInteger() ? Expression.Convert(expression, TypeGuru.longType) : expression;
+		}
+
+		public static Expression withCanonicalArgumentType(this Expression expression) {
+			var expressionType = expression.Type; 
+			if (expressionType.isNonCanonicalSmallInteger()) return Expression.Convert(Expression.Convert(expression, TypeGuru.longType), TypeGuru.objectType);
+			return expressionType.IsClass ? expression : Expression.Convert(expression, TypeGuru.objectType);
+		}
+
+		public static Expression withCanonicalReturnType(this Expression expression) {
+			var expressionType = expression.Type; 
+			if (expressionType.isNonCanonicalSmallInteger()) return Expression.Convert(Expression.Convert(expression, TypeGuru.longType), TypeGuru.objectType);
+			return expressionType.IsClass ? expression : Expression.Convert(expression, TypeGuru.objectType);
+		}
+
 		public static Expression asRationalNumberExpression(this Expression aNumber) {
 			if (aNumber.Type.isRational()) {
 				return aNumber;
@@ -454,20 +523,24 @@ namespace EssenceSharp.Runtime.Binding {
 			}
 		}
 
-		public static BindingRestrictions asBindingRestriction(this Expression receiver) {
-			return BindingRestrictions.GetExpressionRestriction(receiver);
+		public static BindingRestrictions asBindingRestriction(this Expression expression) {
+			return BindingRestrictions.GetExpressionRestriction(expression);
 		}
 
-		public static DynamicMetaObject asDynamicMetaObject(this Expression receiver) {
-			return new DynamicMetaObject(receiver, BindingRestrictions.Empty);
+		public static DynamicMetaObject asDynamicMetaObject(this Expression expression) {
+			return new DynamicMetaObject(expression, BindingRestrictions.Empty);
 		}
 
-		public static DynamicMetaObject asDynamicMetaObject(this Expression receiver, BindingRestrictions restrictions) {
-			return new DynamicMetaObject(receiver, restrictions);
+		public static DynamicMetaObject asDynamicMetaObject(this Expression expression, BindingRestrictions restrictions) {
+			return new DynamicMetaObject(expression, restrictions);
 		}
 
-		public static DynamicMetaObject asDynamicMetaObject(this Expression receiver, BindingRestrictions restrictions, Object value) {
-			return new DynamicMetaObject(receiver, restrictions, value);
+		public static DynamicMetaObject asDynamicMetaObject(this Expression expression, BindingRestrictions restrictions, Object value) {
+			return new DynamicMetaObject(expression, restrictions, value);
+		}
+
+		public static bool isBlock(this Expression expression) {
+			return expression.Type == TypeGuru.esBlockType;
 		}
 
 	}
@@ -559,24 +632,6 @@ namespace EssenceSharp.Runtime.Binding {
 		#endregion
 
 		#region Type Conversion Expressions 
-
-		public static Expression withType(this Expression expression, Type targetType) {
-			var expressionType = expression.Type; 
-			if (expressionType == targetType) return expression;
-			return Expression.Convert(expression, targetType);
-		}
-
-		public static Expression withType(this Expression expression, Type targetType, MethodInfo conversionOperator) {
-			var expressionType = expression.Type; 
-			if (expressionType == targetType) return expression;
-			return Expression.Convert(expression, targetType, conversionOperator);
-		}
-
-		public static Expression promotedToLong(this Expression expression) {
-			var expressionType = expression.Type; 
-			if (!expressionType.isSmallInteger()) return expression;
-			return expression.withType(TypeGuru.longType);
-		}
 
 		public static Expression expressionToInvoke_ToString(Expression value) {
 			return Expression.Call(
@@ -705,22 +760,65 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#region ESCompiledCode to Functors
 
-  		public static Expression expressionToConvertESBlockToFunctor(Expression sourceExpression, long functorArity) {
-			var asBlock = Expression.TypeAs(sourceExpression, TypeGuru.esBlockType);
-			return
-				Expression.Condition(
-					Expression.ReferenceEqual(asBlock, ExpressionTreeGuru.nilConstant),
-						Expression.Block(Expression.Convert(sourceExpression, ESCompiledCode.blockFunctionTypeForNumArgs(functorArity))),
-						Expression.Block(Expression.Convert(Expression.Field(asBlock, TypeGuru.esBlockType, "function"), ESCompiledCode.blockFunctionTypeForNumArgs(functorArity))));
+  		public static Expression expressionToConvertCompiledCodeOrDelegateToFunctor(Expression sourceExpression, Type functorType) {
+			var sourceType = sourceExpression.Type;
+			if (sourceType == TypeGuru.esBlockType) return Expression.Block(Expression.Field(sourceExpression, TypeGuru.esCompiledCodeType, "function").withType(functorType));
+			if (functorType.IsAssignableFrom(sourceType)) return Expression.Block(sourceExpression.withType(functorType));
+			var methodInfo = CompilerHelpers.GetImplicitConverter(sourceType, functorType);
+			if (methodInfo != null) return sourceExpression.withType(functorType, methodInfo);
+			methodInfo = CompilerHelpers.GetExplicitConverter(sourceType, functorType);
+			if (methodInfo != null) return sourceExpression.withType(functorType, methodInfo);
+			return sourceExpression;
 		}
 
-  		public static Expression expressionToConvertESMethodToFunctor(Expression sourceExpression, long functorArity) {
-			var asMethod = Expression.TypeAs(sourceExpression, TypeGuru.esMethodType);
+		public static Expression expressionToCreateBridgeFunctorForCompiledCodeOrDelegate(ESKernel kernel, DynamicMetaObject compiledCodeOrDelegateMO, Type functorType, Type targetType) {
+			var isBlock = compiledCodeOrDelegateMO.isBlock();
+			var compiledCodeOrDelegateExpression = compiledCodeOrDelegateMO.asExpressionWithFormalType();
+			var functorExpression = expressionToConvertCompiledCodeOrDelegateToFunctor(compiledCodeOrDelegateExpression, functorType);
+			if (!TypeGuru.delegateType.IsAssignableFrom(targetType)) return functorExpression;
+			var methodInfo = CompilerHelpers.GetImplicitConverter(functorType, targetType);
+			if (methodInfo != null) return (LambdaExpression)compiledCodeOrDelegateExpression.withType(targetType, methodInfo);
+			methodInfo = CompilerHelpers.GetExplicitConverter(functorType, targetType);
+			if (methodInfo != null) return (LambdaExpression)compiledCodeOrDelegateExpression.withType(targetType, methodInfo);
+
+			methodInfo = targetType.GetMethod("Invoke");
+			var parameterSpecs = methodInfo.GetParameters();
+			var outerParameters = new ParameterExpression[parameterSpecs.Length];
+			var innerParameters = new Expression[parameterSpecs.Length];
+			for (var i = 0; i < parameterSpecs.Length; i++) {
+				var parameterSpec = parameterSpecs[i];
+				var outerParameter = Expression.Parameter(parameterSpec.ParameterType, parameterSpec.Name);
+				outerParameters[i] = outerParameter;
+				innerParameters[i] = isBlock ? outerParameter.withCanonicalArgumentType() : outerParameter.withType(TypeGuru.objectType);
+			}
+
+			Expression body = null;
+			if (methodInfo.ReturnType.isVoidType()) {
+				body = Expression.Block(TypeGuru.voidType, Expression.Invoke(functorExpression, innerParameters));
+			} else {
+				body = Expression.Invoke(functorExpression, innerParameters);
+				var typeBinder = new TypeBindingGuru(kernel, body);
+				body = typeBinder.metaObjectToConvertTo(methodInfo.ReturnType).Expression;
+			}
+			return Expression.Lambda(targetType, body, false, outerParameters);
+		}
+
+		public static Expression expressionToCreateBridgeFunctorForBlockOrDelegate(ESKernel kernel, DynamicMetaObject compiledCodeOrDelegateMO, long arity, Type targetType) {
 			return
-				Expression.Condition(
-					Expression.ReferenceEqual(asMethod, ExpressionTreeGuru.nilConstant),
-						Expression.Block(Expression.Convert(sourceExpression, ESCompiledCode.methodFunctionTypeForNumArgs(functorArity))),
-						Expression.Block(Expression.Convert(Expression.Field(asMethod, TypeGuru.esMethodType, "function"), ESCompiledCode.methodFunctionTypeForNumArgs(functorArity))));
+				expressionToCreateBridgeFunctorForCompiledCodeOrDelegate(
+					kernel, 
+					compiledCodeOrDelegateMO, 
+					ESCompiledCode.blockFunctionTypeForNumArgs(arity), 
+					targetType);
+		}
+
+		public static Expression expressionToCreateBridgeFunctorForMethodOrDelegate(ESKernel kernel, DynamicMetaObject compiledCodeOrDelegateMO, long arity, Type targetType) {
+			return
+				expressionToCreateBridgeFunctorForCompiledCodeOrDelegate(
+					kernel, 
+					compiledCodeOrDelegateMO, 
+					ESCompiledCode.methodFunctionTypeForNumArgs(arity), 
+					targetType);
 		}
 
 		#endregion
@@ -1223,13 +1321,17 @@ namespace EssenceSharp.Runtime.Binding {
 
 	public static class DynamicMetaObjectExtensionMethods {
 
-		#region Extension Methods
+		public static bool isBlock(this DynamicMetaObject metaObject) {
+			var esMetaObject = metaObject as ESDynamicMetaObject;
+			if (esMetaObject == null) return false;
+			return esMetaObject.IsBlock;
+		}
 
 		public static Expression asExpressionWithType(this DynamicMetaObject metaObject, Type targetType) {
 			var expression = metaObject.Expression;
 			var expressionType = expression.Type; 
 			if (expressionType == targetType) return expression;
-			return metaObject.asExpressionWithFormalType().withType(targetType);
+			return metaObject.asExpressionWithFormalType().withType(targetType); 
 		}
 
 		public static Expression asExpressionWithType(this DynamicMetaObject metaObject, Type targetType, MethodInfo conversionOperator) {
@@ -1298,6 +1400,13 @@ namespace EssenceSharp.Runtime.Binding {
 			return restrictions.Merge(operand.Restrictions);
 		}
 
+		public static DynamicMetaObject withCanonicalArgumentType(this DynamicMetaObject argument) {
+			var expression = argument.Expression.withCanonicalArgumentType();
+			return argument.HasValue ?
+				expression.withCanonicalArgumentType().asDynamicMetaObject(argument.Restrictions) :
+				expression.withCanonicalArgumentType().asDynamicMetaObject(argument.Restrictions, argument.Value);
+		}
+
 		public static DynamicMetaObject withInstanceRestriction(this DynamicMetaObject metaObject) {
 			return new DynamicMetaObject(
 					metaObject.asExpressionWithFormalType(), 
@@ -1358,14 +1467,12 @@ namespace EssenceSharp.Runtime.Binding {
 			return new TypeBindingGuru(kernel, metaObject);
 		}
 
-		#endregion
-
 	}
 
 	public class TypeBindingGuru {
 
 		protected ESKernel			kernel;
-		protected DynamicMetaObject		argument;
+		protected DynamicMetaObject		metaObject;
 		protected Object			model;
 		protected ESObject			esModel;
 		protected Type				modelType;
@@ -1374,11 +1481,20 @@ namespace EssenceSharp.Runtime.Binding {
 		protected HashSet<Type>			preferredTargetTypes;
 		protected HashSet<Type>			disfavoredTargetTypes;
 
-		public TypeBindingGuru(ESKernel kernel, DynamicMetaObject argument) {
+		public TypeBindingGuru(ESKernel kernel, Expression expression) : this (kernel, expression.asDynamicMetaObject(BindingRestrictions.Empty)) {
+		}
+
+		public TypeBindingGuru(ESKernel kernel, Expression expression, Object model) : this (kernel, expression.asDynamicMetaObject(BindingRestrictions.Empty, model)) {
+		}
+
+		public TypeBindingGuru(ESKernel kernel, Expression expression, BindingRestrictions restrictions, Object model) : this (kernel, expression.asDynamicMetaObject(restrictions, model)) {
+		}
+
+		public TypeBindingGuru(ESKernel kernel, DynamicMetaObject metaObject) {
 			this.kernel	= kernel;
-			this.argument	= argument;
-			model		= argument.Value;
-			modelType	= argument.LimitType;
+			this.metaObject	= metaObject;
+			model		= metaObject.Value;
+			modelType	= metaObject.LimitType;
 			modelTypeCode	= Type.GetTypeCode(modelType);
 			esModel = model as ESObject;
 			switch (modelTypeCode) {
@@ -1433,7 +1549,7 @@ namespace EssenceSharp.Runtime.Binding {
 					break;
 				default:
 				case TypeCode.Object:
-					if (argument.HasValue && model == null) {
+					if (metaObject.HasValue && model == null) {
 						modelArchitecture = ObjectStateArchitecture.Nil;
 						return;
 					} else if (esModel == null) {
@@ -1449,8 +1565,12 @@ namespace EssenceSharp.Runtime.Binding {
 			get {return kernel;}
 		}
 
-		public DynamicMetaObject Argument {
-			get {return argument;}
+		public DynamicMetaObject MetaObject {
+			get {return metaObject;}
+		}
+
+		public bool HasModel {
+			get {return metaObject.HasValue;}
 		}
 
 		public Object Model {
@@ -1644,7 +1764,7 @@ namespace EssenceSharp.Runtime.Binding {
 					preferredTargetTypes.Add(TypeGuru.charArrayType);			
 					return;
 				case TypeCode.Object:
-					if (argument.HasValue && model == null) {
+					if (metaObject.HasValue && model == null) {
 						modelArchitecture = ObjectStateArchitecture.Nil;
 						return;
 					} else {
@@ -1777,227 +1897,209 @@ namespace EssenceSharp.Runtime.Binding {
 		}
 
 		public DynamicMetaObject metaObjectToConvertTo(Type targetType) {
-			if (targetType == ModelType) return argument.withFormalTypeAndTypeRestriction();
+			if (targetType == ModelType) return metaObject.withFormalTypeAndTypeRestriction();
 			var methodInfo = CompilerHelpers.GetImplicitConverter(ModelType, targetType);
-			if (methodInfo != null) return argument.withTypeRestrictionConvertingTo(targetType, methodInfo);
-			if (targetType.IsAssignableFrom(ModelType)) return argument.withTypeRestrictionConvertingTo(targetType);
+			if (methodInfo != null) return metaObject.withTypeRestrictionConvertingTo(targetType, methodInfo);
+			if (targetType.IsAssignableFrom(ModelType)) return metaObject.withTypeRestrictionConvertingTo(targetType);
 
 			Expression expression, asCharArrayExpression, asStringExpression;
-			Type functorType;
-			long arity;
 			switch (ModelArchitecture) {
 				case ObjectStateArchitecture.Nil:
-					return argument.withInstanceRestrictionConvertingTo(targetType);
+					return metaObject.withInstanceRestrictionConvertingTo(targetType);
 				case ObjectStateArchitecture.IndexedByteSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESByteArrayToByteArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.byteArrayType) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertESByteArrayToByteArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.byteArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.byteArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.byteArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.IndexedCharSlots:
-					var asSymbolExpression = ExpressionTreeGuru.expressionToCreateESSymbolFromESString(kernel.SymbolRegistry, argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.esSymbolType) return argument.withExpressionAndTypeRestriction(asSymbolExpression);
+					var asSymbolExpression = ExpressionTreeGuru.expressionToCreateESSymbolFromESString(kernel.SymbolRegistry, metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.esSymbolType) return metaObject.withExpressionAndTypeRestriction(asSymbolExpression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.esSymbolType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(asSymbolExpression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asSymbolExpression, targetType, methodInfo);
 
-					asCharArrayExpression = ExpressionTreeGuru.expressionToConvertESStringToCharArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.charArrayType) return argument.withExpressionAndTypeRestriction(asCharArrayExpression);
+					asCharArrayExpression = ExpressionTreeGuru.expressionToConvertESStringToCharArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.charArrayType) return metaObject.withExpressionAndTypeRestriction(asCharArrayExpression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.charArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
 
-					asStringExpression = ExpressionTreeGuru.expressionToConvertESStringToString(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.stringType) return argument.withExpressionAndTypeRestriction(asStringExpression);
+					asStringExpression = ExpressionTreeGuru.expressionToConvertESStringToString(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.stringType) return metaObject.withExpressionAndTypeRestriction(asStringExpression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.stringType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
 
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.esSymbolType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(asSymbolExpression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asSymbolExpression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.charArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.stringType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
 
-					expression = argument.asExpressionWithFormalType();
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.Symbol:
 
-					if (targetType.IsEnum) return argument.withExpressionAndTypeRestriction(ExpressionTreeGuru.expressionToConvertSymbolToEnumerationConstant(argument.asExpressionWithFormalType(), targetType));
+					if (targetType.IsEnum) return metaObject.withExpressionAndTypeRestriction(ExpressionTreeGuru.expressionToConvertSymbolToEnumerationConstant(metaObject.asExpressionWithFormalType(), targetType));
 
-					asStringExpression = ExpressionTreeGuru.expressionToConvertESSymbolToString(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.stringType) return argument.withExpressionAndTypeRestriction(asStringExpression);
+					asStringExpression = ExpressionTreeGuru.expressionToConvertESSymbolToString(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.stringType) return metaObject.withExpressionAndTypeRestriction(asStringExpression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.stringType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
 
-					asCharArrayExpression = ExpressionTreeGuru.expressionToConvertESSymbolToCharArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.charArrayType) return argument.withExpressionAndTypeRestriction(asCharArrayExpression);
+					asCharArrayExpression = ExpressionTreeGuru.expressionToConvertESSymbolToCharArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.charArrayType) return metaObject.withExpressionAndTypeRestriction(asCharArrayExpression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.charArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
 
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.stringType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.charArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
 
-					expression = argument.asExpressionWithFormalType();
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.IndexedHalfWordSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESHalfWordArrayToHalfWordArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.ushortArrayType) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertESHalfWordArrayToHalfWordArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.ushortArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.ushortArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.ushortArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.IndexedWordSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESWordArrayToWordArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.uintArrayType) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertESWordArrayToWordArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.uintArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.uintArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.uintArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.IndexedLongWordSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESLongWordArrayToLongWordArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.ulongArrayType) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertESLongWordArrayToLongWordArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.ulongArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.ulongArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.ulongArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.IndexedSinglePrecisionSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESFloatArrayToFloatArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.floatArrayType) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertESFloatArrayToFloatArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.floatArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.floatArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.floatArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.IndexedDoublePrecisionSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESDoubleArrayToDoubleArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.doubleArrayType) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertESDoubleArrayToDoubleArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.doubleArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.doubleArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.doubleArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.IndexedQuadPrecisionSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESQuadArrayToDecimalArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.decimalArrayType) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertESQuadArrayToDecimalArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.decimalArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.decimalArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.decimalArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.Pathname:
-					expression = ExpressionTreeGuru.expressionToConvertESPathnameToStringArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.stringArrayType) argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertESPathnameToStringArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.stringArrayType) metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.stringArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.stringArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.IndexedObjectSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESArrayToObjectArray(argument.asExpressionWithFormalType());
-					if (targetType == TypeGuru.objectArrayType) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertESArrayToObjectArray(metaObject.asExpressionWithFormalType());
+					if (targetType == TypeGuru.objectArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.objectArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.objectArrayType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.Association:
-					expression = ExpressionTreeGuru.expressionToConvertAssociationToKeyValuePair(argument.asExpressionWithFormalType(), TypeGuru.objectType, TypeGuru.objectType);
-					if (targetType == TypeGuru.keyValuePairForObjectKeyObjectValueType) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertAssociationToKeyValuePair(metaObject.asExpressionWithFormalType(), TypeGuru.objectType, TypeGuru.objectType);
+					if (targetType == TypeGuru.keyValuePairForObjectKeyObjectValueType) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.keyValuePairForObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.keyValuePairForObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.BindingReference:
-					expression = ExpressionTreeGuru.expressionToConvertAssociationToKeyValuePair(argument.asExpressionWithFormalType(), TypeGuru.stringType, TypeGuru.esBindingReferenceType);
-					if (targetType == TypeGuru.keyValuePairForStringKeyBindingHandleValueType) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertAssociationToKeyValuePair(metaObject.asExpressionWithFormalType(), TypeGuru.stringType, TypeGuru.esBindingReferenceType);
+					if (targetType == TypeGuru.keyValuePairForStringKeyBindingHandleValueType) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.keyValuePairForStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.keyValuePairForStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.IdentityDictionary:
 				case ObjectStateArchitecture.Dictionary:
-					expression = argument.asExpressionWithFormalType();
+					expression = metaObject.asExpressionWithFormalType();
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.iDictionaryObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.dictionaryObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.iDictionaryObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.dictionaryObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.Namespace:
-					expression = argument.asExpressionWithFormalType();
+					expression = metaObject.asExpressionWithFormalType();
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.iDictionaryStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.dictionaryStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.iDictionaryStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.dictionaryStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.Block:
 					var block = Model as ESBlock;
-					arity = block.NumArgs;
-					functorType = ESCompiledCode.blockFunctionTypeForNumArgs(arity);
-					expression = ExpressionTreeGuru.expressionToConvertESBlockToFunctor(argument.asExpressionWithFormalType(), arity);
-					if (TypeGuru.delegateType.IsAssignableFrom(targetType)) return argument.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(functorType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(functorType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
-					break;
+					return metaObject.withExpressionAndTypeRestriction(
+						ExpressionTreeGuru.expressionToCreateBridgeFunctorForBlockOrDelegate(Kernel, metaObject, block.NumArgs, targetType));
 				case ObjectStateArchitecture.Method:
 					var method = Model as ESMethod;
-					arity = method.NumArgs;
-					functorType = ESCompiledCode.methodFunctionTypeForNumArgs(arity);
-					expression = ExpressionTreeGuru.expressionToConvertESMethodToFunctor(argument.asExpressionWithFormalType(), arity);
-					if (TypeGuru.delegateType.IsAssignableFrom(targetType)) return argument.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(functorType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(functorType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = argument.asExpressionWithFormalType();
-					break;
+					return metaObject.withExpressionAndTypeRestriction(
+						ExpressionTreeGuru.expressionToCreateBridgeFunctorForMethodOrDelegate(Kernel, metaObject, method.NumArgs, targetType));
 				case ObjectStateArchitecture.Behavior:
 				case ObjectStateArchitecture.Class:
 				case ObjectStateArchitecture.Metaclass:
-					expression = ExpressionTreeGuru.expressionToConvertESClassToInstanceType(argument.asExpressionWithFormalType());
-					if (TypeGuru.typeType.IsAssignableFrom(targetType)) return argument.withExpressionAndTypeRestriction(expression);
+					expression = ExpressionTreeGuru.expressionToConvertESClassToInstanceType(metaObject.asExpressionWithFormalType());
+					if (TypeGuru.typeType.IsAssignableFrom(targetType)) return metaObject.withExpressionAndTypeRestriction(expression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.typeType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.typeType, targetType);
-					if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
 					break;
 				case ObjectStateArchitecture.SmallInteger:
 				case ObjectStateArchitecture.SinglePrecision:
 				case ObjectStateArchitecture.DoublePrecision:
 				case ObjectStateArchitecture.QuadPrecision:
-					if (targetType.isNumeric()) return argument.withTypeRestrictionConvertingTo(targetType);
-					expression = argument.asExpressionWithFormalType();
+					if (targetType.isNumeric()) return metaObject.withTypeRestrictionConvertingTo(targetType);
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 				default:
 				case ObjectStateArchitecture.False:
@@ -2010,13 +2112,13 @@ namespace EssenceSharp.Runtime.Binding {
 				case ObjectStateArchitecture.LargeInteger:
 				case ObjectStateArchitecture.ScaledDecimal:
 				case ObjectStateArchitecture.HostSystemObject:
-					expression = argument.asExpressionWithFormalType();
+					expression = metaObject.asExpressionWithFormalType();
 					break;
 			}
 
 			methodInfo = CompilerHelpers.GetExplicitConverter(ModelType, targetType);
-			if (methodInfo != null) return argument.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-			return argument.withTypeRestrictionConvertingTo(targetType);
+			if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
+			return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType);
 
 		}
 

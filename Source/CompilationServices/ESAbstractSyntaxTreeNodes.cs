@@ -604,22 +604,22 @@ namespace EssenceSharp.CompilationServices {
 				// Here is where message sends WILL be inlined:
 
 				case CanonicalSelectorSemantics.IsNil:
-					return cachedExpression = Expression.ReferenceEqual(receiverExpression, ExpressionTreeGuru.nilConstant).withType(TypeGuru.objectType);
+					return cachedExpression = Expression.ReferenceEqual(receiverExpression, ExpressionTreeGuru.nilConstant).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.IsNotNil:
-					return cachedExpression = Expression.ReferenceNotEqual(receiverExpression, ExpressionTreeGuru.nilConstant).withType(TypeGuru.objectType);
+					return cachedExpression = Expression.ReferenceNotEqual(receiverExpression, ExpressionTreeGuru.nilConstant).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.IsIdenticalTo:
 					arg1 = message.argumentAt(0);
-					return cachedExpression = Expression.ReferenceEqual(receiverExpression, arg1.asCLRExpression()).withType(TypeGuru.objectType);
+					return cachedExpression = Expression.ReferenceEqual(receiverExpression, arg1.asCLRExpression()).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.IsNotIdenticalTo:
 					arg1 = message.argumentAt(0);
-					return cachedExpression = Expression.ReferenceNotEqual(receiverExpression, arg1.asCLRExpression()).withType(TypeGuru.objectType);
+					return cachedExpression = Expression.ReferenceNotEqual(receiverExpression, arg1.asCLRExpression()).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.LogicalNot:
 					return cachedExpression = 
-						Expression.Not(ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #not must be a Boolean value")).withType(TypeGuru.objectType);
+						Expression.Not(ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #not must be a Boolean value")).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.ConditionalAnd:
 					arg1 = message.argumentAt(0);
@@ -627,7 +627,7 @@ namespace EssenceSharp.CompilationServices {
 					return cachedExpression = 
 						Expression.AndAlso(
 								ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #and: must be a Boolean value"),
-								ExpressionTreeGuru.expressionThatMustBeBoolean(arg1Expression, "The argument of #and: must evaluate to a Boolean value")).withType(TypeGuru.objectType);
+								ExpressionTreeGuru.expressionThatMustBeBoolean(arg1Expression, "The argument of #and: must evaluate to a Boolean value")).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.ConditionalOr:
 					arg1 = message.argumentAt(0);
@@ -635,7 +635,7 @@ namespace EssenceSharp.CompilationServices {
 					return cachedExpression = 
 							Expression.OrElse(
 								ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #or: must be a Boolean value"),
-								ExpressionTreeGuru.expressionThatMustBeBoolean(arg1Expression, "The argument of #or: must evaluate to a Boolean value")).withType(TypeGuru.objectType);
+								ExpressionTreeGuru.expressionThatMustBeBoolean(arg1Expression, "The argument of #or: must evaluate to a Boolean value")).withCanonicalReturnType();
 
 				// Here is where message sends MIGHT be inlined:
 
@@ -647,7 +647,7 @@ namespace EssenceSharp.CompilationServices {
 					return cachedExpression = Expression.Condition(
 										testExpression,
 											arg1Expression,
-											receiverExpression);
+											receiverExpression).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.IfNotNil:
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
@@ -669,7 +669,7 @@ namespace EssenceSharp.CompilationServices {
 					return cachedExpression = Expression.Condition(
 										testExpression,
 											arg1Expression,
-											arg2Expression);
+											arg2Expression).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.IfNotNilIfNil:
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
@@ -681,16 +681,16 @@ namespace EssenceSharp.CompilationServices {
 					return cachedExpression = Expression.Condition(
 										testExpression,
 											arg1Expression,
-											arg2Expression);
+											arg2Expression).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.IfTrue:
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					arg1 = message.argumentAt(0);
 					arg1Expression = arg1.asInlinedCLRExpression();
-					return Expression.Condition(
-								ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifTrue: must be a Boolean value"),
-									arg1Expression,
-									ExpressionTreeGuru.nilConstant);
+					return cachedExpression = Expression.Condition(
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifTrue: must be a Boolean value"),
+											arg1Expression,
+											ExpressionTreeGuru.nilConstant).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.IfFalse:
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
@@ -699,7 +699,7 @@ namespace EssenceSharp.CompilationServices {
 					return cachedExpression = Expression.Condition(
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifFalse: must be a Boolean value"),
 											ExpressionTreeGuru.nilConstant,
-											arg1Expression);
+											arg1Expression).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.IfTrueIfFalse:
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
@@ -710,7 +710,7 @@ namespace EssenceSharp.CompilationServices {
 					return cachedExpression = Expression.Condition(
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifTrue:ifFalse: must be a Boolean value"),
 											arg1Expression,
-											arg2Expression);
+											arg2Expression).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.IfFalseIfTrue:
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
@@ -721,7 +721,7 @@ namespace EssenceSharp.CompilationServices {
 					return cachedExpression = Expression.Condition(
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifFalse:ifTrue: must be a Boolean value"),
 											arg2Expression,
-											arg1Expression);
+											arg1Expression).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.WhileNil:
 					if (!receiver.IsBlockLiteral) break;
@@ -731,7 +731,7 @@ namespace EssenceSharp.CompilationServices {
 										Expression.ReferenceEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
 											Expression.Empty(),
 											Expression.Break(exit, receiverExpression)),
-							exit);
+									exit).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.WhileNotNil:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -741,7 +741,7 @@ namespace EssenceSharp.CompilationServices {
 										Expression.ReferenceNotEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
 											Expression.Empty(),
 											Expression.Break(exit, receiverExpression)),
-									exit);
+									exit).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.WhileNilDo:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -754,7 +754,7 @@ namespace EssenceSharp.CompilationServices {
 										Expression.ReferenceEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
 											arg1Expression,
 											Expression.Break(exit, receiverExpression)),
-									exit);
+									exit).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.WhileNotNilDo:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -768,7 +768,7 @@ namespace EssenceSharp.CompilationServices {
 										Expression.ReferenceNotEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
 											arg1Expression,
 											Expression.Break(exit, receiverExpression)),
-									exit);
+									exit).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.WhileTrue:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -778,7 +778,7 @@ namespace EssenceSharp.CompilationServices {
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileTrue must evaluate to a Boolean value"),
 											Expression.Empty(),
 											Expression.Break(exit, receiverExpression)),
-									exit);
+									exit).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.WhileFalse:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -788,7 +788,7 @@ namespace EssenceSharp.CompilationServices {
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileFalse must evaluate to a Boolean value"),
 											Expression.Break(exit, receiverExpression),
 											Expression.Empty()),
-									exit);
+									exit).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.WhileTrueDo:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -801,7 +801,7 @@ namespace EssenceSharp.CompilationServices {
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileTrue: must evaluate to a Boolean value"),
 											arg1Expression,
 											Expression.Break(exit, receiverExpression)),
-									exit);
+									exit).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.WhileFalseDo:
 					if (!receiver.IsZeroArgBlockLiteral) break;
@@ -815,7 +815,7 @@ namespace EssenceSharp.CompilationServices {
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileFalse: must evaluate to a Boolean value"),
 											Expression.Break(exit, receiverExpression),
 											arg1Expression),
-									exit);
+									exit).withCanonicalReturnType();
 
 				default:
 

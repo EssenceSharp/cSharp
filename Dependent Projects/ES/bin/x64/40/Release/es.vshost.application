@@ -4,17 +4,17 @@
   <description asmv2:publisher="es" asmv2:product="es" xmlns="urn:schemas-microsoft-com:asm.v1" />
   <deployment install="true" mapFileExtensions="true" />
   <compatibleFrameworks xmlns="urn:schemas-microsoft-com:clickonce.v2">
-    <framework targetVersion="4.5" profile="Full" supportedRuntime="4.0.30319" />
+    <framework targetVersion="4.0" profile="Full" supportedRuntime="4.0.30319" />
   </compatibleFrameworks>
   <dependency>
-    <dependentAssembly dependencyType="install" codebase="es.exe.manifest" size="6053">
+    <dependentAssembly dependencyType="install" codebase="es.exe.manifest" size="5945">
       <assemblyIdentity name="es.exe" version="1.0.0.1" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="amd64" type="win32" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
-        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>Bf6rNHoaQIdDLYyrDlkaK28YP7h2il72lBvpMDGrA3Y=</dsig:DigestValue>
+        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+        <dsig:DigestValue>p1m9joKcebBR2r/BaO8nFFKQS14=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

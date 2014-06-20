@@ -369,7 +369,7 @@ namespace EssenceSharp.Runtime {
 	}
 	
 	public class ESBlock : ESCompiledCode {
-		
+
 		protected ESCompiledCode 									lexicalContext 				= null;
 		
 		public ESBlock(ESBehavior esClass) : base(esClass) {

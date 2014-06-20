@@ -51,6 +51,14 @@ namespace EssenceSharp.Runtime {
 		
 		#region Static variables and functions
 		
+		public static implicit operator String(ESSymbol value) {
+			return value.PrimitiveValue;  
+		}
+
+		public static implicit operator char[](ESSymbol value) {
+			return value.IndexedSlots;  
+		}
+		
 		protected static new readonly String	empty				= "";
 		protected static readonly char[]	emptyChars			= ESString.empty;
 		protected static readonly char		pathElementSeparatorChar	= '.';
@@ -227,14 +235,6 @@ namespace EssenceSharp.Runtime {
 		}
 
 		#region Foreign language interoperability
-		
-		public static implicit operator String(ESSymbol value) {
-			return value.PrimitiveValue;  
-		}
-
-		public static implicit operator char[](ESSymbol value) {
-			return value.IndexedSlots;  
-		}
 		
 		public override char[] ToCharArray() {
 			return stringValue.ToCharArray();
