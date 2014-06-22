@@ -81,7 +81,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public int GetHashCode(Object anObject) {
-			return (int)hashCodeOf(anObject);
+			return (int)(long)hashCodeOf(anObject);
 		}
 
 		public FuncNs.Func<Object, Object, Object> EqualityFunctor {

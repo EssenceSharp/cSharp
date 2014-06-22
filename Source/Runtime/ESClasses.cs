@@ -302,7 +302,7 @@ namespace EssenceSharp.Runtime {
 
 		protected ESKernel								kernel					= null; 
 		protected ESBehavior								superclass				= null;
-		protected System.Collections.Generic.HashSet<ESBehavior>			subclasses				= null;
+		protected HashSet<ESBehavior>							subclasses				= null;
 		protected IDictionary<ESSymbol, ESMethod> 					methodDictionary 			= null;
 		protected IDictionary<long, IDictionary<String, ESMethod>>			hostSystemMethodDictionary		= null;
 		protected ObjectEqualityComparator						instanceEqualityComparator		= null;
@@ -313,6 +313,7 @@ namespace EssenceSharp.Runtime {
 
 		protected ObjectStateArchitecture 						instanceArchitecture			= ObjectStateArchitecture.NamedSlots;
 		protected bool									constraintsMustBeSatisfied		= false;
+
 		protected bool									isInstanceArchitectureLocked		= false;
 		protected ESSymbol[]								instanceVariableNames			= emptyInstanceVariableNames;
 		protected Dictionary<ESSymbol, long>						instanceVariableIndexes			= emptyInstanceVariableIndexes;
@@ -374,7 +375,7 @@ namespace EssenceSharp.Runtime {
 		protected void initialize() {
 			methodDictionary = newMethodDictionary();
 			hostSystemMethodDictionary = newHostSystemMethodDictionary();
-			subclasses = new System.Collections.Generic.HashSet<ESBehavior>();
+			subclasses = new HashSet<ESBehavior>(new ESBehavorIdentityComparator());
 		}
 
 		internal ESKernel Kernel {
@@ -2149,6 +2150,18 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("canonicalInstance",				new FuncNs.Func<Object, Object>(_canonicalInstance_));
 			}
 
+		}
+
+	}
+
+	public class ESBehavorIdentityComparator : IEqualityComparer<ESBehavior> {
+
+		public new bool Equals(ESBehavior left, ESBehavior right) {
+			return left == right;
+		}
+
+		public int GetHashCode(ESBehavior anObject) {
+			return RuntimeHelpers.GetHashCode(anObject);
 		}
 
 	}

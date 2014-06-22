@@ -389,8 +389,16 @@ namespace EssenceSharp.Runtime.Binding {
 			return getPropertyOrFieldOfForeignObjectBinderRegistry.canonicalBinderFor(esClass, selector);
 		}
 
+		internal GetPropertyOrFieldOfForeignObjectBinder canonicalGetMemberBinderFor(ESBehavior esClass, ESSymbol selector, String name) {
+			return getPropertyOrFieldOfForeignObjectBinderRegistry.canonicalBinderFor(esClass, selector, name);
+		}
+
 		internal SetPropertyOrFieldOfForeignObjectBinder canonicalSetMemberBinderFor(ESBehavior esClass, ESSymbol selector) {
 			return setPropertyOrFieldOfForeignObjectBinderRegistry.canonicalBinderFor(esClass, selector);
+		}
+
+		internal SetPropertyOrFieldOfForeignObjectBinder canonicalSetMemberBinderFor(ESBehavior esClass, ESSymbol selector, String name) {
+			return setPropertyOrFieldOfForeignObjectBinderRegistry.canonicalBinderFor(esClass, selector, name);
 		}
 
 		internal GetValueAtIndexOrKeyInForeignObjectBinder canonicalGetIndexBinderFor(ESBehavior esClass, ESSymbol selector) {
@@ -635,7 +643,7 @@ namespace EssenceSharp.Runtime.Binding {
 			operandMO = operandMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(operandMO.Value), selectorValue0), emptyArgArray);
 			var operand = operandMO.asExpressionWithType(TypeGuru.boolType);
 			return new DynamicMetaObject(
-				Expression.AndAlso(self, operand).withType(TypeGuru.objectType).withCanonicalReturnType(), 
+				Expression.AndAlso(self, operand).withCanonicalReturnType(), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(operandMO.addingInstanceRestriction()), 
 				model);
 		}
@@ -646,7 +654,7 @@ namespace EssenceSharp.Runtime.Binding {
 			operandMO = operandMO.BindInvoke(canonicalInvokeBinderFor(kernel.classOf(operandMO.Value), selectorValue0), emptyArgArray);
 			var operand = operandMO.asExpressionWithType(TypeGuru.boolType);
 			return new DynamicMetaObject(
-				Expression.OrElse(self, operand).withType(TypeGuru.objectType).withCanonicalReturnType(), 
+				Expression.OrElse(self, operand).withCanonicalReturnType(), 
 				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(operandMO.addingInstanceRestriction()), 
 				model);
 		}
@@ -1792,9 +1800,15 @@ namespace EssenceSharp.Runtime.Binding {
 				method = esClass.compiledMethodAt(selector);
 				if (method == null) { 
 					if (esClass.IsHostSystemMetaclass) {
-						var name = selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital);
-						var canonicalBinder = canonicalInvokeMemberBinderFor(esClass, selector, name);
-						return canonicalBinder.FallbackInvokeMember(receiver, metaObjectArgs);
+						switch (selector.NumArgs) {
+							case 0:
+								return canonicalGetMemberBinderFor(esClass, selector).FallbackGetMember(receiver);
+							case 1:
+								return canonicalSetMemberBinderFor(esClass, selector).FallbackSetMember(receiver, metaObjectArgs[0]);
+							default:
+								var name = selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital);
+								return canonicalInvokeMemberBinderFor(esClass, selector, name).FallbackInvokeMember(receiver, metaObjectArgs);
+						}
 					}
 					switch (selector.CanonicalSemantics) {
 						case CanonicalSelectorSemantics.Ensure:
@@ -1859,7 +1873,17 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public DynamicMetaObject metaObjectToSendMessageToNilSuper(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 			var superclass = kernel.UndefinedObjectClass.Superclass;
-			var method = superclass == null ? null : superclass.compiledMethodAt(selector);
+			ESMethod method;
+			if (superclass == null) {
+				method = null;
+			} else { 
+				method = superclass.compiledMethodAt(selector);
+				var homeClass = method.HomeClass;
+				if (homeClass != superclass) { 
+					superclass = homeClass.Superclass;
+					method = superclass == null ? null : superclass.compiledMethodAt(selector);
+				}
+			}
 			return metaObjectToSendMessage(
 					receiver, 
 					kernel,
@@ -1931,11 +1955,21 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public DynamicMetaObject metaObjectToSendMessageToESSuper(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 			var superclass = esClass.Superclass;
-			var method = superclass == null ? null : superclass.compiledMethodAt(selector);
+			ESMethod method;
+			if (superclass == null) {
+				method = null;
+			} else { 
+				method = superclass.compiledMethodAt(selector);
+				var homeClass = method.HomeClass;
+				if (homeClass != superclass) { 
+					superclass = homeClass.Superclass;
+					method = superclass == null ? null : superclass.compiledMethodAt(selector);
+				}
+			}
 			return metaObjectToSendMessage(
 					receiver, 
 					kernel,
-					superclass, 
+					esClass, 
 					selector, 
 					method,
 					metaObjectArgs, 
@@ -1945,7 +1979,17 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectToSendMessageToForeignSuper(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 			var esClass = kernel.classOfHostSystemValue(receiver.Value);
 			var superclass = esClass.Superclass;
-			var method = superclass == null ? null : superclass.compiledMethodAt(selector);
+			ESMethod method;
+			if (superclass == null) {
+				method = null;
+			} else { 
+				method = superclass.compiledMethodAt(selector);
+				var homeClass = method.HomeClass;
+				if (homeClass != superclass) { 
+					superclass = homeClass.Superclass;
+					method = superclass == null ? null : superclass.compiledMethodAt(selector);
+				}
+			}
 			if (method == null) {
 				return metaObjectToSendSyntheticMessageToForeignObject(receiver, esClass, selector, metaObjectArgs);
 			} else {
@@ -2073,9 +2117,10 @@ namespace EssenceSharp.Runtime.Binding {
 				// UnaryOperationBinder:
 				case CanonicalSelectorSemantics.Size:	
 					if (receiver.LimitType.IsArray) {
+						// Can't use: return receiver.BindUnaryOperation(canonicalUnaryOperationBinderFor(esClass, selector, ExpressionType.ArrayLength));
 						return metaObjectForForeignObjectOperation(receiver, esClass, Expression.ArrayLength(receiver.asExpressionWithFormalType()).withCanonicalReturnType());
 					} else {
-						return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, "Size"), args);
+						return receiver.BindGetMember(canonicalGetMemberBinderFor(esClass, selector));
 					}
 				case CanonicalSelectorSemantics.Negated:
 					return receiver.BindUnaryOperation(canonicalUnaryOperationBinderFor(esClass, selector, ExpressionType.Negate));
@@ -2158,6 +2203,12 @@ namespace EssenceSharp.Runtime.Binding {
 				case CanonicalSelectorSemantics.InvokeBlock:
 					return receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selector), args);
 
+				// GetMemberBinder:
+				case CanonicalSelectorSemantics.IsImmutable:
+					return receiver.BindGetMember(canonicalGetMemberBinderFor(esClass, selector, "IsReadOnly"));
+				case CanonicalSelectorSemantics.AsImmutable:
+					return receiver.BindGetMember(canonicalGetMemberBinderFor(esClass, selector, "AsReadOnly"));
+
 				// InvokeMemberBinder:
 				case CanonicalSelectorSemantics.Hash:
 					return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, "GetHashCode"), args);
@@ -2173,10 +2224,6 @@ namespace EssenceSharp.Runtime.Binding {
 							ExpressionTreeGuru.expressionToComputeSignOf(
 										mo.asExpressionWithType(TypeGuru.intType), 
 										TypeGuru.intType).withCanonicalReturnType());
-				case CanonicalSelectorSemantics.IsImmutable:
-					return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, "IsReadOnly"), args);
-				case CanonicalSelectorSemantics.AsImmutable:
-					return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, "AsReadOnly"), args);
 
 				// CreateInstanceBinder:
 				case CanonicalSelectorSemantics.New:
@@ -2399,17 +2446,14 @@ namespace EssenceSharp.Runtime.Binding {
 
 				default:
 				case CanonicalSelectorSemantics.None:
-					String name;
+					String name = selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital);
 					switch (selector.NumArgs) {
 						case 0:
-							name = selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital);
-							return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, name), args);
+							return receiver.BindGetMember(canonicalGetMemberBinderFor(esClass, selector, name));
 						case 1:
 							if (selector.Type == SymbolType.BinaryMessageSelector) break; // If not handled above, a binary message selector can't be a valid host operator or method name.
-							name = selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital);
-							return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, name), args);
+							return receiver.BindSetMember(canonicalSetMemberBinderFor(esClass, selector, name), args[0]);
 						default:
-							name = selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital);
 							return receiver.BindInvokeMember(canonicalInvokeMemberBinderFor(esClass, selector, name), args);
 					}
 					
@@ -2433,7 +2477,7 @@ namespace EssenceSharp.Runtime.Binding {
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 
-			protected GetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru dynamicBindingGuru, ESBehavior esClass, ESSymbol selector) : base(selector.PrimitiveValue, false) { 
+			protected GetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru dynamicBindingGuru, ESBehavior esClass, ESSymbol selector, String name) : base(name, false) { 
 				this.dynamicBindingGuru	= dynamicBindingGuru;
 				kernel = dynamicBindingGuru.Kernel;
 				this.esClass		= esClass;
@@ -2481,20 +2525,17 @@ namespace EssenceSharp.Runtime.Binding {
 								target.bindingRestrictionsForForeignObjectReceiver(esClass),
 								target.Value);	
 		
-					} else {
-						return target.BindInvokeMember(
-								dynamicBindingGuru.canonicalInvokeMemberBinderFor(
-									esClass, 
-									Selector, 
-									Selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital)), 
-								emptyArgArray);
 					}
 				}
 
-				return new DynamicMetaObject( 
-					ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, emptyArgArray),
-					target.bindingRestrictionsForForeignObjectReceiver(esClass),
-					target.Value);	
+				return esClass.IsHostSystemMetaclass ?
+					dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, selector, Name).FallbackInvokeMember(target, emptyArgArray) :
+					target.BindInvokeMember(
+						dynamicBindingGuru.canonicalInvokeMemberBinderFor(
+							esClass, 
+							Selector, 
+							Name), 
+						emptyArgArray);
 
 			}
 
@@ -2506,18 +2547,22 @@ namespace EssenceSharp.Runtime.Binding {
 				}
 
 				public GetPropertyOrFieldOfForeignObjectBinder canonicalBinderFor(ESBehavior esClass, ESSymbol selector) {
+					return canonicalBinderFor(esClass, selector, selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital));
+				}
+
+				public GetPropertyOrFieldOfForeignObjectBinder canonicalBinderFor(ESBehavior esClass, ESSymbol selector, String memberName) {
 					Dictionary<ESSymbol, GetPropertyOrFieldOfForeignObjectBinder> binderRegistry;
 					GetPropertyOrFieldOfForeignObjectBinder binder;
 					long classId = esClass.Identity;
 					if (!registry.TryGetValue(classId, out binderRegistry)) {
 						binderRegistry = new Dictionary<ESSymbol, GetPropertyOrFieldOfForeignObjectBinder>();
 						registry[classId] = binderRegistry;
-						binder = new GetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru, esClass, selector);
+						binder = new GetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru, esClass, selector, memberName);
 						binderRegistry[selector] = binder;
 						return binder;
 					}
 					if (!binderRegistry.TryGetValue(selector, out binder)) {
-						binder = new GetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru, esClass, selector);
+						binder = new GetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru, esClass, selector, memberName);
 						binderRegistry[selector] = binder;
 					}
 					return binder;
@@ -2535,11 +2580,15 @@ namespace EssenceSharp.Runtime.Binding {
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 
-			protected SetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru dynamicBindingGuru, ESBehavior esClass, ESSymbol selector) : base(selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital), false) { 
+			protected SetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru dynamicBindingGuru, ESBehavior esClass, ESSymbol selector, String name) : base(name, false) { 
 				this.dynamicBindingGuru	= dynamicBindingGuru;
 				kernel			= dynamicBindingGuru.Kernel;
 				this.esClass		= esClass;
 				this.selector		= selector;
+			}
+
+			public ESSymbol	Selector {
+				get {return selector;}
 			}
 
 			public override DynamicMetaObject FallbackSetMember(DynamicMetaObject target, DynamicMetaObject value, DynamicMetaObject errorSuggestion) {
@@ -2564,13 +2613,17 @@ namespace EssenceSharp.Runtime.Binding {
 						Expression.Block(assignExpression, self),
 						target.bindingRestrictionsForForeignObjectReceiver(esClass, value),
 						target.Value);	
-		
-				} else {
-					return new DynamicMetaObject(
-						ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, argArrayFor(value)),
-						target.bindingRestrictionsForForeignObjectReceiver(esClass),
-						target.Value);	
 				}
+
+				return esClass.IsHostSystemMetaclass ?
+					dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, selector, Name).FallbackInvokeMember(target, argArrayFor(value)) :
+					target.BindInvokeMember(
+						dynamicBindingGuru.canonicalInvokeMemberBinderFor(
+							esClass, 
+							Selector, 
+							Name), 
+						argArrayFor(value));
+				
 
 			}
 
@@ -2582,18 +2635,22 @@ namespace EssenceSharp.Runtime.Binding {
 				}
 
 				public SetPropertyOrFieldOfForeignObjectBinder canonicalBinderFor(ESBehavior esClass, ESSymbol selector) {
+					return canonicalBinderFor(esClass, selector, selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital));
+				}
+
+				public SetPropertyOrFieldOfForeignObjectBinder canonicalBinderFor(ESBehavior esClass, ESSymbol selector, String memberName) {
 					Dictionary<ESSymbol, SetPropertyOrFieldOfForeignObjectBinder> binderRegistry;
 					SetPropertyOrFieldOfForeignObjectBinder binder;
 					long classId = esClass.Identity;
 					if (!registry.TryGetValue(classId, out binderRegistry)) {
 						binderRegistry = new Dictionary<ESSymbol, SetPropertyOrFieldOfForeignObjectBinder>();
 						registry[classId] = binderRegistry;
-						binder = new SetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru, esClass, selector);
+						binder = new SetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru, esClass, selector, memberName);
 						binderRegistry[selector] = binder;
 						return binder;
 					}
 					if (!binderRegistry.TryGetValue(selector, out binder)) {
-						binder = new SetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru, esClass, selector);
+						binder = new SetPropertyOrFieldOfForeignObjectBinder(DynamicBindingGuru, esClass, selector, memberName);
 						binderRegistry[selector] = binder;
 					}
 					return binder;
@@ -2887,14 +2944,6 @@ namespace EssenceSharp.Runtime.Binding {
 				BindingRestrictions bindingRestrictions = null;
 
 				switch (Selector.CanonicalSemantics) {
-					case CanonicalSelectorSemantics.Size:	
-						var receiverType = target.LimitType;
-						if (receiverType.IsArray) {
-							unaryOperatorExpression = Expression.ArrayLength(self);
-						} else {
-							return target.BindGetMember(dynamicBindingGuru.canonicalGetMemberBinderFor(esClass, Selector));
-						}
-						break;
 					case CanonicalSelectorSemantics.Negated:
 						unaryOperatorExpression = Expression.Negate(self);
 						break;
@@ -3248,12 +3297,14 @@ namespace EssenceSharp.Runtime.Binding {
 			protected ESKernel		kernel			= null;
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
+			protected long			numArgs			= 0;
 
 			protected InvokeForeignFunctionBinder(DynamicBindingGuru dynamicBindingGuru, ESBehavior esClass, ESSymbol selector) : base(ExpressionTreeGuru.callInfoForArgCount(selector.NumArgs)) { 
 				this.dynamicBindingGuru	= dynamicBindingGuru;
 				kernel = dynamicBindingGuru.Kernel;
 				this.esClass		= esClass;
 				this.selector		= selector;
+				numArgs			= selector.NumArgs;
 			}
 
 			public ESSymbol	Selector {
@@ -3278,6 +3329,10 @@ namespace EssenceSharp.Runtime.Binding {
 							invokeExpression, 
 							target.addingFormalTypeRestriction().Merge(BindingRestrictions.Combine(arguments)),
 							target.Value);
+				} else if (numArgs == 0) {
+					return target.BindGetMember(dynamicBindingGuru.canonicalGetMemberBinderFor(esClass, Selector));
+				} else if (numArgs == 1) {
+					return target.BindSetMember(dynamicBindingGuru.canonicalSetMemberBinderFor(esClass, Selector), args[0]);
 				} else {
 					return target.BindInvokeMember(dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, Selector, "Value"), args);
 				}
@@ -3357,15 +3412,16 @@ namespace EssenceSharp.Runtime.Binding {
 				}
 
 				if (methodInfo == null) {
-					switch (Selector.NumArgs) {
-						case 0:
-							return target.BindGetMember(dynamicBindingGuru.canonicalGetMemberBinderFor(esClass, Selector));
-						case 1:
-							return target.BindSetMember(dynamicBindingGuru.canonicalSetMemberBinderFor(esClass, Selector), args[0]);
+					switch (Selector.CanonicalSemantics) {
+						case CanonicalSelectorSemantics.InvokeBlock:
+							if (Selector.NumArgs == 0) return dynamicBindingGuru.metaObjectForForeignObjectOperation(target, esClass, target.Expression);
+							break;
+						case CanonicalSelectorSemantics.Size:
+							return dynamicBindingGuru.metaObjectForForeignObjectOperation(target, esClass, Expression.Constant(0L));
 						default:
-							invokeMemberExpression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, args);
 							break;
 					}
+					invokeMemberExpression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, args);
 				} else {
 					if (methodInfo.IsStatic) {
 						invokeMemberExpression = Expression.Call(null, methodInfo, expressionArrayFor(typedArguments.ToArray()));
@@ -3422,19 +3478,19 @@ namespace EssenceSharp.Runtime.Binding {
 				public Registry(DynamicBindingGuru dynamicBindingGuru) : base(dynamicBindingGuru) {
 				}
 
-				public MessageSendToForeignObjectBinder canonicalBinderFor(ESBehavior esClass, ESSymbol selector, String memberName) {
+				public MessageSendToForeignObjectBinder canonicalBinderFor(ESBehavior esClass, ESSymbol selector, String methodName) {
 					Dictionary<ESSymbol, MessageSendToForeignObjectBinder> binderRegistry;
 					MessageSendToForeignObjectBinder binder;
 					long classId = esClass.Identity;
 					if (!registry.TryGetValue(classId, out binderRegistry)) {
 						binderRegistry = new Dictionary<ESSymbol, MessageSendToForeignObjectBinder>();
 						registry[classId] = binderRegistry;
-						binder = new MessageSendToForeignObjectBinder(DynamicBindingGuru, esClass, selector, memberName);
+						binder = new MessageSendToForeignObjectBinder(DynamicBindingGuru, esClass, selector, methodName);
 						binderRegistry[selector] = binder;
 						return binder;
 					}
 					if (!binderRegistry.TryGetValue(selector, out binder)) {
-						binder = new MessageSendToForeignObjectBinder(DynamicBindingGuru, esClass, selector, memberName);
+						binder = new MessageSendToForeignObjectBinder(DynamicBindingGuru, esClass, selector, methodName);
 						binderRegistry[selector] = binder;
 					}
 					return binder;
