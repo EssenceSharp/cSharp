@@ -94,9 +94,213 @@ namespace EssenceSharp.Runtime {
 
 	}
 
-	public class ESObject : EssenceSharpObject, IDynamicMetaObjectProvider, IEquatable<ESObject>, ICloneable {
+	public interface ESObjectType : IDynamicMetaObjectProvider, IEquatable<ESObject>, ICloneable {
+		
+		ObjectStateArchitecture Architecture {
+			get;
+		}
+		
+		Object HostSystemValue {
+			get;
+		}
+
+		String ClassName {
+			get;
+		}
+
+		String QualifiedClassName {
+			get;
+		}
+		
+		BindingHandle asBindingHandle();
+
+		#region Essence# API
+
+		#region Core
+
+		ESBehavior Class {
+			get;
+		}
+
+		bool IsNil {
+			get;
+		}
+		
+		bool NotNil {
+			get;
+		}
+		
+		bool IsTrue {
+			get;
+		}
+		
+		bool IsFalse {
+			get;
+		}
+		
+		bool IsNamespace {
+			get;
+		}
+		
+		bool IsBehavior {
+			get;
+		}
+		
+		bool IsClass {
+			get;
+		}
+		
+		bool IsMetaclass {
+			get;
+		}
+		
+		bool HasIndexedSlots {
+			get;
+		}
+		
+		bool IsString {
+			get;
+		}
+		
+		bool IsSymbol {
+			get;
+		}
+		
+		bool IsBlock {
+			get;
+		}
+		
+		bool IsMethod {
+			get;
+		}
+
+		bool IsImmutable {
+			get;
+		}
+		
+		void beImmutable();
+
+		bool isMemberOf(ESBehavior aBehavior);
+		
+		bool isKindOf(ESBehavior aBehavior);
+
+		bool hasSameValueAs(ESObject other);
+		
+		ESObject shallowCopy();
+		
+		ESObject copy();
+		
+		void postCopy();
+		
+		ESObject asMutable();
+		
+		ESObject asImmutable();
+
+		BindingHandle asImmutableBindingHandle();
+	
+		BindingHandle asMutableBindingHandle();
+
+		#endregion
+
+		#region Instance variable accessing
+
+		long size();
+		
+		Object instVarValueAt(long slotIndex);
+		
+		Object instVarValueAtPut(long slotIndex, Object newValue);
+		
+		Object instVarValueAtName(ESSymbol name);
+		
+		Object instVarValueAtNamePut(ESSymbol name, Object newValue);
+		
+		#endregion
+		
+		#region Sending messages
+		
+		bool respondsTo(ESSymbol selector);
+		
+		Object respondTo(ESMessage message);
+		
+		Object perform(ESSymbol unaryMessageSelector);
+		
+		Object performWith1(ESSymbol binaryOrKeywordMessageSelector, Object a1);
+		
+		Object performWith2(ESSymbol keywordMessageSelector, Object a1, Object a2);
+		
+		Object performWith3(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3);
+		
+		Object performWith4(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3, Object a4);
+		
+		Object performWithArguments(ESSymbol selector, Object[] arguments);
+		
+		#endregion
+
+		#region Debugging
+
+		void halt();
+
+		void show();
+
+		void crShow();
+
+		void showCr();
+
+		#endregion
+
+		#endregion
+
+		#region Conversions to Essence Sharp objects
+		
+		ESByteArray asESByteArray();
+		
+		ESString asESString();
+		
+		ESHalfWordArray asESHalfWordArray();
+		
+		ESWordArray asESWordArray();
+		
+		ESLongWordArray asESLongWordArray();
+		
+		ESFloatArray asESFloatArray();
+		
+		ESDoubleArray asESDoubleArray();
+		
+		ESQuadArray asESQuadArray();
+		
+		ESArray asESArray();
+		
+		ESSymbol asESSymbol();
+		
+		ESPathname asESPathname();
+		
+		ESMethod asESMethod();
+		
+		ESBehavior asESBehavior();
+		
+		ESNamespace asESNamespace();
+
+		ESBlock asBlock();
+
+		#endregion
+
+		#region Printing
+		
+		void printTypeUsing(Action<String> append);
+		
+		void printUsing(uint depth, Action<String> append, Action<uint> newLine);
+		
+		#endregion
+
+		T valueBy<T>(Operation<T> operation);
+
+	}
+
+	public class ESObject : EssenceSharpObject, ESObjectType {
 		
 		#region Static variables and methods
+
+		protected static readonly Object[]						emtpyObjArray	 			= new Object[0];
 
 		#region Utilities
 
@@ -181,7 +385,7 @@ namespace EssenceSharp.Runtime {
 		
 		#endregion;
 		
-		private ESBehavior 									_class 				= null;
+		private ESBehavior 									_class;
 		
 		public ESObject(ESBehavior esClass) {
 			setClass(esClass);
@@ -517,7 +721,7 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Smalltalk API
+		#region Essence# API
 
 		#region Core
 

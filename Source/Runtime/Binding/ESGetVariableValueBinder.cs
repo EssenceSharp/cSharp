@@ -44,10 +44,10 @@ namespace EssenceSharp.Runtime.Binding {
 
 	public class GetVariableValueBinder : NamedVariableBinder {
 
-		protected GetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, ESSymbol selector) : base(dynamicBindingGuru, name, selector) {
+		protected GetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name) : base(dynamicBindingGuru, name) {
 		}
 
-		protected GetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, ESSymbol selector, ESNamespace environment) : base(dynamicBindingGuru, name, selector, environment) {
+		protected GetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, ESNamespace environment) : base(dynamicBindingGuru, name, environment) {
 		}
 
 		public override Expression Bind(Object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {
@@ -55,18 +55,6 @@ namespace EssenceSharp.Runtime.Binding {
 			Expression getVariableValueExpression = null;
 			doAllButFinalBinding(
 				args, 
-				(ESObject model, long index, Object[] namedSlots, long classVersionId) => {
-					ParameterExpression self = parameters[0];
-					var modelConstant = Expression.Constant(model);
-					testRuleValidityExpression = 
-						Expression.AndAlso(
-							Expression.ReferenceEqual(self, modelConstant),
-					                ExpressionTreeGuru.expressionToTestThatESObjectHasSameClassVersion(self, Expression.Constant(classVersionId)));
-					getVariableValueExpression = 
-						Expression.ArrayAccess(
-							Expression.Constant(namedSlots),
-							Expression.Constant((int)index));
-				}, 
 				(BindingHandle handle) => {
 					testRuleValidityExpression = Expression.Constant(true);
 					var handleConstant = Expression.Constant(handle);
@@ -82,40 +70,27 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public new class Registry : NamedVariableBinder.Registry {
 
-			protected readonly Dictionary<ESNamespace, Dictionary<ESSymbol, Dictionary<ESSymbol, GetVariableValueBinder>>> registry = new Dictionary<ESNamespace, Dictionary<ESSymbol, Dictionary<ESSymbol, GetVariableValueBinder>>>();
+			protected readonly Dictionary<ESNamespace, Dictionary<ESSymbol, GetVariableValueBinder>> registry = new Dictionary<ESNamespace, Dictionary<ESSymbol, GetVariableValueBinder>>();
 
 			public  Registry(DynamicBindingGuru dynamicBindingGuru) : base(dynamicBindingGuru) {
 			}
 
-			public GetVariableValueBinder canonicalBinderFor(ESSymbol name, ESSymbol selector) {
-				return canonicalBinderFor(name, selector, defaultNamespace);
+			public GetVariableValueBinder canonicalBinderFor(ESSymbol name) {
+				return canonicalBinderFor(name, defaultNamespace);
 			}
 
-			public GetVariableValueBinder canonicalBinderFor(ESSymbol name, ESSymbol selector, ESNamespace environment) {
-				ESSymbol selectorKey = selector; 
+			public GetVariableValueBinder canonicalBinderFor(ESSymbol name, ESNamespace environment) {
 				if (environment == null) environment = defaultNamespace;
-				if (selector == null) selectorKey = noSelector;
-				Dictionary<ESSymbol, Dictionary<ESSymbol, GetVariableValueBinder>> selectorRegistry;
 				Dictionary<ESSymbol, GetVariableValueBinder> nameRegistry;
 				GetVariableValueBinder binder;
-				if (!registry.TryGetValue(environment, out selectorRegistry)) {
-					selectorRegistry = new Dictionary<ESSymbol, Dictionary<ESSymbol, GetVariableValueBinder>>();
-					registry[environment] = selectorRegistry;
+				if (!registry.TryGetValue(environment, out nameRegistry)) {
 					nameRegistry = new Dictionary<ESSymbol, GetVariableValueBinder>();
-					selectorRegistry[selectorKey] = nameRegistry;
-					binder = new GetVariableValueBinder(DynamicBindingGuru, name, selector, environment);
-					nameRegistry[name] = binder;
-					return binder;
-				}
-				if (!selectorRegistry.TryGetValue(selectorKey, out nameRegistry)) {
-					nameRegistry = new Dictionary<ESSymbol, GetVariableValueBinder>();
-					selectorRegistry[selectorKey] = nameRegistry;
-					binder = new GetVariableValueBinder(DynamicBindingGuru, name, selector, environment);
+					binder = new GetVariableValueBinder(DynamicBindingGuru, name, environment);
 					nameRegistry[name] = binder;
 					return binder;
 				}
 				if (!nameRegistry.TryGetValue(name, out binder)) {
-					binder = new GetVariableValueBinder(DynamicBindingGuru, name, selector, environment);
+					binder = new GetVariableValueBinder(DynamicBindingGuru, name, environment);
 					nameRegistry[name] = binder;
 				}
 				return binder;

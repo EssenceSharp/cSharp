@@ -72,19 +72,11 @@ namespace EssenceSharp.Runtime {
 		
 	}
 
-	public interface NamedSlotsObject {
+	public interface NamedSlotsObject : ESObjectType {
 
 		Object[] NamedSlots {
 			get;
 		}
-
-		Object instVarValueAt(long slotIndex);
-		
-		Object instVarValueAtPut(long slotIndex, Object newValue);
-		
-		Object instVarValueAtName(ESSymbol name);
-		
-		Object instVarValueAtNamePut(ESSymbol name, Object newValue);
 
 	}
 
@@ -96,7 +88,7 @@ namespace EssenceSharp.Runtime {
 		
 		#endregion
 		
-		protected Object[] 						namedSlots 				= null;	
+		protected Object[] 						namedSlots;	
 		
 		public ESNamedSlotsObject(ESBehavior esClass) : base(esClass) {
 		}
@@ -267,7 +259,7 @@ namespace EssenceSharp.Runtime {
 				
 		#endregion
 		
-		protected ElementType[] 						slots 					= null;
+		protected ElementType[] 						slots;
 		
 		public ESIndexedSlotsObject(ESBehavior esClass, long size) : base(esClass) {
 			initialize(size > 0 ? new ElementType[size] : empty);

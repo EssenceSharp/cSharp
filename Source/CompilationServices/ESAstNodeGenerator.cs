@@ -83,9 +83,9 @@ namespace EssenceSharp.CompilationServices {
 		#endregion
 
 		protected ESCompiler							compiler;
-		protected CodeGenerationContext						context;
 		protected ESKernel							kernel;
 		protected SymbolRegistry						symbolRegistry;
+		protected CodeGenerationContext						context;
 		protected List<CodeGenerationContext>					contextStack			= new  List<CodeGenerationContext>();
 
 		public ASTGenerator(ESCompiler esCompiler, CodeGenerationContext context) {

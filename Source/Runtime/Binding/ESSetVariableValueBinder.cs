@@ -48,10 +48,10 @@ namespace EssenceSharp.Runtime.Binding {
 		protected static readonly ConstantExpression mutabilityFlagBitConstant	= Expression.Constant(ESInitiallyMutableObject.mutabilityFlagBit);
 		protected static readonly ConstantExpression zeroConstant		= Expression.Constant((byte)0);
 
-		protected SetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, ESSymbol selector) : base(dynamicBindingGuru, name, selector) {
+		protected SetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name) : base(dynamicBindingGuru, name) {
 		}
 
-		protected SetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, ESSymbol selector, ESNamespace environment) : base(dynamicBindingGuru, name, selector, environment) {
+		protected SetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, ESNamespace environment) : base(dynamicBindingGuru, name, environment) {
 		}
 
 		public override Expression Bind(Object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {
@@ -60,31 +60,6 @@ namespace EssenceSharp.Runtime.Binding {
 			ParameterExpression value = parameters[1];
 			doAllButFinalBinding(
 				args, 
-				(ESObject model, long index, Object[] namedSlots, long classVersionId) => {
-					ParameterExpression self = parameters[0];
-					var modelConstant = Expression.Constant(model);
-					if (model.IsImmutable) {
-						setVariableValueExpression = Expression.Block(
-								TypeGuru.objectType,
-								Expression.Throw(Expression.Constant(new ImmutableObjectException())),
-								self);
-					} else {
-						var statusFlags = Expression.Field(self, "statusFlags");
-						var isMutable = Expression.Equal(Expression.And(statusFlags, mutabilityFlagBitConstant), zeroConstant);
-						testRuleValidityExpression = 
-							Expression.AndAlso(
-								Expression.AndAlso(
-									Expression.ReferenceEqual(self, modelConstant),
-									isMutable),
-								ExpressionTreeGuru.expressionToTestThatESObjectHasSameClassVersion(self, Expression.Constant(classVersionId)));
-						setVariableValueExpression = 
-							Expression.Assign(
-								Expression.ArrayAccess(
-									Expression.Constant(namedSlots),
-									Expression.Constant((int)index)),
-									value);
-					}
-				}, 
 				(BindingHandle handle) => {
 					testRuleValidityExpression = Expression.Constant(true);
 					setVariableValueExpression = 
@@ -101,40 +76,27 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public new class Registry : NamedVariableBinder.Registry {
 
-			protected readonly Dictionary<ESNamespace, Dictionary<ESSymbol, Dictionary<ESSymbol, SetVariableValueBinder>>> registry = new Dictionary<ESNamespace, Dictionary<ESSymbol, Dictionary<ESSymbol, SetVariableValueBinder>>>();
+			protected readonly Dictionary<ESNamespace, Dictionary<ESSymbol, SetVariableValueBinder>> registry = new Dictionary<ESNamespace, Dictionary<ESSymbol, SetVariableValueBinder>>();
 
 			public  Registry(DynamicBindingGuru dynamicBindingGuru) : base(dynamicBindingGuru) {
 			}
 
-			public SetVariableValueBinder canonicalBinderFor(ESSymbol name, ESSymbol selector) {
-				return canonicalBinderFor(name, selector, defaultNamespace);
+			public SetVariableValueBinder canonicalBinderFor(ESSymbol name) {
+				return canonicalBinderFor(name, defaultNamespace);
 			}
 
-			public SetVariableValueBinder canonicalBinderFor(ESSymbol name, ESSymbol selector, ESNamespace environment) {
-				ESSymbol selectorKey = selector; 
+			public SetVariableValueBinder canonicalBinderFor(ESSymbol name, ESNamespace environment) {
 				if (environment == null) environment = defaultNamespace;
-				if (selector == null) selectorKey = noSelector;
-				Dictionary<ESSymbol, Dictionary<ESSymbol, SetVariableValueBinder>> selectorRegistry;
 				Dictionary<ESSymbol, SetVariableValueBinder> nameRegistry;
 				SetVariableValueBinder binder;
-				if (!registry.TryGetValue(environment, out selectorRegistry)) {
-					selectorRegistry = new Dictionary<ESSymbol, Dictionary<ESSymbol, SetVariableValueBinder>>();
-					registry[environment] = selectorRegistry;
+				if (!registry.TryGetValue(environment, out nameRegistry)) {
 					nameRegistry = new Dictionary<ESSymbol, SetVariableValueBinder>();
-					selectorRegistry[selectorKey] = nameRegistry;
-					binder = new SetVariableValueBinder(DynamicBindingGuru, name, selector, environment);
-					nameRegistry[name] = binder;
-					return binder;
-				}
-				if (!selectorRegistry.TryGetValue(selectorKey, out nameRegistry)) {
-					nameRegistry = new Dictionary<ESSymbol, SetVariableValueBinder>();
-					selectorRegistry[selectorKey] = nameRegistry;
-					binder = new SetVariableValueBinder(DynamicBindingGuru, name, selector, environment);
+					binder = new SetVariableValueBinder(DynamicBindingGuru, name, environment);
 					nameRegistry[name] = binder;
 					return binder;
 				}
 				if (!nameRegistry.TryGetValue(name, out binder)) {
-					binder = new SetVariableValueBinder(DynamicBindingGuru, name, selector, environment);
+					binder = new SetVariableValueBinder(DynamicBindingGuru, name, environment);
 					nameRegistry[name] = binder;
 				}
 				return binder;

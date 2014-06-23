@@ -55,17 +55,17 @@ namespace EssenceSharp.CompilationServices {
 
 		public static readonly bool useTailCallOptimization = false;
 
-		public static ExpressionElementType[] newCLRExpressionArray<SourceElementType, ExpressionElementType>(SourceElementType[] elements) 
+		public static ExpressionElementType[] newCLRExpressionArray<SourceElementType, ExpressionElementType>(ESNamespace environment, SourceElementType[] elements) 
 			where SourceElementType : OperandNode 
 			where ExpressionElementType : Expression {
-			return Array.ConvertAll<SourceElementType, ExpressionElementType>(elements, element => (ExpressionElementType)element.asCLRExpression());
+			return Array.ConvertAll<SourceElementType, ExpressionElementType>(elements, element => (ExpressionElementType)element.asCLRExpression(environment));
 		}
 
-		public static ExpressionElementType[] newCLRExpressionArray<SourceElementType, ExpressionElementType>(List<SourceElementType> elements) 
+		public static ExpressionElementType[] newCLRExpressionArray<SourceElementType, ExpressionElementType>(ESNamespace environment, List<SourceElementType> elements) 
 			where SourceElementType : OperandNode 
 			where ExpressionElementType : Expression {
 			var expArray = new ExpressionElementType[elements.Count];
-			for (var i = 0; i < expArray.Length; i++) expArray[i] = (ExpressionElementType)elements[i].asCLRExpression();
+			for (var i = 0; i < expArray.Length; i++) expArray[i] = (ExpressionElementType)elements[i].asCLRExpression(environment);
 			return expArray;
 		}
 
@@ -167,7 +167,7 @@ namespace EssenceSharp.CompilationServices {
 			get {return Context.IsCompilable && CompilesToBlockOrMethod || CompilesToExecutableCode || CompilesToExpression;}
 		}
 
-		public virtual System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
+		public virtual HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
 			// By default, do nothing
 			return null;
 		}
@@ -176,11 +176,11 @@ namespace EssenceSharp.CompilationServices {
 			// By default, do nothing
 		}
 
-		public virtual Expression asInlinedCLRExpression() {
-			return asCLRExpression();
+		public virtual Expression asInlinedCLRExpression(ESNamespace environment) {
+			return asCLRExpression(environment);
 		}
 
-		public virtual Expression asCLRExpression() {
+		public virtual Expression asCLRExpression(ESNamespace environment) {
 			return null;
 		}
 
@@ -222,7 +222,7 @@ namespace EssenceSharp.CompilationServices {
 			constantExpression = constantValue == null ? ExpressionTreeGuru.nilConstant : constantValue;
 		}
 
-		public override Expression asCLRExpression() {
+		public override Expression asCLRExpression(ESNamespace environment) {
 			return Expression.Convert(constantExpression, TypeGuru.objectType);
 		}
 
@@ -249,15 +249,15 @@ namespace EssenceSharp.CompilationServices {
 			foreach (var element in elements) element.invalidateCachedExpressions();
 		}
 
-		public override Expression asCLRExpression() {
+		public override Expression asCLRExpression(ESNamespace environment) {
 			if (cachedExpression != null) return cachedExpression;
-			return cachedExpression = ExpressionTreeGuru.expressionToCreateESObjectArray(Context.Kernel.ArrayClass, newCLRExpressionArray<ExpressionNode, Expression>(elements));
+			return cachedExpression = ExpressionTreeGuru.expressionToCreateESObjectArray(Context.Kernel.ArrayClass, newCLRExpressionArray<ExpressionNode, Expression>(environment, elements));
 		}
 
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			System.Collections.Generic.HashSet<ESSymbol> undeclaredVariables = null;
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			HashSet<ESSymbol> undeclaredVariables = null;
 			foreach (var element in elements) {
-				var undeclaredVarSet = element.bindNonLocalVariablesToEnvironment();
+				var undeclaredVarSet = element.bindNonLocalVariablesToEnvironment(environment);
 				if (undeclaredVarSet != null) {
 					if (undeclaredVariables == null) {
 						undeclaredVariables = undeclaredVarSet;
@@ -276,10 +276,10 @@ namespace EssenceSharp.CompilationServices {
 		public DictionaryLiteralNode(CodeGenerationContext context, ExpressionNode[] elements) : base(context, elements) {
 		}
 
-		public override Expression asCLRExpression() {
+		public override Expression asCLRExpression(ESNamespace environment) {
 			if (cachedExpression != null) return cachedExpression;
 			var associationElements = new List<Expression>();
-			foreach (var element in elements) associationElements.Add(Expression.Convert(element.asCLRExpression(), typeof(ESAssociation)));
+			foreach (var element in elements) associationElements.Add(Expression.Convert(element.asCLRExpression(environment), typeof(ESAssociation)));
 			return cachedExpression = ExpressionTreeGuru.expressionToCreateESDictionary(Context.Kernel.DictionaryClass, associationElements);		}
 
 	}
@@ -300,7 +300,7 @@ namespace EssenceSharp.CompilationServices {
 			get {return variableReference.IsAssignable;}
 		}
 
-		public override Expression asCLRExpression() {
+		public override Expression asCLRExpression(ESNamespace environment) {
 			if (cachedExpression != null) return cachedExpression;
 			return cachedExpression = variableReference.asCLRGetValueExpression();
 		}
@@ -411,10 +411,10 @@ namespace EssenceSharp.CompilationServices {
 
 		public abstract void argumentsDo(Action<OperandNode> enumerator1);
 		
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			System.Collections.Generic.HashSet<ESSymbol> undeclaredVariables = null;
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			HashSet<ESSymbol> undeclaredVariables = null;
 			argumentsDo(argument => {
-				var undeclaredVarSet = argument.bindNonLocalVariablesToEnvironment();
+				var undeclaredVarSet = argument.bindNonLocalVariablesToEnvironment(environment);
 				if (undeclaredVarSet != null) {
 					if (undeclaredVariables == null) {
 						undeclaredVariables = undeclaredVarSet;
@@ -426,13 +426,13 @@ namespace EssenceSharp.CompilationServices {
 			return undeclaredVariables;
 		}
 
-		public void appendArgumentsAsCLRExpressionsTo(List<Expression> arguments) {
-			argumentsDo(argument => arguments.Add(argument.asCLRExpression()));
+		public void appendArgumentsAsCLRExpressionsTo(ESNamespace environment, List<Expression> arguments) {
+			argumentsDo(argument => arguments.Add(argument.asCLRExpression(environment)));
 		}
 
-		public List<Expression> argumentsAsCLRExpressions() {
+		public List<Expression> argumentsAsCLRExpressions(ESNamespace environment) {
 			var arguments = new List<Expression>();
-			appendArgumentsAsCLRExpressionsTo(arguments);
+			appendArgumentsAsCLRExpressionsTo(environment, arguments);
 			return arguments;
 		}
 
@@ -573,9 +573,9 @@ namespace EssenceSharp.CompilationServices {
 			message.invalidateCachedExpressions();
 		}
 		
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			var undeclaredVariables = receiver.bindNonLocalVariablesToEnvironment();
-			var undeclaredVarSet = message.bindNonLocalVariablesToEnvironment();
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			var undeclaredVariables = receiver.bindNonLocalVariablesToEnvironment(environment);
+			var undeclaredVarSet = message.bindNonLocalVariablesToEnvironment(environment);
 			if (undeclaredVarSet != null) {
 				if (undeclaredVariables == null) {
 					undeclaredVariables = undeclaredVarSet;
@@ -586,12 +586,12 @@ namespace EssenceSharp.CompilationServices {
 			return undeclaredVariables;
 		}
 
-		public override Expression asCLRExpression() {
+		public override Expression asCLRExpression(ESNamespace environment) {
 			if (cachedExpression != null) return cachedExpression;
 
 			OperandNode arg1;
 			OperandNode arg2;
-			Expression receiverExpression = receiver.asCLRExpression();
+			Expression receiverExpression = receiver.asCLRExpression(environment);
 			Expression testExpression;
 			Expression arg1Expression;
 			Expression arg2Expression;
@@ -611,11 +611,11 @@ namespace EssenceSharp.CompilationServices {
 
 				case CanonicalSelectorSemantics.IsIdenticalTo:
 					arg1 = message.argumentAt(0);
-					return cachedExpression = Expression.ReferenceEqual(receiverExpression, arg1.asCLRExpression()).withCanonicalReturnType();
+					return cachedExpression = Expression.ReferenceEqual(receiverExpression, arg1.asCLRExpression(environment)).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.IsNotIdenticalTo:
 					arg1 = message.argumentAt(0);
-					return cachedExpression = Expression.ReferenceNotEqual(receiverExpression, arg1.asCLRExpression()).withCanonicalReturnType();
+					return cachedExpression = Expression.ReferenceNotEqual(receiverExpression, arg1.asCLRExpression(environment)).withCanonicalReturnType();
 
 				case CanonicalSelectorSemantics.LogicalNot:
 					return cachedExpression = 
@@ -623,7 +623,7 @@ namespace EssenceSharp.CompilationServices {
 
 				case CanonicalSelectorSemantics.ConditionalAnd:
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					return cachedExpression = 
 						Expression.AndAlso(
 								ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #and: must be a Boolean value"),
@@ -631,7 +631,7 @@ namespace EssenceSharp.CompilationServices {
 
 				case CanonicalSelectorSemantics.ConditionalOr:
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					return cachedExpression = 
 							Expression.OrElse(
 								ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #or: must be a Boolean value"),
@@ -643,7 +643,7 @@ namespace EssenceSharp.CompilationServices {
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					testExpression = Expression.ReferenceEqual(receiverExpression, ExpressionTreeGuru.nilConstant);
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					return cachedExpression = Expression.Condition(
 										testExpression,
 											arg1Expression,
@@ -653,7 +653,7 @@ namespace EssenceSharp.CompilationServices {
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					testExpression = Expression.ReferenceNotEqual(receiverExpression, ExpressionTreeGuru.nilConstant);
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					return cachedExpression = Expression.Condition(
 										testExpression,
 											arg1Expression,
@@ -663,9 +663,9 @@ namespace EssenceSharp.CompilationServices {
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
 					testExpression = Expression.ReferenceEqual(receiverExpression, ExpressionTreeGuru.nilConstant);
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					arg2 = message.argumentAt(1);
-					arg2Expression = arg2.asInlinedCLRExpression();
+					arg2Expression = arg2.asInlinedCLRExpression(environment);
 					return cachedExpression = Expression.Condition(
 										testExpression,
 											arg1Expression,
@@ -675,9 +675,9 @@ namespace EssenceSharp.CompilationServices {
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
 					testExpression = Expression.ReferenceNotEqual(receiverExpression, ExpressionTreeGuru.nilConstant);
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					arg2 = message.argumentAt(1);
-					arg2Expression = arg2.asInlinedCLRExpression();
+					arg2Expression = arg2.asInlinedCLRExpression(environment);
 					return cachedExpression = Expression.Condition(
 										testExpression,
 											arg1Expression,
@@ -686,7 +686,7 @@ namespace EssenceSharp.CompilationServices {
 				case CanonicalSelectorSemantics.IfTrue:
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					return cachedExpression = Expression.Condition(
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifTrue: must be a Boolean value"),
 											arg1Expression,
@@ -695,7 +695,7 @@ namespace EssenceSharp.CompilationServices {
 				case CanonicalSelectorSemantics.IfFalse:
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					return cachedExpression = Expression.Condition(
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifFalse: must be a Boolean value"),
 											ExpressionTreeGuru.nilConstant,
@@ -704,9 +704,9 @@ namespace EssenceSharp.CompilationServices {
 				case CanonicalSelectorSemantics.IfTrueIfFalse:
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					arg2 = message.argumentAt(1);
-					arg2Expression = arg2.asInlinedCLRExpression();
+					arg2Expression = arg2.asInlinedCLRExpression(environment);
 					return cachedExpression = Expression.Condition(
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifTrue:ifFalse: must be a Boolean value"),
 											arg1Expression,
@@ -715,9 +715,9 @@ namespace EssenceSharp.CompilationServices {
 				case CanonicalSelectorSemantics.IfFalseIfTrue:
 					if (!message.FirstTwoArgsAreZeroArgBlockLiterals) break;
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					arg2 = message.argumentAt(1);
-					arg2Expression = arg2.asInlinedCLRExpression();
+					arg2Expression = arg2.asInlinedCLRExpression(environment);
 					return cachedExpression = Expression.Condition(
 										ExpressionTreeGuru.expressionThatMustBeBoolean(receiverExpression, "The receiver of #ifFalse:ifTrue: must be a Boolean value"),
 											arg2Expression,
@@ -728,7 +728,7 @@ namespace EssenceSharp.CompilationServices {
 					exit = Expression.Label(TypeGuru.objectType);
 					return cachedExpression = Expression.Loop(
 									Expression.IfThenElse(
-										Expression.ReferenceEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
+										Expression.ReferenceEqual(receiver.asInlinedCLRExpression(environment), ExpressionTreeGuru.nilConstant),
 											Expression.Empty(),
 											Expression.Break(exit, receiverExpression)),
 									exit).withCanonicalReturnType();
@@ -738,7 +738,7 @@ namespace EssenceSharp.CompilationServices {
 					exit = Expression.Label(TypeGuru.objectType);
 					return cachedExpression = Expression.Loop(
 									Expression.IfThenElse(
-										Expression.ReferenceNotEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
+										Expression.ReferenceNotEqual(receiver.asInlinedCLRExpression(environment), ExpressionTreeGuru.nilConstant),
 											Expression.Empty(),
 											Expression.Break(exit, receiverExpression)),
 									exit).withCanonicalReturnType();
@@ -747,11 +747,11 @@ namespace EssenceSharp.CompilationServices {
 					if (!receiver.IsZeroArgBlockLiteral) break;
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					exit = Expression.Label(TypeGuru.objectType);
 					return cachedExpression = Expression.Loop(
 									Expression.IfThenElse(
-										Expression.ReferenceEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
+										Expression.ReferenceEqual(receiver.asInlinedCLRExpression(environment), ExpressionTreeGuru.nilConstant),
 											arg1Expression,
 											Expression.Break(exit, receiverExpression)),
 									exit).withCanonicalReturnType();
@@ -761,11 +761,11 @@ namespace EssenceSharp.CompilationServices {
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					exit = Expression.Label(TypeGuru.objectType);
 					return cachedExpression = Expression.Loop(
 									Expression.IfThenElse(
-										Expression.ReferenceNotEqual(receiver.asInlinedCLRExpression(), ExpressionTreeGuru.nilConstant),
+										Expression.ReferenceNotEqual(receiver.asInlinedCLRExpression(environment), ExpressionTreeGuru.nilConstant),
 											arg1Expression,
 											Expression.Break(exit, receiverExpression)),
 									exit).withCanonicalReturnType();
@@ -775,7 +775,7 @@ namespace EssenceSharp.CompilationServices {
 					exit = Expression.Label(TypeGuru.objectType);
 					return cachedExpression = Expression.Loop(
 									Expression.IfThenElse(
-										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileTrue must evaluate to a Boolean value"),
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(environment), "The receiver of #whileTrue must evaluate to a Boolean value"),
 											Expression.Empty(),
 											Expression.Break(exit, receiverExpression)),
 									exit).withCanonicalReturnType();
@@ -785,7 +785,7 @@ namespace EssenceSharp.CompilationServices {
 					exit = Expression.Label(TypeGuru.objectType);
 					return cachedExpression = Expression.Loop(
 									Expression.IfThenElse(
-										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileFalse must evaluate to a Boolean value"),
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(environment), "The receiver of #whileFalse must evaluate to a Boolean value"),
 											Expression.Break(exit, receiverExpression),
 											Expression.Empty()),
 									exit).withCanonicalReturnType();
@@ -794,11 +794,11 @@ namespace EssenceSharp.CompilationServices {
 					if (!receiver.IsZeroArgBlockLiteral) break;
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					exit = Expression.Label(TypeGuru.objectType);
 					return cachedExpression = Expression.Loop(
 									Expression.IfThenElse(
-										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileTrue: must evaluate to a Boolean value"),
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(environment), "The receiver of #whileTrue: must evaluate to a Boolean value"),
 											arg1Expression,
 											Expression.Break(exit, receiverExpression)),
 									exit).withCanonicalReturnType();
@@ -808,11 +808,11 @@ namespace EssenceSharp.CompilationServices {
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					if (!message.FirstArgIsZeroArgBlockLiteral) break;
 					arg1 = message.argumentAt(0);
-					arg1Expression = arg1.asInlinedCLRExpression();
+					arg1Expression = arg1.asInlinedCLRExpression(environment);
 					exit = Expression.Label(TypeGuru.objectType);
 					return cachedExpression = Expression.Loop(
 									Expression.IfThenElse(
-										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(), "The receiver of #whileFalse: must evaluate to a Boolean value"),
+										ExpressionTreeGuru.expressionThatMustBeBoolean(receiver.asInlinedCLRExpression(environment), "The receiver of #whileFalse: must evaluate to a Boolean value"),
 											Expression.Break(exit, receiverExpression),
 											arg1Expression),
 									exit).withCanonicalReturnType();
@@ -833,7 +833,7 @@ namespace EssenceSharp.CompilationServices {
 			List<Expression> argumentExpressions = new List<Expression>();
 			argumentExpressions.Add(callSiteConstant);
 			argumentExpressions.Add(receiverExpression);
-			Message.appendArgumentsAsCLRExpressionsTo(argumentExpressions);
+			Message.appendArgumentsAsCLRExpressionsTo(environment, argumentExpressions);
 			return cachedExpression = Expression.Invoke(Expression.Field(callSiteConstant, CodeGenerationContext.callSiteType[selector.NumArgs], "Target"), argumentExpressions);
 
 		}
@@ -884,16 +884,16 @@ namespace EssenceSharp.CompilationServices {
 			operand.invalidateCachedExpressions();
 		}
 		
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			return operand.bindNonLocalVariablesToEnvironment();
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			return operand.bindNonLocalVariablesToEnvironment(environment);
 		}
 
-		public override Expression asInlinedCLRExpression() {
-			return operand.asInlinedCLRExpression();
+		public override Expression asInlinedCLRExpression(ESNamespace environment) {
+			return operand.asInlinedCLRExpression(environment);
 		}
 
-		public override Expression asCLRExpression() {
-			return operand.asCLRExpression();
+		public override Expression asCLRExpression(ESNamespace environment) {
+			return operand.asCLRExpression(environment);
 		}
 
 	}
@@ -915,11 +915,11 @@ namespace EssenceSharp.CompilationServices {
 			cascadedMessagesDo(message => message.invalidateCachedExpressions());
 		}
 
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			System.Collections.Generic.HashSet<ESSymbol> undeclaredVariables = base.bindNonLocalVariablesToEnvironment();
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			HashSet<ESSymbol> undeclaredVariables = base.bindNonLocalVariablesToEnvironment(environment);
 			if (cascadedMessages != null) { 
 				foreach (var messageNode in cascadedMessages) {
-					var undeclaredVarSet = messageNode.bindNonLocalVariablesToEnvironment();
+					var undeclaredVarSet = messageNode.bindNonLocalVariablesToEnvironment(environment);
 					if (undeclaredVarSet != null) {
 						if (undeclaredVariables == null) {
 							undeclaredVariables = undeclaredVarSet;
@@ -932,16 +932,16 @@ namespace EssenceSharp.CompilationServices {
 			return undeclaredVariables;
 		}
 
-		public override Expression asCLRExpression() {
+		public override Expression asCLRExpression(ESNamespace environment) {
 			if (cachedExpression != null) return cachedExpression;
 			var receiver = Expression.Parameter(TypeGuru.objectType, "$receiver");
 			var receiverNode = Context.newReducedNode(receiver);
-			var assignReceiver = Expression.Assign(receiver, operand.asCLRExpression());
+			var assignReceiver = Expression.Assign(receiver, operand.asCLRExpression(environment));
 			var expressionSequence = new List<Expression>();
 			expressionSequence.Add(assignReceiver);
 			cascadedMessagesDo(messageNode => {
 				var messageSend = Context.newMessageSendNode(receiverNode, messageNode);
-				expressionSequence.Add(messageSend.asCLRExpression());
+				expressionSequence.Add(messageSend.asCLRExpression(environment));
 			});
 			return cachedExpression = Expression.Block(TypeGuru.objectType, new ParameterExpression[]{receiver}, expressionSequence);
 		}
@@ -973,13 +973,13 @@ namespace EssenceSharp.CompilationServices {
 			operand.invalidateCachedExpressions();
 		}
 
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			return operand.bindNonLocalVariablesToEnvironment();
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			return operand.bindNonLocalVariablesToEnvironment(environment);
 		}
 
-		public override Expression asCLRExpression() {
+		public override Expression asCLRExpression(ESNamespace environment) {
 			if (cachedExpression != null) return cachedExpression;
-			cachedExpression = operand.asCLRExpression();
+			cachedExpression = operand.asCLRExpression(environment);
 			if (variables == null || variables.Length < 1) return cachedExpression; // This would be weird....
 			foreach (var variable in variables) cachedExpression = variable.asCLRSetValueExpression(cachedExpression);
 			return cachedExpression;
@@ -1004,14 +1004,14 @@ namespace EssenceSharp.CompilationServices {
 			statement.invalidateCachedExpressions();
 		}
 
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			return statement.bindNonLocalVariablesToEnvironment();
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			return statement.bindNonLocalVariablesToEnvironment(environment);
 		}
 
-		public override Expression asCLRExpression() {
+		public override Expression asCLRExpression(ESNamespace environment) {
 			if (cachedExpression != null) return cachedExpression;
 			if (Scope.IsRoot) {
-				return cachedExpression = Expression.Return(Context.ReturnTarget, StatementNode.asCLRExpression(), TypeGuru.objectType);
+				return cachedExpression = Expression.Return(Context.ReturnTarget, StatementNode.asCLRExpression(environment), TypeGuru.objectType);
 			}
 			var createNonLocalReturnExpression =
 				Expression.New(
@@ -1021,7 +1021,7 @@ namespace EssenceSharp.CompilationServices {
 						new Type[]{TypeGuru.longType, TypeGuru.objectType},
 						null),
 					Context.IdentityExpression,
-					StatementNode.asCLRExpression());
+					StatementNode.asCLRExpression(environment));
 			return cachedExpression = Expression.Block(Expression.Throw(createNonLocalReturnExpression), Context.SelfParameter);
 		}
 
@@ -1070,10 +1070,10 @@ namespace EssenceSharp.CompilationServices {
 			statements.Add(statement);
 		}
 
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			System.Collections.Generic.HashSet<ESSymbol> undeclaredVariables = null;
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			HashSet<ESSymbol> undeclaredVariables = null;
 			foreach (var statement in statements) {
-				var undeclaredVarSet = statement.bindNonLocalVariablesToEnvironment();
+				var undeclaredVarSet = statement.bindNonLocalVariablesToEnvironment(environment);
 				if (undeclaredVarSet != null) {
 					if (undeclaredVariables == null) {
 						undeclaredVariables = undeclaredVarSet;
@@ -1085,13 +1085,13 @@ namespace EssenceSharp.CompilationServices {
 			return undeclaredVariables;
 		}
 
-		public override Expression asCLRExpression() {
+		public override Expression asCLRExpression(ESNamespace environment) {
 			if (cachedExpression != null) return cachedExpression;
 			if (StatementCount < 1) return cachedExpression = Context.SelfParameter;
 			if (VariableDeclarationCount < 1) {
 				return cachedExpression = Expression.Block(
 								TypeGuru.objectType,
-								newCLRExpressionArray<StatementNode, Expression>(statements));
+								newCLRExpressionArray<StatementNode, Expression>(environment, statements));
 			} else {
 				var clrVarDeclarations = new List<ParameterExpression>();
 				Scope.localVariablesDo(
@@ -1100,7 +1100,7 @@ namespace EssenceSharp.CompilationServices {
 							clrVarDeclarations.Add(declaration.asCLRDeclarationExpression());
 					});
 				var statementExpressions = new List<Expression>();
-				foreach (var statement in statements) statementExpressions.Add(statement.asCLRExpression());
+				foreach (var statement in statements) statementExpressions.Add(statement.asCLRExpression(environment));
 				cachedExpression = Expression.Block(TypeGuru.objectType, clrVarDeclarations, statementExpressions);
 				return cachedExpression;
 
@@ -1127,7 +1127,7 @@ namespace EssenceSharp.CompilationServices {
 
 		protected List<ParameterExpression>			parmeterExpressions;
 		protected ExecutableCodeNode				body;
-		protected System.Collections.Generic.HashSet<ESSymbol>	undeclaredVariables;
+		protected HashSet<ESSymbol>	undeclaredVariables;
 
 		protected CodeDeclarationNode(CodeGenerationContext context) : base(context) {
 		}
@@ -1165,7 +1165,7 @@ namespace EssenceSharp.CompilationServices {
 			get {return body == null ? 0 : body.StatementCount;}
 		}
 
-		public System.Collections.Generic.HashSet<ESSymbol> UndeclaredVariables {
+		public HashSet<ESSymbol> UndeclaredVariables {
 			get {return undeclaredVariables;}
 		}
 
@@ -1202,11 +1202,11 @@ namespace EssenceSharp.CompilationServices {
 			body.invalidateCachedExpressions();
 		}
 
-		protected abstract Expression bodyAsCLRExpression();
+		protected abstract Expression bodyAsCLRExpression(ESNamespace environment);
 
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			undeclaredVariables = Scope.IsRoot ? Scope.bindNonLocalVariablesToEnvironment() : null;
-			var undeclaredVarSet = body.bindNonLocalVariablesToEnvironment();
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			undeclaredVariables = Scope.IsRoot ? Scope.bindNonLocalVariablesToEnvironment(environment) : null;
+			var undeclaredVarSet = body.bindNonLocalVariablesToEnvironment(environment);
 			if (undeclaredVarSet != null) {
 				if (undeclaredVariables == null) {
 					undeclaredVariables = undeclaredVarSet;
@@ -1217,12 +1217,13 @@ namespace EssenceSharp.CompilationServices {
 			return undeclaredVariables;
 		}
 
-		public LambdaExpression Lambda {
-			get {return (LambdaExpression)asCLRExpression();}
+		public LambdaExpression lambdaFor(ESNamespace environment) {
+			invalidateCachedExpressions();
+			return (LambdaExpression)asCLRExpression(environment);
 		}
 
-		public Delegate Function {
-			get {return Lambda.Compile();}
+		public Delegate functionFor(ESNamespace environment) {
+			return lambdaFor(environment).Compile();
 		}
 
 	}
@@ -1235,10 +1236,10 @@ namespace EssenceSharp.CompilationServices {
 		public BlockDeclarationNode(CodeGenerationContext context, ExecutableCodeNode body) : base(context, body) {
 		}
 
-		protected override Expression bodyAsCLRExpression() {
+		protected override Expression bodyAsCLRExpression(ESNamespace environment) {
 			var parameters = ParmeterExpressions;
 			if (StatementCount < 1) return parameters.Count > 0 ? parameters.Last() : (Scope.IsRoot ? (Expression)Context.SelfParameter : ExpressionTreeGuru.nilConstant);
-			var bodyExpression = body.asCLRExpression();
+			var bodyExpression = body.asCLRExpression(environment);
 			if (Scope.IsRoot) {
 				var exception = Expression.Parameter(TypeGuru.nonLocalReturnExceptionType, "ex");
 				var exceptionReturnValue = Expression.Field(exception, "returnValue");
@@ -1259,15 +1260,15 @@ namespace EssenceSharp.CompilationServices {
 			return bodyExpression;
 		}
 
- 		public override Expression asInlinedCLRExpression() {
-			bindNonLocalVariablesToEnvironment();
-			return bodyAsCLRExpression();
+ 		public override Expression asInlinedCLRExpression(ESNamespace environment) {
+			bindNonLocalVariablesToEnvironment(environment);
+			return bodyAsCLRExpression(environment);
 		}
 
- 		public override Expression asCLRExpression() {
-			bindNonLocalVariablesToEnvironment();
+ 		public override Expression asCLRExpression(ESNamespace environment) {
+			bindNonLocalVariablesToEnvironment(environment);
 			var parameters = ParmeterExpressions;
-			var body = bodyAsCLRExpression();
+			var body = bodyAsCLRExpression(environment);
 			return Expression.Lambda(body, useTailCallOptimization, parameters);
 
 			#region Legacy implementation
@@ -1361,11 +1362,6 @@ namespace EssenceSharp.CompilationServices {
 			this.selector = selector;
 		}
 
-		public ESBehavior HomeClass {
-			get {return Context.MethodHomeClass;}
-			internal set {Context.MethodHomeClass = value;}
-		}
-
 		public ESSymbol Selector {
 			get {return selector;}
 		}
@@ -1387,7 +1383,7 @@ namespace EssenceSharp.CompilationServices {
 			base.parameterDeclarationsDo(enumerator1);
 		}
 
-		protected override Expression bodyAsCLRExpression() {
+		protected override Expression bodyAsCLRExpression(ESNamespace environment) {
 			if (StatementCount < 1) return Context.SelfParameter;
 			var exception = Expression.Parameter(TypeGuru.nonLocalReturnExceptionType, "ex");
 			var exceptionReturnValue = Expression.Field(exception, "returnValue");
@@ -1400,14 +1396,14 @@ namespace EssenceSharp.CompilationServices {
 							Expression.Block(TypeGuru.objectType, Expression.Rethrow(), exceptionReturnValue)));
 			var catchBlock = Expression.Catch(exception, handleNonLocalReturnExpression);
 			return  Expression.Block(
-					Expression.TryCatch(body.asCLRExpression(), catchBlock),
+					Expression.TryCatch(body.asCLRExpression(environment), catchBlock),
 					Expression.Label(Context.ReturnTarget, Context.SelfParameter));
 		}
 
- 		public override Expression asCLRExpression() {
-			bindNonLocalVariablesToEnvironment();
+ 		public override Expression asCLRExpression(ESNamespace environment) {
+			bindNonLocalVariablesToEnvironment(environment);
 			var parameters = ParmeterExpressions;
-			var body = bodyAsCLRExpression();
+			var body = bodyAsCLRExpression(environment);
 			return Expression.Lambda(body, useTailCallOptimization, parameters);
 			
 			#region Legacy implementation
@@ -1487,10 +1483,8 @@ namespace EssenceSharp.CompilationServices {
 
 		}
 
-		public void recompileFor(ESMethod method) {
-			HomeClass = method.HomeClass;
-			invalidateCachedExpressions();
-			method.Function = Function;
+		public void compileFor(ESMethod method) {
+			method.Function = functionFor(method.HomeClass);
 		}
 
 	}
@@ -1507,9 +1501,10 @@ namespace EssenceSharp.CompilationServices {
 			get {return true;}
 		}
 
- 		public Expression onFailCodeAsCLRExpression() {
-			if (StatementCount > 0) return base.bodyAsCLRExpression();
+ 		public Expression onFailCodeAsCLRExpression(ESNamespace environment) {
+			if (StatementCount > 0) return base.bodyAsCLRExpression(environment);
 			var kernel = Context.Kernel;
+			var homeClass = environment as ESBehavior;
 			var parameters = ParmeterExpressions;
 			var parametersArray = new Expression[parameters.Count];
 			for (var i = 0; i < parametersArray.Length; i++) parametersArray[i] = parameters[i];
@@ -1517,7 +1512,7 @@ namespace EssenceSharp.CompilationServices {
 			return Expression.Block(
 				new ParameterExpression[]{Context.SelfParameter},
 				Expression.Assign(Context.SelfParameter, Expression.Constant(Context.SelfValue)),
-				ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, HomeClass, kernel.SymbolRegistry, message));
+				ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, homeClass, kernel.SymbolRegistry, message));
 		}
 
 	}
@@ -1538,11 +1533,11 @@ namespace EssenceSharp.CompilationServices {
 			get {return primitiveFunction;}
 		}
 
-		protected override Expression bodyAsCLRExpression() {
+		protected override Expression bodyAsCLRExpression(ESNamespace environment) {
 			var arguments = new List<Expression>();
 			foreach (var p in ParmeterExpressions) arguments.Add(p);
 			var invokePrimExpression = Expression.Invoke(Expression.Convert(Expression.Constant(PrimitiveFunction), ESCompiledCode.methodFunctionTypeForNumArgs(NumArgs)), arguments); 
-			var catchBlock = Expression.Catch(TypeGuru.primitiveFailExceptionType, onFailCodeAsCLRExpression());
+			var catchBlock = Expression.Catch(TypeGuru.primitiveFailExceptionType, onFailCodeAsCLRExpression(environment));
 			return Expression.TryCatch(invokePrimExpression, catchBlock);
 		}
 
@@ -1568,13 +1563,13 @@ namespace EssenceSharp.CompilationServices {
 			get {return operation;}
 		}
 
-		protected override Expression bodyAsCLRExpression() {
+		protected override Expression bodyAsCLRExpression(ESNamespace environment) {
 			// The implementation is simply to invoke the method by sending the message specified by its selector, 
 			// because the dynamic binding logic won't actually invoke the method function, but will instead emit 
 			// appropriate inline code as specified by the InlineOperation. And if the method's function ever is 
 			// actually invoked, the dynamic binding logic will nevertheless just do whatever the method's 
 			// InlineOperation specifies, without recursively invoking the method's function a second time.
-			InlineOperation.OnFailExpression = onFailCodeAsCLRExpression();
+			InlineOperation.OnFailExpression = onFailCodeAsCLRExpression(environment);
 			MessageNode message = null;
 			switch (Selector.Type) {
 				case SymbolType.Identifier:
@@ -1592,7 +1587,7 @@ namespace EssenceSharp.CompilationServices {
 					break;
 			}
 			var messageSend = Context.newMessageSendNode(Context.newSelfNode(), message);
-			return messageSend.asCLRExpression();
+			return messageSend.asCLRExpression(environment);
 		}
 
 	}
@@ -1618,7 +1613,7 @@ namespace EssenceSharp.CompilationServices {
 			get {return DeclarationNode.Scope;}
 		}
 
-		public abstract System.Collections.Generic.HashSet<ESSymbol> UndeclaredVariables {
+		public abstract HashSet<ESSymbol> UndeclaredVariables {
 			get;
 		}
 
@@ -1672,7 +1667,7 @@ namespace EssenceSharp.CompilationServices {
 			get {return declarationNode;}
 		}
 
-		public override System.Collections.Generic.HashSet<ESSymbol> UndeclaredVariables {
+		public override HashSet<ESSymbol> UndeclaredVariables {
 			get {return declarationNode.UndeclaredVariables;}
 		}
 
@@ -1681,19 +1676,19 @@ namespace EssenceSharp.CompilationServices {
 			declarationNode.invalidateCachedExpressions();
 		}
 
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			return declarationNode.bindNonLocalVariablesToEnvironment();
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			return declarationNode.bindNonLocalVariablesToEnvironment(environment);
 		}
 
- 		public override Expression asInlinedCLRExpression() {
-			return declarationNode.asInlinedCLRExpression();
+ 		public override Expression asInlinedCLRExpression(ESNamespace environment) {
+			return declarationNode.asInlinedCLRExpression(environment);
 		}
 
- 		public override Expression asCLRExpression() {
+ 		public override Expression asCLRExpression(ESNamespace environment) {
 			if (cachedExpression != null) return cachedExpression;
 			return cachedExpression = ExpressionTreeGuru.expressionToCreateESBlock(
 									Context.Kernel.BlockClass, 
-									declarationNode.asCLRExpression(),
+									declarationNode.asCLRExpression(environment),
 									declarationNode.NumArgs);
 		}
 
@@ -1719,7 +1714,7 @@ namespace EssenceSharp.CompilationServices {
 			get {return declarationNode.Selector;}
 		}
 
-		public override System.Collections.Generic.HashSet<ESSymbol> UndeclaredVariables {
+		public override HashSet<ESSymbol> UndeclaredVariables {
 			get {return declarationNode.UndeclaredVariables;}
 		}
 
@@ -1728,13 +1723,14 @@ namespace EssenceSharp.CompilationServices {
 			declarationNode.invalidateCachedExpressions();
 		}
 
-		public override System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
-			return declarationNode.bindNonLocalVariablesToEnvironment();
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+			return declarationNode.bindNonLocalVariablesToEnvironment(environment);
 		}
 
- 		public override Expression asCLRExpression() {
+ 		public override Expression asCLRExpression(ESNamespace environment) {
 			if (cachedExpression != null) return cachedExpression;
-			return cachedExpression = ExpressionTreeGuru.expressionToCreateESMethod(Context.Kernel.MethodClass, declarationNode);
+			var homeClass = environment as ESBehavior;
+			return cachedExpression = ExpressionTreeGuru.expressionToCreateESMethod(Context.Kernel.MethodClass, homeClass, declarationNode);
 		}
 
 	}

@@ -29,6 +29,7 @@
 
 #region Using declarations
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Reflection;
 using System.Dynamic;
@@ -149,14 +150,18 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		protected Delegate											function					= null;
-		protected long 												numArgs 					= 0;
+		protected Delegate											function;
+		protected long 												numArgs;
 		
 		protected ESCompiledCode(ESBehavior esClass) : base(esClass) {
 			setFunctionToDefault(out function);
 		}
 		
-		public ESCompiledCode(ESBehavior esClass, Delegate function, long numArgs) : base(esClass) {
+		protected ESCompiledCode(ESBehavior esClass, long numArgs) : base(esClass) {
+			this.numArgs = numArgs;
+		}
+		
+		protected ESCompiledCode(ESBehavior esClass, Delegate function, long numArgs) : base(esClass) {
 			this.numArgs = numArgs;
 			Function = function;
 		}
@@ -167,11 +172,19 @@ namespace EssenceSharp.Runtime {
 			get {return numArgs;}
 			set {numArgs = value;}
 		}
-		
+
+		public bool HasFunction {
+			get {return function != null;}
+		}
+
 		public Delegate Function {
 			get {return function;}
 			set {function = value;
 				if (function == null) setFunctionToDefault(out function); }
+		}
+		
+		public abstract ESNamespace Environment {
+			get;
 		}
 		
 		public abstract ESMethod HomeMethod {
@@ -370,7 +383,7 @@ namespace EssenceSharp.Runtime {
 	
 	public class ESBlock : ESCompiledCode {
 
-		protected ESCompiledCode 									lexicalContext 				= null;
+		protected ESCompiledCode 									lexicalContext;
 		
 		public ESBlock(ESBehavior esClass) : base(esClass) {
 		}
@@ -386,6 +399,10 @@ namespace EssenceSharp.Runtime {
 			get {return true;}
 		}
 		
+		public override ESNamespace Environment {
+			get {return HasHomeClass ? HomeClass : null;}
+		}
+		
 		public ESCompiledCode LexicalContext {
 			get {return lexicalContext;}
 			set {lexicalContext = value;}
@@ -395,12 +412,12 @@ namespace EssenceSharp.Runtime {
 			get {return lexicalContext == null ? null : lexicalContext.HomeMethod;}
 		}
 		
-		public override ESBehavior HomeClass {
-			get {return lexicalContext == null ? null : lexicalContext.HomeClass;}
-		}
-		
 		public override bool HasHomeClass {
 			get {return lexicalContext == null ? false : lexicalContext.HasHomeClass;}
+		}
+		
+		public override ESBehavior HomeClass {
+			get {return lexicalContext == null ? null : lexicalContext.HomeClass;}
 		}
 		
 		public override ESBlock asBlock() {
@@ -999,9 +1016,29 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			#region Primitive Definitions
+
+			public static Object _numArgs_(Object receiver) {
+				return ((ESBlock)receiver).NumArgs;
+			}
+		
+			public static Object _environment_(Object receiver) {
+				return ((ESBlock)receiver).Environment;
+			}
 		
 			public static Object _lexicalContext_(Object receiver) {
 				return ((ESBlock)receiver).LexicalContext;
+			}
+		
+			public static Object _homeMethod_(Object receiver) {
+				return ((ESBlock)receiver).HomeMethod;
+			}
+		
+			public static Object _hasHomeClass_(Object receiver) {
+				return ((ESBlock)receiver).HasHomeClass;
+			}
+		
+			public static Object _homeClass_(Object receiver) {
+				return ((ESBlock)receiver).HomeClass;
 			}
 		
 			public static Object _whileNil_(Object receiver) {
@@ -1199,10 +1236,15 @@ namespace EssenceSharp.Runtime {
 			}
 
 			#endregion
-
+		
 			public override void publishCanonicalPrimitives() {
 
+				publishPrimitive("numArgs",					new FuncNs.Func<Object, Object>(_numArgs_));
+
+				publishPrimitive("environment",					new FuncNs.Func<Object, Object>(_environment_));
 				publishPrimitive("lexicalContext",				new FuncNs.Func<Object, Object>(_lexicalContext_));
+				publishPrimitive("homeMethod",					new FuncNs.Func<Object, Object>(_homeMethod_));
+				publishPrimitive("hasHomeClass",				new FuncNs.Func<Object, Object>(_hasHomeClass_));
 
 				publishPrimitive("whileNil",					new FuncNs.Func<Object, Object>(_whileNil_));
 				publishPrimitive("whileNotNil",					new FuncNs.Func<Object, Object>(_whileNotNil_));
@@ -1295,11 +1337,11 @@ namespace EssenceSharp.Runtime {
 
 	public class ESMethod : ESCompiledCode {
 		
-		protected ESSymbol										selector				= null;
+		protected ESBehavior 										homeClass;
+		protected ESSymbol										selector;
 		protected InlineOperation									inlineOperation;
-		protected ESBehavior 										lexicalContext 				= null;
-		protected System.Collections.Generic.HashSet<ESSymbol>						protocols				= null;
-		protected MethodDeclarationNode									methodDeclarationNode			= null;
+		protected MethodDeclarationNode									methodDeclarationNode;
+		protected HashSet<ESSymbol>									protocols;
 		
 		internal ESMethod(ESBehavior esClass) : base(esClass) {
 		}
@@ -1307,41 +1349,41 @@ namespace EssenceSharp.Runtime {
 		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function) : this(esClass, selector, function, null, null) {
 		}
 		
-		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, ESBehavior lexicalContext) : this(esClass, selector, function, lexicalContext, null) {
+		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, ESBehavior homeClass) : this(esClass, selector, function, homeClass, null) {
 		}
 		
 		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, ESSymbol protocol) : this(esClass, selector, function, null, protocol) {
 		}
 		
-		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, ESBehavior lexicalContext, ESSymbol protocol) : this(esClass, selector, null, function, lexicalContext, protocol) {
+		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, ESBehavior homeClass, ESSymbol protocol) : this(esClass, selector, null, function, homeClass, protocol) {
 		}
 		
 		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function) : this(esClass, selector, inlineOperation, function, null, null) {
 		}
 		
-		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior lexicalContext) : this(esClass, selector, inlineOperation, function, lexicalContext, null) {
+		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior homeClass) : this(esClass, selector, inlineOperation, function, homeClass, null) {
 		}
 
 		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESSymbol protocol) : this(esClass, selector, inlineOperation, function, null, protocol) {
 		}
 		
-		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior lexicalContext, ESSymbol protocol) : base(esClass) {
+		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior homeClass, ESSymbol protocol) : base(esClass) {
 			Selector		= selector;
 			this.inlineOperation	= inlineOperation;
 			Function		= function;
-			LexicalContext		= lexicalContext;
+			setHomeClass(homeClass);
 			addToProtocol(protocol);
 		}
 		
-		public ESMethod(ESBehavior esClass, MethodDeclarationNode methodDeclarationNode) : this(esClass, methodDeclarationNode, null) {
+		public ESMethod(ESBehavior esClass, ESBehavior homeClass, MethodDeclarationNode methodDeclarationNode) : this(esClass, homeClass, methodDeclarationNode, null) {
 		}
 		
-		public ESMethod(ESBehavior esClass, MethodDeclarationNode methodDeclarationNode, ESSymbol protocol) 
+		public ESMethod(ESBehavior esClass, ESBehavior homeClass, MethodDeclarationNode methodDeclarationNode, ESSymbol protocol) 
 			: this(esClass, 
 				methodDeclarationNode.Selector,
 				methodDeclarationNode.InlineOperation,
-				methodDeclarationNode.Function,
-				methodDeclarationNode.HomeClass,
+				methodDeclarationNode.functionFor(homeClass),
+				homeClass,
 				protocol) {
 			this.methodDeclarationNode = methodDeclarationNode;
 		}
@@ -1357,6 +1399,10 @@ namespace EssenceSharp.Runtime {
 		public override bool IsMethod {
 			get {return true;}
 		}
+		
+		public override ESMethod asESMethod() {
+			return this;
+		}
 
 		public MethodOperationType OperationType {
 			get {return inlineOperation == null ? MethodOperationType.Function : inlineOperation.Type;}
@@ -1369,17 +1415,21 @@ namespace EssenceSharp.Runtime {
 		public InlineOperation InlineOperation {
 			get {return inlineOperation;}
 		}
+		
+		public override ESNamespace Environment {
+			get {return homeClass;}
+		}
 
-		public ESBehavior LexicalContext {
-			get {return lexicalContext;}
-			set {	bool isNewContext = lexicalContext != value;
-				lexicalContext = value;
-				if (isNewContext) recompile();}
+		public override ESMethod HomeMethod {
+			get {return this;}
 		}
 		
-		public override long NumArgs {
-			get {return numArgs;}
-			set {}
+		public override bool HasHomeClass {
+			get {return homeClass != null;}
+		}
+
+		public override ESBehavior HomeClass {
+			get {return homeClass;}
 		}
 		
 		public ESSymbol Selector {
@@ -1388,46 +1438,51 @@ namespace EssenceSharp.Runtime {
 				numArgs = selector == null ? 0 : selector.NumArgs;}
 		}
 		
+		public override long NumArgs {
+			get {return numArgs;}
+			set {}
+		}
+		
 		public long ProtocolCount {
 			get {return protocols == null ? 0 : protocols.Count;}
 		}
 
-		public System.Collections.Generic.HashSet<ESSymbol> Protocols {
+		public HashSet<ESSymbol> Protocols {
  			get {return protocols;}
 		}
-		
-		public override ESBehavior HomeClass {
-			get {return lexicalContext;}
+
+		internal void setHomeClass(ESBehavior newHomeClass) {
+			bool isNewHomeClass = homeClass != newHomeClass;
+			homeClass = newHomeClass;
+			if (isNewHomeClass) recompile();
 		}
 
-		public override ESMethod HomeMethod {
-			get {return this;}
-		}
-		
-		public override bool HasHomeClass {
-			get {return lexicalContext != null;}
-		}
-		
 		public void recompile() {
-			if (methodDeclarationNode == null) return;
-			methodDeclarationNode.recompileFor(this);
+			if (homeClass == null || methodDeclarationNode == null) return;
+			Function = methodDeclarationNode.functionFor(homeClass);
 		}
 
 		internal void become(ESMethod other) {
-			methodDeclarationNode = other.MethodDeclarationNode;
 			inlineOperation = other.InlineOperation;
-			Function = other.Function;
+			methodDeclarationNode = other.MethodDeclarationNode;
+			var otherHomeClass = other.HomeClass;
+			bool isNewHomeClass = homeClass != otherHomeClass;
+			if (isNewHomeClass) {
+				recompile();
+			} else { 
+				Function = other.Function;
+			}
 			if (other.ProtocolCount > 0) foreach (var protocol in other.Protocols) addToProtocol(protocol);
 		}
 		
-		public override ESMethod asESMethod() {
-			return this;
-		}
-		
-		public ESMethod newCopyIn(ESBehavior newLexicalContext) {
+		public ESMethod newCopyIn(ESBehavior newHomeClass) {
 			var newCopy = (ESMethod)copy();
-			newCopy.LexicalContext = newLexicalContext;
+			newCopy.setHomeClass(newHomeClass);
 			return newCopy;
+		}
+
+		protected HashSet<ESSymbol> newProtocolSet() {
+			return new HashSet<ESSymbol>(new ESSymbolIdentityComparator());
 		}
 
 		public void protocolsDo(FuncNs.Func<Object, Object> enumerator1) {
@@ -1437,7 +1492,7 @@ namespace EssenceSharp.Runtime {
 
 		public void addToProtocol(ESSymbol protocol) {
 			if (protocol == null) return;
-			if (protocols == null) protocols = new System.Collections.Generic.HashSet<ESSymbol>();
+			if (protocols == null) protocols = newProtocolSet();
 			protocols.Add(protocol);
 		}
 
@@ -2039,8 +2094,28 @@ namespace EssenceSharp.Runtime {
 		
 			#region Primitive Definitions
 		
+			public Object _environment_(Object receiver) {
+				return ((ESMethod)receiver).Environment;
+			}
+		
+			public Object _homeMethod_(Object receiver) {
+				return ((ESMethod)receiver).HomeMethod;
+			}
+		
+			public Object _hasHomeClass_(Object receiver) {
+				return ((ESMethod)receiver).HasHomeClass;
+			}
+		
+			public Object _homeClass_(Object receiver) {
+				return ((ESMethod)receiver).HomeClass;
+			}
+		
 			public Object _selector_(Object receiver) {
 				return ((ESMethod)receiver).Selector;
+			}
+		
+			public Object _numArgs_(Object receiver) {
+				return ((ESMethod)receiver).NumArgs;
 			}
 		
 			public Object _protocolCount_(Object receiver) {
@@ -2209,6 +2284,12 @@ namespace EssenceSharp.Runtime {
 
 			public override void publishCanonicalPrimitives() {
 
+				publishPrimitive("environment",					new FuncNs.Func<Object, Object>(_environment_));
+				publishPrimitive("homeMethod",					new FuncNs.Func<Object, Object>(_homeMethod_));
+				publishPrimitive("hasHomeClass",				new FuncNs.Func<Object, Object>(_hasHomeClass_));
+				publishPrimitive("homeClass",					new FuncNs.Func<Object, Object>(_homeClass_));
+	
+				publishPrimitive("numArgs",					new FuncNs.Func<Object, Object>(_numArgs_));
 				publishPrimitive("selector",					new FuncNs.Func<Object, Object>(_selector_));
 
 				publishPrimitive("protocolCount",				new FuncNs.Func<Object, Object>(_protocolCount_));

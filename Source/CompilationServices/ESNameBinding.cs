@@ -68,17 +68,16 @@ namespace EssenceSharp.CompilationServices {
 			this.outerScope = outerScope;
 		}
 
-		public System.Collections.Generic.HashSet<ESSymbol> bindNonLocalVariablesToEnvironment() {
+		public HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
 			if (nonLocalBindings == null) {
-				if (outerScope != null) return outerScope.bindNonLocalVariablesToEnvironment();
+				if (outerScope != null) return outerScope.bindNonLocalVariablesToEnvironment(environment);
 				return null;
 			}
 			String nameContext;
 			instanceVariableBindings = null;
 			namespaceResidentBindings = null;
-			System.Collections.Generic.HashSet<ESSymbol> instVarNames = null;
-			var environment = Context.Environment;
-			var methodHomeClass = Context.MethodHomeClass;
+			HashSet<ESSymbol> instVarNames = null;			
+			var methodHomeClass = environment as ESBehavior;
 			var methodName = Context.MethodSelector;
 			if (methodName != null) {
 				if (methodHomeClass == null) {
@@ -86,7 +85,7 @@ namespace EssenceSharp.CompilationServices {
 				} else {
 					nameContext = methodHomeClass.PathnameString + ">>" + methodName.PrimitiveValue + " => ";
 					methodHomeClass.allInstVarNamesAndIndexesDo((instVarName, index) => {
-						if (instVarNames == null) instVarNames = new System.Collections.Generic.HashSet<ESSymbol>();
+						if (instVarNames == null) instVarNames = new HashSet<ESSymbol>();
 						instVarNames.Add(instVarName);
 						NonLocalVariableDeclaration nonLocalVar;
 						if (nonLocalBindings.TryGetValue(instVarName, out nonLocalVar)) {
@@ -98,16 +97,16 @@ namespace EssenceSharp.CompilationServices {
 			} else {
 				nameContext = environment.PathnameString + " => ";
 			}
-			System.Collections.Generic.HashSet<ESSymbol> undeclared = null;
+			HashSet<ESSymbol> undeclared = null;
 			foreach (var kvp in nonLocalBindings) {
 				var nonLocalVar = kvp.Value;
 				var nonLocalName = nonLocalVar.NameSymbol;
 				if (instVarNames == null || !instVarNames.Contains(nonLocalName)) {
-					var nsResidentVar = declareNamespaceVariable(nonLocalName, null);
+					var nsResidentVar = declareNamespaceVariable(environment, nonLocalName, null);
 					nonLocalVar.occurrencesDo(occurrence => occurrence.Declaration = nsResidentVar);
 					var binding = nonLocalName.bindingInNamespaceIfAbsent(environment, AccessPrivilegeLevel.Local, ImportTransitivity.Transitive, null);
 					if (binding == null) {
-						if (undeclared == null) undeclared = new System.Collections.Generic.HashSet<ESSymbol>();
+						if (undeclared == null) undeclared = new HashSet<ESSymbol>();
 						var nameInContext = Context.symbolFor(nameContext + nonLocalName);
 						undeclared.Add(nameInContext);
 					}
@@ -305,11 +304,11 @@ namespace EssenceSharp.CompilationServices {
 			return (PseudovariableThisContext)thisContext;
 		}
 
-		public NamespaceResidentVariableDeclaration declareNamespaceVariable(ESSymbol name, Functor1<NamespaceResidentVariableDeclaration, String> collisionAction) {
+		public NamespaceResidentVariableDeclaration declareNamespaceVariable(ESNamespace environment, ESSymbol name, Functor1<NamespaceResidentVariableDeclaration, String> collisionAction) {
 			if (namespaceResidentBindings == null) {
 				namespaceResidentBindings = new Dictionary<String, NamespaceResidentVariableDeclaration>();
 			} else if (namespaceResidentBindings.ContainsKey(name)) return collisionAction(name);
-			var declaration = new NamespaceResidentVariableDeclaration(this, name);
+			var declaration = new NamespaceResidentVariableDeclaration(environment, this, name);
 			namespaceResidentBindings[name] = declaration;
 			return declaration;
 		}
@@ -580,9 +579,9 @@ namespace EssenceSharp.CompilationServices {
 		protected ConstantExpression getVariableCallSite;
 		protected ConstantExpression setVariableCallSite;
 
-		public NamespaceResidentVariableDeclaration(NameBindingScope scope, ESSymbol name) : base(scope, name) {
-			getVariableCallSite = Context.getVariableValueCallSiteConstantFor(name);
-			setVariableCallSite = Context.setVariableValueCallSiteConstantFor(name);
+		public NamespaceResidentVariableDeclaration(ESNamespace environment, NameBindingScope scope, ESSymbol name) : base(scope, name) {
+			getVariableCallSite = Context.getVariableValueCallSiteConstantFor(environment, name);
+			setVariableCallSite = Context.setVariableValueCallSiteConstantFor(environment, name);
 		}
 
 		public override Expression asCLRGetValueExpression() {

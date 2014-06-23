@@ -471,10 +471,6 @@ namespace EssenceSharp.Runtime {
 			return new ESBehavior(canonicalBehaviorClass, this, instanceArchitecture, superclass);
 		}
 
-		public ESBehavior newBehavior(ObjectStateArchitecture instanceArchitecture, ESSymbol[] instanceVarnames, ESBehavior superclass) {
-			return new ESBehavior(canonicalBehaviorClass, this, instanceArchitecture, instanceVarnames, superclass);
-		}
-
 		public ESClass newClass() {
 			return new ESClass(newMetaclass());
 		}
@@ -531,12 +527,12 @@ namespace EssenceSharp.Runtime {
 			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function);
 		}
 
-		public ESMethod newMethod(ESSymbol selector, Delegate function, ESBehavior lexicalContext) {
-			return new ESMethod(canonicalMethodClass, selector, function, lexicalContext);
+		public ESMethod newMethod(ESSymbol selector, Delegate function, ESBehavior homeClass) {
+			return new ESMethod(canonicalMethodClass, selector, function, homeClass);
 		}
 
-		public ESMethod newMethod(ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior lexicalContext) {
-			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function, lexicalContext);
+		public ESMethod newMethod(ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior homeClass) {
+			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function, homeClass);
 		}
 
 		public ESMethod newMethod(ESSymbol selector, Delegate function, ESSymbol protocol) {
@@ -547,20 +543,20 @@ namespace EssenceSharp.Runtime {
 			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function, protocol);
 		}
 
-		public ESMethod newMethod(ESSymbol selector, Delegate function, ESBehavior lexicalContext, ESSymbol protocol) {
-			return new ESMethod(canonicalMethodClass, selector, function, lexicalContext, protocol);
+		public ESMethod newMethod(ESSymbol selector, Delegate function, ESBehavior homeClass, ESSymbol protocol) {
+			return new ESMethod(canonicalMethodClass, selector, function, homeClass, protocol);
 		}
 
-		public ESMethod newMethod(ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior lexicalContext, ESSymbol protocol) {
-			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function, lexicalContext, protocol);
+		public ESMethod newMethod(ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior homeClass, ESSymbol protocol) {
+			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function, homeClass, protocol);
 		}
 
-		public ESMethod newMethod(MethodDeclarationNode methodDeclarationNode) {
-			return new ESMethod(canonicalMethodClass, methodDeclarationNode);
+		public ESMethod newMethod(ESBehavior homeClass, MethodDeclarationNode methodDeclarationNode) {
+			return new ESMethod(canonicalMethodClass, homeClass, methodDeclarationNode);
 		}
 
-		public ESMethod newMethod(MethodDeclarationNode methodDeclarationNode, ESSymbol protocol) {
-			return new ESMethod(canonicalMethodClass, methodDeclarationNode, protocol);
+		public ESMethod newMethod(ESBehavior homeClass, MethodDeclarationNode methodDeclarationNode, ESSymbol protocol) {
+			return new ESMethod(canonicalMethodClass, homeClass, methodDeclarationNode, protocol);
 		}
 
 		#endregion
@@ -1990,53 +1986,53 @@ namespace EssenceSharp.Runtime {
 
 		protected virtual void establishCanonicalClassInheritanceStructure() {
 
-			canonicalObjectClass.Superclass = null;
-			canonicalNamespaceClass.Superclass = canonicalKeyedCollectionClass;
-			canonicalBehaviorClass.Superclass = canonicalNamespaceClass;
-			canonicalClassClass.Superclass = canonicalBehaviorClass;
-			canonicalMetaclassClass.Superclass = canonicalBehaviorClass;
-			canonicalCompiledCodeClass.Superclass = canonicalObjectClass;
-			canonicalBlockClass.Superclass = canonicalCompiledCodeClass;
-			canonicalMethodClass.Superclass = canonicalCompiledCodeClass;
-			canonicalAssociationClass.Superclass = canonicalObjectClass;
-			canonicalBindingReferenceClass.Superclass = canonicalObjectClass;
-			canonicalMessageClass.Superclass = canonicalObjectClass;
-			canonicalMagnitudeClass.Superclass = canonicalObjectClass;
+			canonicalObjectClass.setSuperclass(null);
+			canonicalNamespaceClass.setSuperclass(canonicalKeyedCollectionClass);
+			canonicalBehaviorClass.setSuperclass(canonicalNamespaceClass);
+			canonicalClassClass.setSuperclass(canonicalBehaviorClass);
+			canonicalMetaclassClass.setSuperclass(canonicalBehaviorClass);
+			canonicalCompiledCodeClass.setSuperclass(canonicalObjectClass);
+			canonicalBlockClass.setSuperclass(canonicalCompiledCodeClass);
+			canonicalMethodClass.setSuperclass(canonicalCompiledCodeClass);
+			canonicalAssociationClass.setSuperclass(canonicalObjectClass);
+			canonicalBindingReferenceClass.setSuperclass(canonicalObjectClass);
+			canonicalMessageClass.setSuperclass(canonicalObjectClass);
+			canonicalMagnitudeClass.setSuperclass(canonicalObjectClass);
 
-			canonicalCollectionClass.Superclass = canonicalObjectClass;
-			canonicalKeyedCollectionClass.Superclass = canonicalCollectionClass;
-			canonicalIdentityDictionaryClass.Superclass = canonicalKeyedCollectionClass;
-			canonicalDictionaryClass.Superclass = canonicalIdentityDictionaryClass;
-			canonicalSequenceableCollectionClass.Superclass = canonicalCollectionClass;
-			canonicalArrayedCollectionClass.Superclass = canonicalSequenceableCollectionClass;
-			canonicalArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalPrimitiveValueArrayClass.Superclass = canonicalArrayedCollectionClass;
-			canonicalByteArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
-			canonicalStringClass.Superclass = canonicalPrimitiveValueArrayClass;
-			canonicalSymbolClass.Superclass = canonicalStringClass;
-			canonicalHalfWordArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
-			canonicalWordArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
-			canonicalLongWordArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
-			canonicalFloatArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
-			canonicalDoubleArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
-			canonicalQuadArrayClass.Superclass = canonicalPrimitiveValueArrayClass;
-			canonicalPathnameClass.Superclass = canonicalPrimitiveValueArrayClass;
+			canonicalCollectionClass.setSuperclass(canonicalObjectClass);
+			canonicalKeyedCollectionClass.setSuperclass(canonicalCollectionClass);
+			canonicalIdentityDictionaryClass.setSuperclass(canonicalKeyedCollectionClass);
+			canonicalDictionaryClass.setSuperclass(canonicalIdentityDictionaryClass);
+			canonicalSequenceableCollectionClass.setSuperclass(canonicalCollectionClass);
+			canonicalArrayedCollectionClass.setSuperclass(canonicalSequenceableCollectionClass);
+			canonicalArrayClass.setSuperclass(canonicalArrayedCollectionClass);
+			canonicalPrimitiveValueArrayClass.setSuperclass(canonicalArrayedCollectionClass);
+			canonicalByteArrayClass.setSuperclass(canonicalPrimitiveValueArrayClass);
+			canonicalStringClass.setSuperclass(canonicalPrimitiveValueArrayClass);
+			canonicalSymbolClass.setSuperclass(canonicalStringClass);
+			canonicalHalfWordArrayClass.setSuperclass(canonicalPrimitiveValueArrayClass);
+			canonicalWordArrayClass.setSuperclass(canonicalPrimitiveValueArrayClass);
+			canonicalLongWordArrayClass.setSuperclass(canonicalPrimitiveValueArrayClass);
+			canonicalFloatArrayClass.setSuperclass(canonicalPrimitiveValueArrayClass);
+			canonicalDoubleArrayClass.setSuperclass(canonicalPrimitiveValueArrayClass);
+			canonicalQuadArrayClass.setSuperclass(canonicalPrimitiveValueArrayClass);
+			canonicalPathnameClass.setSuperclass(canonicalPrimitiveValueArrayClass);
 
-			canonicalPrimitiveValueClass.Superclass = null;
-			canonicalUndefinedObjectClass.Superclass = canonicalPrimitiveValueClass;
-			canonicalBooleanClass.Superclass = canonicalPrimitiveValueClass;
-			canonicalFalseClass.Superclass = canonicalBooleanClass;
-			canonicalTrueClass.Superclass = canonicalBooleanClass;
-			canonicalCharacterClass.Superclass = canonicalPrimitiveValueClass;
-			canonicalArithmeticValueClass.Superclass = canonicalPrimitiveValueClass;
-			canonicalNumberClass.Superclass = canonicalArithmeticValueClass;
-			canonicalIntegerClass.Superclass = canonicalNumberClass;
-			canonicalSmallIntegerClass.Superclass = canonicalIntegerClass;
-			canonicalRationalClass.Superclass = canonicalNumberClass;
-			canonicalInvariantPrecisionRealClass.Superclass = canonicalRationalClass;
-			canonicalFloatClass.Superclass = canonicalInvariantPrecisionRealClass;
-			canonicalDoubleClass.Superclass = canonicalInvariantPrecisionRealClass;
-			canonicalQuadClass.Superclass = canonicalInvariantPrecisionRealClass;
+			canonicalPrimitiveValueClass.setSuperclass(null);
+			canonicalUndefinedObjectClass.setSuperclass(canonicalPrimitiveValueClass);
+			canonicalBooleanClass.setSuperclass(canonicalPrimitiveValueClass);
+			canonicalFalseClass.setSuperclass(canonicalBooleanClass);
+			canonicalTrueClass.setSuperclass(canonicalBooleanClass);
+			canonicalCharacterClass.setSuperclass(canonicalPrimitiveValueClass);
+			canonicalArithmeticValueClass.setSuperclass(canonicalPrimitiveValueClass);
+			canonicalNumberClass.setSuperclass(canonicalArithmeticValueClass);
+			canonicalIntegerClass.setSuperclass(canonicalNumberClass);
+			canonicalSmallIntegerClass.setSuperclass(canonicalIntegerClass);
+			canonicalRationalClass.setSuperclass(canonicalNumberClass);
+			canonicalInvariantPrecisionRealClass.setSuperclass(canonicalRationalClass);
+			canonicalFloatClass.setSuperclass(canonicalInvariantPrecisionRealClass);
+			canonicalDoubleClass.setSuperclass(canonicalInvariantPrecisionRealClass);
+			canonicalQuadClass.setSuperclass(canonicalInvariantPrecisionRealClass);
 
 		}
 

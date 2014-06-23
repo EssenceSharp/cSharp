@@ -49,9 +49,103 @@ using EssenceSharp.Runtime.Binding;
 using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
-namespace EssenceSharp.Runtime { 
-	
-	public class ESBehavior : ESNamespace {
+namespace EssenceSharp.Runtime {
+
+	public interface BehaviorSpec : NamedSlotsObject {
+
+		ESKernel Kernel {
+			get;
+		}
+
+ 		bool HasSuperclass {
+			get;
+		}
+
+		#region Named instance variables
+
+		ESSymbol[] InstanceVariableNames {
+			get;
+		}
+
+		ESSymbol basicInstVarNameAt(long index);
+		
+		ESSymbol instVarNameAt(long index);
+		
+		long instVarIndexFor(ESSymbol instanceVariableName);
+		
+		long BasicInstSize {
+			get;
+		}
+		
+		long SuperInstSize {
+			get;
+		}
+		
+		long InstSize {
+			get;
+		}
+		
+		void allInstVarNamesAndIndexesDo(System.Action<ESSymbol, long> enumerator2);
+
+		#endregion
+		
+		#region Compiled Methods -- Smalltalk Protocol
+		
+		ESMethod basicCompiledMethodAt(ESSymbol selector);
+		
+		ESMethod compiledMethodAt(ESSymbol selector);
+
+		ESMethod addMethod(ESMethod newMethod);
+		
+		ESMethod addMethodBoundToSystemSelector(ESMethod newMethod, String systemSelector);
+
+		bool removeSelector(ESSymbol selector);
+		
+		bool includesSelector(ESSymbol selector);
+		
+		bool canUnderstand(ESSymbol selector);
+		
+		long selectorCount();
+		
+		ESSymbol[] selectors();
+		
+		void selectorsDo(FuncNs.Func<Object, Object> enumerator1);
+
+		void selectorsAndMethodsDo(FuncNs.Func<Object, Object, Object> enumerator2);
+		
+		#endregion
+		
+		#region Compiled Methods -- Host System Protocol
+
+		// Operations on methods whose selectors conform to host system (CLR) naming conventions
+
+		ESMethod compiledMethodAtSystemSelector(String systemSelector, long numArgs);
+		
+		ESMethod bindMethodToSystemSelector(ESSymbol essenceSelector, String systemSelector);
+		
+		bool unbindMethodFromSystemSelector(String systemSelector, long numArgs);
+		
+		bool includesSystemSelector(String systemSelector, long numArgs);
+		
+		bool canUnderstandSystemMessage(String systemSelector, long numArgs);
+		
+		long systemSelectorCount();
+		
+		void systemSelectorsDo(FuncNs.Func<Object, Object, Object> enumerator2);
+
+		void systemSelectorsAndMethodsDo(FuncNs.Func<Object, Object, Object, Object> enumerator3);
+		
+		#endregion
+
+		#region Compiling Methods
+
+		ESMethod compileMethod(ESSymbol protocol, TextReader sourceStream);
+
+		#endregion
+
+	}
+
+	public class ESBehavior : ESNamespace, BehaviorSpec {
 
 		#region Static variables and methods
 
@@ -296,27 +390,21 @@ namespace EssenceSharp.Runtime {
 		internal static readonly ESSymbol[]						emptyInstanceVariableNames	 	= new ESSymbol[0];
 		internal static readonly Dictionary<ESSymbol, long>				emptyInstanceVariableIndexes 		= new Dictionary<ESSymbol, long>();
 
-		protected static readonly Object[]						emtpyObjArray	 			= new Object[0];
-
 		#endregion
 
-		protected ESKernel								kernel					= null; 
-		protected ESBehavior								superclass				= null;
-		protected HashSet<ESBehavior>							subclasses				= null;
-		protected IDictionary<ESSymbol, ESMethod> 					methodDictionary 			= null;
-		protected IDictionary<long, IDictionary<String, ESMethod>>			hostSystemMethodDictionary		= null;
-		protected ObjectEqualityComparator						instanceEqualityComparator		= null;
-		protected FuncNs.Func<Object, Object, Object>					instanceEqualityFunctor			= null;
-		protected FuncNs.Func<Object, Object>						instanceHashFunctor			= null;
-		protected Type									instanceType				= null;
+		protected ESKernel								kernel; 
+		protected ESBehavior								superclass; 
+		protected HashSet<ESBehavior>							subclasses; 
+		protected IDictionary<ESSymbol, ESMethod> 					methodDictionary; 
+		protected IDictionary<long, IDictionary<String, ESMethod>>			hostSystemMethodDictionary; 
+		protected ObjectEqualityComparator						instanceEqualityComparator; 
+		protected FuncNs.Func<Object, Object, Object>					instanceEqualityFunctor; 
+		protected FuncNs.Func<Object, Object>						instanceHashFunctor; 
+		protected Type									instanceType; 
 		protected bool									isInstanceTypeLocked			= false;
-
 		protected ObjectStateArchitecture 						instanceArchitecture			= ObjectStateArchitecture.NamedSlots;
 		protected bool									constraintsMustBeSatisfied		= false;
-
 		protected bool									isInstanceArchitectureLocked		= false;
-		protected ESSymbol[]								instanceVariableNames			= emptyInstanceVariableNames;
-		protected Dictionary<ESSymbol, long>						instanceVariableIndexes			= emptyInstanceVariableIndexes;
 			
 		internal ESBehavior(ObjectStateArchitecture instanceArchitecture) : base(null) {
 			this.instanceArchitecture = instanceArchitecture;
@@ -325,33 +413,22 @@ namespace EssenceSharp.Runtime {
 
 		protected ESBehavior(ESBehavior metaClass) : base(metaClass) {
 			initialize();
-			instanceVariableNames = emptyInstanceVariableNames;
 		}
 
 		public ESBehavior(ESBehavior metaClass, ESKernel kernel) : this(metaClass) {
-			Kernel = kernel;
+			setKernel(kernel);
 		}
 			
 		protected ESBehavior(ESBehavior metaClass, ObjectStateArchitecture instanceArchitecture, ESBehavior superclass) 
 					: base(metaClass) {
 			this.instanceArchitecture = instanceArchitecture;
 			initialize();
-			Superclass = superclass;
+			setSuperclass(superclass);
 		}
 			
 		public ESBehavior(ESBehavior metaClass, ESKernel kernel, ObjectStateArchitecture instanceArchitecture, ESBehavior superclass) 
 					: this(metaClass, instanceArchitecture, superclass) {
-			Kernel = kernel;
-		}
-			
-		protected ESBehavior(ESBehavior metaClass, ObjectStateArchitecture instanceArchitecture, ESSymbol[] instanceVarnames, ESBehavior superclass) 
-					: this(metaClass, instanceArchitecture, superclass) {
-			setInstanceVariableNames(instanceVarnames);
-		}
-			
-		public ESBehavior(ESBehavior metaClass, ESKernel kernel, ObjectStateArchitecture instanceArchitecture, ESSymbol[] instanceVarnames, ESBehavior superclass) 
-					: this(metaClass, kernel, instanceArchitecture, superclass) {
-			setInstanceVariableNames(instanceVarnames);
+			setKernel(kernel);
 		}
 		
 		public override ObjectStateArchitecture Architecture {
@@ -378,14 +455,15 @@ namespace EssenceSharp.Runtime {
 			subclasses = new HashSet<ESBehavior>(new ESBehavorIdentityComparator());
 		}
 
-		internal ESKernel Kernel {
+		public ESKernel Kernel {
 			get {return kernel;}
-			set {
-				if (kernel == value) return;
-				if (kernel != null) unbindFromKernel();
-				kernel = value;
-				if (kernel != null) bindToKernel();
-			}
+		}
+
+		protected void setKernel(ESKernel newKernel) {
+			if (kernel == newKernel) return;
+			if (kernel != null) unbindFromKernel();
+			kernel = newKernel;
+			if (kernel != null) bindToKernel();
 		}
 
 		protected virtual void unbindFromKernel() {
@@ -736,7 +814,6 @@ namespace EssenceSharp.Runtime {
 		
 		public ESBehavior Superclass {
 			get {return superclass;}
-			set {setSuperclass(value);}
 		}
 
 		protected bool canInheritFrom(ObjectStateArchitecture instanceArchitecture, ESBehavior aSuperclass) {
@@ -749,7 +826,7 @@ namespace EssenceSharp.Runtime {
 			return canInheritFrom(InstanceArchitecture, aSuperclass);
 		}
 
-		protected void setSuperclass(ESBehavior newSuperclass) {
+		public void setSuperclass(ESBehavior newSuperclass) {
 			if (superclass == newSuperclass) return;
 			if (newSuperclass != null) {
 				assertValidInheritanceStructure(newSuperclass);
@@ -794,12 +871,12 @@ namespace EssenceSharp.Runtime {
 			}
 			int prevSize = subclasses.Count;
 			subclasses.Add(subclass);
-			subclass.Superclass = this;
+			subclass.setSuperclass(this);
 		}
 
 		public void removeSubclass(ESBehavior subclass) {
 			if (subclass == null) return;
-			if (subclasses.Remove(subclass)) subclass.Superclass = null;
+			if (subclasses.Remove(subclass)) subclass.setSuperclass(null);
 		}
 
 		internal void bindToHostSystemSuperclasses() {
@@ -814,7 +891,7 @@ namespace EssenceSharp.Runtime {
 			}
 			if (systemSupertype == null) return;
 			var newSuperclass = kernel.classForHostSystemType(systemSupertype);
-			Superclass = newSuperclass;
+			setSuperclass(newSuperclass);
 		}
 
 		public bool includesBehavior(ESBehavior aBehavior) {
@@ -839,33 +916,8 @@ namespace EssenceSharp.Runtime {
 
 		#region Named instance variables
 
-		public ESSymbol[] InstanceVariableNames {
-			get {return instanceVariableNames;}
-			set {setInstanceVariableNames(value);}
-		}
-		
-		protected void setInstanceVariableNames(ESSymbol[] instanceVarNames) {
-			ESSymbol[] prevInstVarNames = instanceVariableNames;
-			if (InstancesCanHaveNamedSlots) {
-				instanceVariableNames = (instanceVarNames == null || instanceVarNames.Length < 1) ? emptyInstanceVariableNames : instanceVarNames;
-				if (!elementsAreIdentical(prevInstVarNames, instanceVariableNames)) {
-					invalidateInstanceVariableNames();
-				}
-			} else {
-				if (instanceVarNames == null || instanceVarNames.Length < 1) {
-					instanceVariableNames = emptyInstanceVariableNames;
-					if (prevInstVarNames.Length > 0) {
-						invalidateInstanceVariableNames();
-					}
-				} else if (isInstanceArchitectureLocked) {
-					throw new PrimInvalidOperandException("A Behavior with instance architecture " + instanceArchitecture + " cannot have any instance variables.");
-				} else {
-					InstanceArchitecture = ObjectStateArchitecture.NamedSlots;
-					setInstanceVariableNames(instanceVarNames);
-					return;
-				}
-			}
-			instanceVariableIndexes = null;
+		public virtual ESSymbol[] InstanceVariableNames {
+			get {return emptyInstanceVariableNames;}
 		}
 
 		protected virtual void invalidateInstanceVariableNames() {
@@ -874,49 +926,27 @@ namespace EssenceSharp.Runtime {
 			foreach (var subclass in subclasses) subclass.invalidateInstanceVariableNames();	
 		}
 
-		public ESSymbol basicInstVarNameAt(long index) {
-			if (index >= instanceVariableNames.Length || index < 0) return null;
-			return instanceVariableNames[index];
+		public virtual ESSymbol basicInstVarNameAt(long index) {
+			return null;
 		}
 		
-		public ESSymbol instVarNameAt(long index) {
+		public virtual ESSymbol instVarNameAt(long index) {
 			if (index < 0) return null;
 			long superInstSize = SuperInstSize;
 			if (index < superInstSize) return superInstSize > 0 ? superclass.instVarNameAt(index) : null;
-			index -= superInstSize;
-			if (index >= instanceVariableNames.Length) return null;
-			return instanceVariableNames[index];
+			return null;			
 		}
 		
-		public Dictionary<ESSymbol, long> InstanceVariableIndexes {
-			get {if (instanceVariableIndexes == null) mapInstanceVariableNamesToIndexes();
-				return instanceVariableIndexes;}
+		protected virtual Dictionary<ESSymbol, long> InstanceVariableIndexes {
+			get {return emptyInstanceVariableIndexes;}
 		}
 		
-		protected void mapInstanceVariableNamesToIndexes() {
-			if (instanceVariableNames.Length > 0) {
-				instanceVariableIndexes = new Dictionary<ESSymbol, long>();
-				for (uint index = 0; index < instanceVariableNames.Length; index++) {
-					instanceVariableIndexes[instanceVariableNames[index]] = index;
-				}
-			} else {
-				instanceVariableIndexes = emptyInstanceVariableIndexes;
-			}
+		public virtual long instVarIndexFor(ESSymbol instanceVariableName) {
+			return superclass == null ? -1 : superclass.instVarIndexFor(instanceVariableName);
 		}
 		
-		public long instVarIndexFor(ESSymbol instanceVariableName) {
-			if (instanceVariableIndexes == null) mapInstanceVariableNamesToIndexes();
-			if (instanceVariableIndexes.Count < 1) return superclass == null ? -1 : superclass.instVarIndexFor(instanceVariableName);
-			long index;
-			if (instanceVariableIndexes.TryGetValue(instanceVariableName, out index)) {
-				return index + SuperInstSize;
-			} else {
-				return superclass == null ? -1 : superclass.instVarIndexFor(instanceVariableName);
-			}
-		}
-		
-		public long BasicInstSize {
-			get {return instanceVariableNames.Length;}
+		public virtual long BasicInstSize {
+			get {return 0;}
 		}
 		
 		public long SuperInstSize {
@@ -927,17 +957,9 @@ namespace EssenceSharp.Runtime {
 			get {return SuperInstSize + BasicInstSize;}
 		}
 		
-		public void allInstVarNamesAndIndexesDo(System.Action<ESSymbol, long> enumerator2) {
-			long baseIndex = 0;
-			if (superclass != null) {
-				superclass.allInstVarNamesAndIndexesDo(enumerator2);
-				baseIndex = SuperInstSize;
-			}
-			if (instanceVariableNames.Length < 1) return;
-			for (var i = 0; i < instanceVariableNames.Length; i++) {
-				var name = instanceVariableNames[i];
-				enumerator2(name, baseIndex + i);
-			}
+		public virtual void allInstVarNamesAndIndexesDo(System.Action<ESSymbol, long> enumerator2) {
+			if (superclass == null) return;
+			superclass.allInstVarNamesAndIndexesDo(enumerator2);
 		}
 
 		#endregion
@@ -1612,7 +1634,7 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _setSuperclass_(Object receiver, Object superclass) {
-				((ESBehavior)receiver).Superclass = (ESBehavior)superclass;
+				((ESBehavior)receiver).setSuperclass((ESBehavior)superclass);
 				return receiver;
 			}
 		
@@ -1756,13 +1778,6 @@ namespace EssenceSharp.Runtime {
 				return kernel.newArray(Array.ConvertAll<ESSymbol, Object>(((ESBehavior)receiver).InstanceVariableNames, symbol => symbol));
 			}
 		
-			public Object _setInstanceVariableNames_(Object receiver, Object instanceVariableNames) {
-				Object[] namesArray = asHostArray<Object>(instanceVariableNames);
-				ESSymbol[] symbolArray = Array.ConvertAll<Object, ESSymbol>(namesArray, new Converter<Object, ESSymbol>(kernel.asESSymbol));
-				((ESBehavior)receiver).InstanceVariableNames = symbolArray;
-				return receiver;
-			}
-		
 			public Object _basicInstVarNameAt_(Object receiver, Object index) {
 				return ((ESBehavior)receiver).basicInstVarNameAt(asHostLong(index) - 1);
 			}
@@ -1836,7 +1851,6 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("instanceArchitecture",				new FuncNs.Func<Object, Object>(_instanceArchitecture_));
 				publishPrimitive("instanceArchitecture:",				new FuncNs.Func<Object, Object, Object>(_setInstanceArchitecture_));
 				publishPrimitive("instanceVariableNames",				new FuncNs.Func<Object, Object>(_instanceVariableNames_));
-				publishPrimitive("instanceVariableNames:",				new FuncNs.Func<Object, Object, Object>(_setInstanceVariableNames_));
 				publishPrimitive("basictInstVarNameAt:",				new FuncNs.Func<Object, Object, Object>(_basicInstVarNameAt_));
 				publishPrimitive("instVarNameAt:",					new FuncNs.Func<Object, Object, Object>(_instVarNameAt_));
 				publishPrimitive("instVarIndexFor:",					new FuncNs.Func<Object, Object, Object>(_instVarIndexFor_));
@@ -1852,8 +1866,152 @@ namespace EssenceSharp.Runtime {
 		}
 		
 	}
-	
-	public class ESClass : ESBehavior {
+
+	public abstract class ESAbstractClass : ESBehavior {
+
+		protected ESSymbol[]								instanceVariableNames			= emptyInstanceVariableNames;
+		protected Dictionary<ESSymbol, long>						instanceVariableIndexes			= emptyInstanceVariableIndexes;
+
+		internal ESAbstractClass(ObjectStateArchitecture instanceArchitecture) : base(instanceArchitecture) {
+		}
+
+		protected ESAbstractClass(ESBehavior metaClass) : base(metaClass) {
+			instanceVariableNames = emptyInstanceVariableNames;
+		}
+
+		public ESAbstractClass(ESBehavior metaClass, ESKernel kernel) : base(metaClass, kernel) {
+		}
+			
+		protected ESAbstractClass(ESBehavior metaClass, ObjectStateArchitecture instanceArchitecture, ESBehavior superclass) 
+					: base(metaClass, instanceArchitecture, superclass) {
+		}
+			
+		public ESAbstractClass(ESBehavior metaClass, ESKernel kernel, ObjectStateArchitecture instanceArchitecture, ESBehavior superclass) 
+					: base(metaClass, kernel, instanceArchitecture, superclass) {
+		}
+			
+		protected ESAbstractClass(ESBehavior metaClass, ObjectStateArchitecture instanceArchitecture, ESSymbol[] instanceVarnames, ESBehavior superclass) 
+					: base(metaClass, instanceArchitecture, superclass) {
+			setInstanceVariableNames(instanceVarnames);
+		}
+			
+		public ESAbstractClass(ESBehavior metaClass, ESKernel kernel, ObjectStateArchitecture instanceArchitecture, ESSymbol[] instanceVarnames, ESBehavior superclass) 
+					: base(metaClass, kernel, instanceArchitecture, superclass) {
+			setInstanceVariableNames(instanceVarnames);
+		}
+
+		#region Named instance variables
+
+		public override ESSymbol[] InstanceVariableNames {
+			get {return instanceVariableNames;}
+		}
+		
+		public void setInstanceVariableNames(ESSymbol[] instanceVarNames) {
+			ESSymbol[] prevInstVarNames = instanceVariableNames;
+			if (InstancesCanHaveNamedSlots) {
+				instanceVariableNames = (instanceVarNames == null || instanceVarNames.Length < 1) ? emptyInstanceVariableNames : instanceVarNames;
+				if (!elementsAreIdentical(prevInstVarNames, instanceVariableNames)) {
+					invalidateInstanceVariableNames();
+				}
+			} else {
+				if (instanceVarNames == null || instanceVarNames.Length < 1) {
+					instanceVariableNames = emptyInstanceVariableNames;
+					if (prevInstVarNames.Length > 0) {
+						invalidateInstanceVariableNames();
+					}
+				} else if (isInstanceArchitectureLocked) {
+					throw new PrimInvalidOperandException("A Behavior with instance architecture " + instanceArchitecture + " cannot have any instance variables.");
+				} else {
+					InstanceArchitecture = ObjectStateArchitecture.NamedSlots;
+					setInstanceVariableNames(instanceVarNames);
+					return;
+				}
+			}
+			instanceVariableIndexes = null;
+		}
+
+		public override ESSymbol basicInstVarNameAt(long index) {
+			if (index >= instanceVariableNames.Length || index < 0) return null;
+			return instanceVariableNames[index];
+		}
+		
+		public override ESSymbol instVarNameAt(long index) {
+			if (index < 0) return null;
+			long superInstSize = SuperInstSize;
+			if (index < superInstSize) return superInstSize > 0 ? superclass.instVarNameAt(index) : null;
+			index -= superInstSize;
+			if (index >= instanceVariableNames.Length) return null;
+			return instanceVariableNames[index];
+		}
+		
+		protected override Dictionary<ESSymbol, long> InstanceVariableIndexes {
+			get {if (instanceVariableIndexes == null) mapInstanceVariableNamesToIndexes();
+				return instanceVariableIndexes;}
+		}
+		
+		protected void mapInstanceVariableNamesToIndexes() {
+			if (instanceVariableNames.Length > 0) {
+				instanceVariableIndexes = new Dictionary<ESSymbol, long>();
+				for (uint index = 0; index < instanceVariableNames.Length; index++) {
+					instanceVariableIndexes[instanceVariableNames[index]] = index;
+				}
+			} else {
+				instanceVariableIndexes = emptyInstanceVariableIndexes;
+			}
+		}
+		
+		public override long instVarIndexFor(ESSymbol instanceVariableName) {
+			if (instanceVariableIndexes == null) mapInstanceVariableNamesToIndexes();
+			if (instanceVariableIndexes.Count < 1) return superclass == null ? -1 : superclass.instVarIndexFor(instanceVariableName);
+			long index;
+			if (instanceVariableIndexes.TryGetValue(instanceVariableName, out index)) {
+				return index + SuperInstSize;
+			} else {
+				return superclass == null ? -1 : superclass.instVarIndexFor(instanceVariableName);
+			}
+		}
+		
+		public override long BasicInstSize {
+			get {return instanceVariableNames.Length;}
+		}
+		
+		public long InstSize {
+			get {return SuperInstSize + BasicInstSize;}
+		}
+		
+		public override void allInstVarNamesAndIndexesDo(System.Action<ESSymbol, long> enumerator2) {
+			long baseIndex = 0;
+			if (superclass != null) {
+				superclass.allInstVarNamesAndIndexesDo(enumerator2);
+				baseIndex = SuperInstSize;
+			}
+			if (instanceVariableNames.Length < 1) return;
+			for (var i = 0; i < instanceVariableNames.Length; i++) {
+				var name = instanceVariableNames[i];
+				enumerator2(name, baseIndex + i);
+			}
+		}
+
+		#endregion
+
+		public new abstract class Primitives : PrimitiveDomain {
+		
+			public Object _setInstanceVariableNames_(Object receiver, Object instanceVariableNames) {
+				Object[] namesArray = asHostArray<Object>(instanceVariableNames);
+				ESSymbol[] symbolArray = Array.ConvertAll<Object, ESSymbol>(namesArray, new Converter<Object, ESSymbol>(kernel.asESSymbol));
+				((ESAbstractClass)receiver).setInstanceVariableNames(symbolArray);
+				return receiver;
+			}
+
+			public override void publishCanonicalPrimitives() {
+				publishPrimitive("instanceVariableNames:",				new FuncNs.Func<Object, Object, Object>(_setInstanceVariableNames_));
+			}
+
+		}
+
+	}
+
+	public class ESClass : ESAbstractClass {
 
 		internal ESClass(ObjectStateArchitecture instanceArchitecture) : base(instanceArchitecture) {
 		}
@@ -1912,7 +2070,7 @@ namespace EssenceSharp.Runtime {
 			if (metaClass == null) return;
 			var metalass = metaClass as ESMetaclass;
 			if (metalass == null) throw new PrimInvalidOperandException("The class of a Class must be a Metaclass.");
-			Kernel = metalass.Kernel;
+			setKernel(metalass.Kernel);
 			base.setClass(metalass);
 			metalass.adopt(this);
 		}
@@ -1939,7 +2097,7 @@ namespace EssenceSharp.Runtime {
 		    return operation.applyToClass(this);
 		}
 
-		public new class Primitives : PrimitiveDomain {
+		public new class Primitives : ESAbstractClass.Primitives {
 
 			protected override void bindToKernel() {
 				domainClass = kernel.ClassClass;
@@ -1949,14 +2107,11 @@ namespace EssenceSharp.Runtime {
 				get {return PrimitiveDomainType.Class;}
 			}
 
-			public override void publishCanonicalPrimitives() {
-			}
-
 		}
 		
 	}
 	
-	public class ESMetaclass : ESBehavior {
+	public class ESMetaclass : ESAbstractClass {
 			
 		internal ESMetaclass(ESBehavior metaClass, ESKernel kernel) : this(metaClass, kernel, null, null) {
 		}
@@ -2011,7 +2166,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		internal void bindToCanonicalInstance() {
-			Superclass = CanonicalInstance.HasSuperclass ? CanonicalInstance.Superclass.Class : kernel.ClassClass;
+			setSuperclass(CanonicalInstance.HasSuperclass ? CanonicalInstance.Superclass.Class : kernel.ClassClass);
 			name = null;
 		}
 
@@ -2128,7 +2283,7 @@ namespace EssenceSharp.Runtime {
 		    return operation.applyToMetaclass(this);
 		}
 
-		public new class Primitives : PrimitiveDomain {
+		public new class Primitives : ESAbstractClass.Primitives {
 
 			protected override void bindToKernel() {
 				domainClass = kernel.MetaclassClass;
@@ -2147,6 +2302,7 @@ namespace EssenceSharp.Runtime {
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+				base.publishCanonicalPrimitives();
 				publishPrimitive("canonicalInstance",				new FuncNs.Func<Object, Object>(_canonicalInstance_));
 			}
 

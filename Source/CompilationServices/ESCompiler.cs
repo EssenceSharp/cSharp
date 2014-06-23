@@ -56,8 +56,8 @@ namespace EssenceSharp.CompilationServices {
 		protected ESKernel								kernel						= null;
 		protected ESParser								parser						= null;
 		protected ASTGenerator								abstractSyntaxTreeGenerator			= null;
-		protected ESNamespace								rootEnvironment					= null;
-		protected bool									rootEnvironmentIsMethodClass			= false;
+		protected ESNamespace								defaultEnvironment				= null;
+		protected bool									defaultEnvironmentIsMethodClass			= false;
 
 		protected int									errorCount					= 0;
 		protected System.Action<String, SourceSpan, int, Severity> 			reportError 					= null;
@@ -148,17 +148,9 @@ namespace EssenceSharp.CompilationServices {
 				bindToParser();}
 		}
 
-		public ESNamespace RootEnvironment {
-			get {return rootEnvironment;}
-			set {rootEnvironment = value;}
-		}
-
-		public bool HasMethodClass {
-			get {return rootEnvironmentIsMethodClass;}
-		}
-
-		public ESBehavior MethodHomeClass {
-			get {return rootEnvironmentIsMethodClass ? RootEnvironment as ESBehavior : null;}
+		public ESNamespace DefaultEnvironment {
+			get {return defaultEnvironment;}
+			set {defaultEnvironment = value;}
 		}
 		
 		public int ErrorCount {
@@ -251,7 +243,7 @@ namespace EssenceSharp.CompilationServices {
 				methodClass, 
 				(MethodDeclarationNode methodDeclarationNode, Delegate function) => {
 					if (function == null) return false;
-					method = kernel.newMethod(methodDeclarationNode, protocol);
+					method = kernel.newMethod(methodClass, methodDeclarationNode, protocol);
 					return true;
 				})) {
 				compiledMethod = method;
@@ -273,8 +265,8 @@ namespace EssenceSharp.CompilationServices {
 
 		public virtual bool compile(ScriptType rootParseNodeType, ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, List<ParameterExpression> rootParameters, out BlockLiteralNode blockLiteralNode) {
 
-			rootEnvironment = environment ?? Kernel.SmalltalkNamespace;
-			this.rootEnvironmentIsMethodClass = rootEnvironmentIsMethodClass && rootEnvironment is ESBehavior;
+			defaultEnvironment = environment ?? Kernel.SmalltalkNamespace;
+			this.defaultEnvironmentIsMethodClass = rootEnvironmentIsMethodClass && defaultEnvironment is ESBehavior;
 			ParseTreeNode rootParseNode;
 			List<String> parameterNames = null;
 			if (rootParameters != null) {
@@ -307,7 +299,7 @@ namespace EssenceSharp.CompilationServices {
 		public virtual bool compile(ScriptType rootParseNodeType, ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, List<ParameterExpression> rootParameters, out Expression expression) {
 			BlockLiteralNode blockLiteralNode;
 			if (compile(rootParseNodeType, environment, rootEnvironmentIsMethodClass, selfValue, rootParameters, out blockLiteralNode)) {
-				expression = blockLiteralNode.asCLRExpression();
+				expression = blockLiteralNode.asCLRExpression(environment);
 				var undeclaredVariables = blockLiteralNode.UndeclaredVariables;
 				if (undeclaredVariables != null && undeclaredVariables.Count > 0)
 					handleUndeclaredVariableReferences(undeclaredVariables, SourceSpan.None);
@@ -333,8 +325,8 @@ namespace EssenceSharp.CompilationServices {
 
 		public virtual bool compileMethod(ESBehavior methodClass, Functor1<bool, MethodDeclarationNode> compileMethodFromMethodDeclarationNode) {
 
-			rootEnvironment = methodClass ?? Kernel.SmalltalkNamespace;
-			rootEnvironmentIsMethodClass = rootEnvironment is ESBehavior;
+			defaultEnvironment = methodClass ?? Kernel.SmalltalkNamespace;
+			defaultEnvironmentIsMethodClass = defaultEnvironment is ESBehavior;
 			ParseTreeNode rootParseNode = parser.methodParseTree();
 			if (parser.ErrorCount > 0) return false;
 			switch (rootParseNode.ParseNodeType) {
@@ -353,7 +345,7 @@ namespace EssenceSharp.CompilationServices {
 
 		public virtual bool compileMethod(ESBehavior methodClass, Functor2<bool, MethodDeclarationNode, LambdaExpression> compileMethodFromLambdaExpression) {
 			return compileMethod(methodClass, (MethodDeclarationNode methodDeclarationNode) => {
-								var lambda = methodDeclarationNode.Lambda;
+								var lambda = methodDeclarationNode.lambdaFor(methodClass);
 								var undeclaredVariables = methodDeclarationNode.UndeclaredVariables;
 								if (undeclaredVariables != null && undeclaredVariables.Count > 0)
 									handleUndeclaredVariableReferences(undeclaredVariables, SourceSpan.None);

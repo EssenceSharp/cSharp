@@ -572,7 +572,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public static readonly ConstructorInfo					methodConstructorInfo			= TypeGuru.esMethodType.GetConstructor(methodConstructorSignature);
 		public static readonly Type[]						inlineMethodConstructorSignature	= {TypeGuru.esBehaviorType, TypeGuru.esSymbolType, TypeGuru.inlineOperationType, TypeGuru.delegateType};
 		public static readonly ConstructorInfo					inlineMethodConstructorInfo		= TypeGuru.esMethodType.GetConstructor(inlineMethodConstructorSignature);
-		public static readonly Type[]						compiledMethodConstructorSignature	= {TypeGuru.esBehaviorType, TypeGuru.esMethodDeclarationNodeType};
+		public static readonly Type[]						compiledMethodConstructorSignature	= {TypeGuru.esBehaviorType, TypeGuru.esBehaviorType, TypeGuru.esMethodDeclarationNodeType};
 		public static readonly ConstructorInfo					compiledMethodConstructorInfo		= TypeGuru.esMethodType.GetConstructor(compiledMethodConstructorSignature);
 
 		#endregion
@@ -1063,10 +1063,11 @@ namespace EssenceSharp.Runtime.Binding {
 
 		}
 		
-		public static Expression expressionToCreateESMethod(ESBehavior esClass, MethodDeclarationNode methodDeclarationNode) {
+		public static Expression expressionToCreateESMethod(ESBehavior esClass, ESBehavior homeClass, MethodDeclarationNode methodDeclarationNode) {
 			return Expression.New(
 					compiledMethodConstructorInfo,
 					Expression.Constant(esClass),
+					Expression.Constant(homeClass),
 					Expression.Constant(methodDeclarationNode));
 
 		}

@@ -33,6 +33,7 @@ using System.Text;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 #if CLR2
 using FuncNs = Microsoft.Scripting.Utils;
 #else
@@ -71,7 +72,7 @@ namespace EssenceSharp.Runtime {
 		
 		protected SymbolType			type				= SymbolType.String;
 		protected CanonicalSelectorSemantics	canonicalSemantics		= CanonicalSelectorSemantics.None;
-		protected String			stringValue			= null;
+		protected String			stringValue;
 		protected byte				numArgs				= 0;
 		protected char				qualifiedNameSeparatorChar	= pathElementSeparatorChar;
 		protected byte				pathElementCount		= 1;
@@ -300,6 +301,17 @@ namespace EssenceSharp.Runtime {
 		
 	}
 
+	public class ESSymbolIdentityComparator : IEqualityComparer<ESSymbol> {
+
+		public new bool Equals(ESSymbol left, ESSymbol right) {
+			return left == right;
+		}
+
+		public int GetHashCode(ESSymbol anObject) {
+			return RuntimeHelpers.GetHashCode(anObject);
+		}
+
+	}
 	public class SymbolRegistry {
 		
 		protected static readonly String	empty				= "";
@@ -310,7 +322,7 @@ namespace EssenceSharp.Runtime {
 			get {return pathElementSeparatorChar;}
 		}
 		
-		protected ESClass			symbolClass			= null;
+		protected ESClass			symbolClass;
 		protected Dictionary<String, ESSymbol>	symbols				= new Dictionary<String, ESSymbol>();
 		protected ESSymbol			doesNotUnderstandSelector;
 

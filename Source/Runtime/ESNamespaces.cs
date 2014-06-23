@@ -119,7 +119,7 @@ namespace EssenceSharp.Runtime {
 
 	public class DirectBindingHandle : AbstractBindingHandle {
 
-		protected Object										value					= null;
+		protected Object										value;
 
 		public DirectBindingHandle() {
 		}
@@ -146,7 +146,7 @@ namespace EssenceSharp.Runtime {
 
 	public class HostVariableBindingHandle : AbstractBindingHandle {
 
-		protected IScopeVariable									scopeVariable			= null;
+		protected IScopeVariable									scopeVariable;
 
 		public HostVariableBindingHandle(IScopeVariable scopeVariable) : base() {
 			this.scopeVariable = scopeVariable;
@@ -413,7 +413,7 @@ namespace EssenceSharp.Runtime {
 
 	public class ESImportSpec : IEquatable<ESImportSpec> {
 
-		protected ESNamespace										source					= null;
+		protected ESNamespace										source;
 		protected AccessPrivilegeLevel									accessPrivilegeLevel			= Runtime.AccessPrivilegeLevel.Local;
 		protected ImportTransitivity									transitivity				= ImportTransitivity.Intransitive;
 
@@ -460,7 +460,7 @@ namespace EssenceSharp.Runtime {
 
 	public class ESSpecifImportSpec : ESImportSpec {
 
-		protected String /* The public name to which the entity is bound in the source namespace */	nameInSource				= null;
+		protected String /* The public name to which the entity is bound in the source namespace */	nameInSource;
 
 		public ESSpecifImportSpec(ESNamespace source, AccessPrivilegeLevel accessPrivilegeLevel, ImportTransitivity transitivity, String nameInSource) : base(source, accessPrivilegeLevel, transitivity) {
 			this.nameInSource = nameInSource;
@@ -488,14 +488,14 @@ namespace EssenceSharp.Runtime {
 
 		protected long											identity				= identityGenerator++;
 		protected long											versionId				= versionIdGenerator++;
-		protected ESSymbol										name					= null;
-		protected bool											isBoundToHostSystemNamespace		= false;
-		protected String										hostSystemNamespace			= null;
-		protected String										hostSystemName				= null;
-		protected Assembly										assembly				= null;
-		protected ESNamespace	/* The "parent" or "containing" namespace */				environment				= null;
-		protected Dictionary<String, ESSpecifImportSpec>						specificImports				= null; 
-		protected List<ESImportSpec>									generalImports				= null; 
+		protected ESSymbol										name;
+		protected bool											isBoundToHostSystemNamespace;
+		protected String										hostSystemNamespace;
+		protected String										hostSystemName;
+		protected Assembly										assembly;
+		protected ESNamespace	/* The "parent" or "containing" namespace */				environment;
+		protected Dictionary<String, ESSpecifImportSpec>						specificImports;
+		protected List<ESImportSpec>									generalImports;
 
 		public ESNamespace(ESBehavior esClass) : base(esClass) {
 			initializeImports();

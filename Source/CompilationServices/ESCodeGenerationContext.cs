@@ -101,18 +101,20 @@ namespace EssenceSharp.CompilationServices {
 		protected long				identity			= identityGenerator++;
 		protected ConstantExpression		identityExpression;
 		protected ESKernel			kernel;
-		protected SymbolRegistry		symbolRegistry			= null;
-		protected MessageSendBinder.Registry	messageSendBinderRegistry	= null;
-		protected ESNamespace			environment;
-		protected ESBehavior			methodHomeClass;
+		protected SymbolRegistry		symbolRegistry;
+		protected MessageSendBinder.Registry	messageSendBinderRegistry;
 		protected ParameterExpression		selfParameter			= Expression.Parameter(TypeGuru.objectType, selfName);
 		protected ParameterExpression		thisContextParameter		= Expression.Parameter(TypeGuru.objectType, thisContextName);
-		protected ESSymbol			selfSymbol			= null;
-		protected ESSymbol			superSymbol			= null;
-		protected ESSymbol			thisContextSymbol		= null;
-		protected Object			selfValue			= null;
-		protected ParameterExpression[]		rootParameters			= null;
+		protected ESSymbol			selfSymbol;
+		protected ESSymbol			superSymbol;
+		protected ESSymbol			thisContextSymbol;
+		protected Object			selfValue;
+		protected ParameterExpression[]		rootParameters;
 		protected ESSymbol			methodSelector;
+		protected HashSet<ESSymbol>		messagesSent;
+		protected HashSet<ESSymbol>		messagesSentToSelf;
+		protected HashSet<ESSymbol>		messagesSentToSuper;
+		protected HashSet<ESSymbol>		messagesSentToThisContext;
 		protected NameBindingScope		scope;
 		protected PseudovariableSelf		self;
 		protected PseudovariableSuper		super;
@@ -124,8 +126,6 @@ namespace EssenceSharp.CompilationServices {
 		public CodeGenerationContext(ESCompiler compiler) {
 			identityExpression		= Expression.Constant(identity);
 			kernel				= compiler.Kernel;
-			environment			= compiler.RootEnvironment;
-			methodHomeClass			= compiler.MethodHomeClass;
 			bindToKernel();
 		}
 
@@ -209,15 +209,6 @@ namespace EssenceSharp.CompilationServices {
 
 		#region Scope Operations
 
-		public ESNamespace Environment {
-			get {return environment;}
-		}
-
-		public ESBehavior MethodHomeClass {
-			get {return methodHomeClass;}
-			internal set {methodHomeClass = value;}
-		}
-
 		public ESSymbol MethodSelector {
 			get {return methodSelector;}
 			set {methodSelector = value;}
@@ -265,6 +256,53 @@ namespace EssenceSharp.CompilationServices {
 				scope = scope.OuterScope;
 			}
 			return poppedScope;
+		}
+
+		#endregion
+
+		#region Messages Sent
+
+		protected HashSet<ESSymbol> newMessagesSentSet() {
+			return new HashSet<ESSymbol>(new ESSymbolIdentityComparator());
+		}
+
+		public HashSet<ESSymbol> MessagesSent {
+			get {return messagesSent == null ? newMessagesSentSet() : messagesSent;}
+		}
+
+		public HashSet<ESSymbol> MessagesSentToSelf {
+			get {return messagesSentToSelf == null ? newMessagesSentSet() : messagesSentToSelf;}
+		}
+
+		public HashSet<ESSymbol> MessagesSentToSuper {
+			get {return messagesSentToSuper == null ? newMessagesSentSet() : messagesSentToSuper;}
+		}
+
+		public HashSet<ESSymbol> MessagesSentToThisContext {
+			get {return messagesSentToThisContext == null ? newMessagesSentSet() : messagesSentToThisContext;}
+		}
+
+		protected void logMessageSent(ESSymbol messageSelector) {
+			if (messagesSent == null) messagesSent = newMessagesSentSet();
+			messagesSent.Add(messageSelector);
+		}
+
+		protected void logMessageSentToSelf(ESSymbol messageSelector) {
+			logMessageSent(messageSelector);
+			if (messagesSentToSelf == null) messagesSentToSelf = newMessagesSentSet();
+			messagesSentToSelf.Add(messageSelector);
+		}
+
+		protected void logMessageSentToSuper(ESSymbol messageSelector) {
+			logMessageSent(messageSelector);
+			if (messagesSentToSuper == null) messagesSentToSuper = newMessagesSentSet();
+			messagesSentToSuper.Add(messageSelector);
+		}
+
+		protected void logMessageSentToThisContext(ESSymbol messageSelector) {
+			logMessageSent(messageSelector);
+			if (messagesSentToThisContext == null) messagesSentToThisContext = newMessagesSentSet();
+			messagesSentToThisContext.Add(messageSelector);
 		}
 
 		#endregion
@@ -369,29 +407,43 @@ namespace EssenceSharp.CompilationServices {
 
 		#region Dynamic Binding
 
-		public GetVariableValueBinder canonicalGetVariableBinderFor(ESSymbol name) {
-			return kernel.GetVariableValueBinderRegistry.canonicalBinderFor(name, MethodSelector, Environment);
+		public GetVariableValueBinder canonicalGetVariableBinderFor(ESNamespace environment, ESSymbol name) {
+			return kernel.GetVariableValueBinderRegistry.canonicalBinderFor(name, environment);
 		}
 
-		public SetVariableValueBinder canonicalSetVariableBinderFor(ESSymbol name) {
-			return kernel.SetVariableValueBinderRegistry.canonicalBinderFor(name, MethodSelector, Environment);;
+		public SetVariableValueBinder canonicalSetVariableBinderFor(ESNamespace environment, ESSymbol name) {
+			return kernel.SetVariableValueBinderRegistry.canonicalBinderFor(name, environment);;
 		}
 
-		public ConstantExpression getVariableValueCallSiteConstantFor(ESSymbol variableName) {
-			return Expression.Constant(CallSite<Functor2<Object, CallSite, Object>>.Create(canonicalGetVariableBinderFor(variableName)));
+		public ConstantExpression getVariableValueCallSiteConstantFor(ESNamespace environment, ESSymbol variableName) {
+			return Expression.Constant(CallSite<Functor2<Object, CallSite, Object>>.Create(canonicalGetVariableBinderFor(environment, variableName)));
 		}
 
-		public ConstantExpression setVariableValueCallSiteConstantFor(ESSymbol variableName) {
-			return Expression.Constant(CallSite<Functor3<Object, CallSite, Object, Object>>.Create(canonicalSetVariableBinderFor(variableName)));
+		public ConstantExpression setVariableValueCallSiteConstantFor(ESNamespace environment, ESSymbol variableName) {
+			return Expression.Constant(CallSite<Functor3<Object, CallSite, Object, Object>>.Create(canonicalSetVariableBinderFor(environment, variableName)));
 		}
 
 		public MessageSendBinder.Registry MessageSendBinderRegistry {
 			get {return messageSendBinderRegistry;}
 		}
 
-		public ConstantExpression messageSendCallSiteConstantFor(MessageReceiverKind receiverKind, ESSymbol selector) {
-			var binder = MessageSendBinderRegistry.canonicalBinderFor(receiverKind, selector);
-			switch (selector.NumArgs) {
+		public ConstantExpression messageSendCallSiteConstantFor(MessageReceiverKind receiverKind, ESSymbol messageSelector) {
+			switch (receiverKind) {
+				case MessageReceiverKind.General:
+					logMessageSent(messageSelector);
+					break;
+				case MessageReceiverKind.Self:
+					logMessageSentToSelf(messageSelector);
+					break;
+				case MessageReceiverKind.Super:
+					logMessageSentToSuper(messageSelector);
+					break;
+				case MessageReceiverKind.ThisContext:
+					logMessageSentToThisContext(messageSelector);
+					break;
+			}
+			var binder = MessageSendBinderRegistry.canonicalBinderFor(receiverKind, messageSelector);
+			switch (messageSelector.NumArgs) {
   				case 0:
 					return Expression.Constant(CallSite<Functor2<Object, CallSite, Object>>.Create(binder));
 				case 1:
