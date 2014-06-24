@@ -47,7 +47,7 @@ namespace EssenceSharp.Runtime.Binding {
 		protected GetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name) : base(dynamicBindingGuru, name) {
 		}
 
-		protected GetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, ESNamespace environment) : base(dynamicBindingGuru, name, environment) {
+		protected GetVariableValueBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, NamespaceObject environment) : base(dynamicBindingGuru, name, environment) {
 		}
 
 		public override Expression Bind(Object[] args, ReadOnlyCollection<ParameterExpression> parameters, LabelTarget returnLabel) {
@@ -70,7 +70,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public new class Registry : NamedVariableBinder.Registry {
 
-			protected readonly Dictionary<ESNamespace, Dictionary<ESSymbol, GetVariableValueBinder>> registry = new Dictionary<ESNamespace, Dictionary<ESSymbol, GetVariableValueBinder>>();
+			protected readonly Dictionary<NamespaceObject, Dictionary<ESSymbol, GetVariableValueBinder>> registry = new Dictionary<NamespaceObject, Dictionary<ESSymbol, GetVariableValueBinder>>();
 
 			public  Registry(DynamicBindingGuru dynamicBindingGuru) : base(dynamicBindingGuru) {
 			}
@@ -79,7 +79,7 @@ namespace EssenceSharp.Runtime.Binding {
 				return canonicalBinderFor(name, defaultNamespace);
 			}
 
-			public GetVariableValueBinder canonicalBinderFor(ESSymbol name, ESNamespace environment) {
+			public GetVariableValueBinder canonicalBinderFor(ESSymbol name, NamespaceObject environment) {
 				if (environment == null) environment = defaultNamespace;
 				Dictionary<ESSymbol, GetVariableValueBinder> nameRegistry;
 				GetVariableValueBinder binder;

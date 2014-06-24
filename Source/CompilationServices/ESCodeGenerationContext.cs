@@ -407,19 +407,19 @@ namespace EssenceSharp.CompilationServices {
 
 		#region Dynamic Binding
 
-		public GetVariableValueBinder canonicalGetVariableBinderFor(ESNamespace environment, ESSymbol name) {
+		public GetVariableValueBinder canonicalGetVariableBinderFor(NamespaceObject environment, ESSymbol name) {
 			return kernel.GetVariableValueBinderRegistry.canonicalBinderFor(name, environment);
 		}
 
-		public SetVariableValueBinder canonicalSetVariableBinderFor(ESNamespace environment, ESSymbol name) {
+		public SetVariableValueBinder canonicalSetVariableBinderFor(NamespaceObject environment, ESSymbol name) {
 			return kernel.SetVariableValueBinderRegistry.canonicalBinderFor(name, environment);;
 		}
 
-		public ConstantExpression getVariableValueCallSiteConstantFor(ESNamespace environment, ESSymbol variableName) {
+		public ConstantExpression getVariableValueCallSiteConstantFor(NamespaceObject environment, ESSymbol variableName) {
 			return Expression.Constant(CallSite<Functor2<Object, CallSite, Object>>.Create(canonicalGetVariableBinderFor(environment, variableName)));
 		}
 
-		public ConstantExpression setVariableValueCallSiteConstantFor(ESNamespace environment, ESSymbol variableName) {
+		public ConstantExpression setVariableValueCallSiteConstantFor(NamespaceObject environment, ESSymbol variableName) {
 			return Expression.Constant(CallSite<Functor3<Object, CallSite, Object, Object>>.Create(canonicalSetVariableBinderFor(environment, variableName)));
 		}
 

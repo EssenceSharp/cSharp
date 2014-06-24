@@ -68,16 +68,15 @@ namespace EssenceSharp.CompilationServices {
 			this.outerScope = outerScope;
 		}
 
-		public HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(ESNamespace environment) {
+		public HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(NamespaceObject environment, BehavioralObject methodHomeClass) {
 			if (nonLocalBindings == null) {
-				if (outerScope != null) return outerScope.bindNonLocalVariablesToEnvironment(environment);
+				if (outerScope != null) return outerScope.bindNonLocalVariablesToEnvironment(environment, methodHomeClass);
 				return null;
 			}
 			String nameContext;
 			instanceVariableBindings = null;
 			namespaceResidentBindings = null;
 			HashSet<ESSymbol> instVarNames = null;			
-			var methodHomeClass = environment as ESBehavior;
 			var methodName = Context.MethodSelector;
 			if (methodName != null) {
 				if (methodHomeClass == null) {
@@ -304,7 +303,7 @@ namespace EssenceSharp.CompilationServices {
 			return (PseudovariableThisContext)thisContext;
 		}
 
-		public NamespaceResidentVariableDeclaration declareNamespaceVariable(ESNamespace environment, ESSymbol name, Functor1<NamespaceResidentVariableDeclaration, String> collisionAction) {
+		public NamespaceResidentVariableDeclaration declareNamespaceVariable(NamespaceObject environment, ESSymbol name, Functor1<NamespaceResidentVariableDeclaration, String> collisionAction) {
 			if (namespaceResidentBindings == null) {
 				namespaceResidentBindings = new Dictionary<String, NamespaceResidentVariableDeclaration>();
 			} else if (namespaceResidentBindings.ContainsKey(name)) return collisionAction(name);
@@ -579,7 +578,7 @@ namespace EssenceSharp.CompilationServices {
 		protected ConstantExpression getVariableCallSite;
 		protected ConstantExpression setVariableCallSite;
 
-		public NamespaceResidentVariableDeclaration(ESNamespace environment, NameBindingScope scope, ESSymbol name) : base(scope, name) {
+		public NamespaceResidentVariableDeclaration(NamespaceObject environment, NameBindingScope scope, ESSymbol name) : base(scope, name) {
 			getVariableCallSite = Context.getVariableValueCallSiteConstantFor(environment, name);
 			setVariableCallSite = Context.setVariableValueCallSiteConstantFor(environment, name);
 		}

@@ -257,7 +257,7 @@ namespace EssenceSharp.ClientServices {
 			scriptArguments.Add(scriptArg);
 		}
 
-		protected void evaluatScriptArguments(ESKernel kernel, ESNamespace environment) {
+		protected void evaluatScriptArguments(ESKernel kernel, NamespaceObject environment) {
  			var argList = new List<Object>();
 			foreach (var argSpec in scriptArguments) {
 				try { 
@@ -285,7 +285,7 @@ namespace EssenceSharp.ClientServices {
 			scriptArgs = argList.ToArray();
 		}
 
-		protected abstract Object runScript(ScriptEngine engine, ESCompilerOptions compilationOptions, ESNamespace environment);
+		protected abstract Object runScript(ScriptEngine engine, ESCompilerOptions compilationOptions, NamespaceObject environment);
 
 		public Object run(ScriptEngine engine) {
 			if (errors.Count > 0) {
@@ -334,7 +334,7 @@ namespace EssenceSharp.ClientServices {
 			get { return text;}
 		}
  
-		protected override Object runScript(ScriptEngine engine, ESCompilerOptions compilationOptions, ESNamespace environment) {
+		protected override Object runScript(ScriptEngine engine, ESCompilerOptions compilationOptions, NamespaceObject environment) {
  			var script = engine.CreateScriptSourceFromString(text);
 			return script.Execute(compilationOptions, scriptArgs, out durationToRun);
 		}	
@@ -353,7 +353,7 @@ namespace EssenceSharp.ClientServices {
 			get { return pathnameSuffix;}
 		}
 
-		protected override Object runScript(ScriptEngine engine, ESCompilerOptions compilationOptions, ESNamespace environment) {
+		protected override Object runScript(ScriptEngine engine, ESCompilerOptions compilationOptions, NamespaceObject environment) {
 			var script = engine.CreateScriptSourceFromPathSuffix(pathnameSuffix);
 			return script.Execute(compilationOptions, scriptArgs, out durationToRun);
 		}	

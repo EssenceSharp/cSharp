@@ -85,7 +85,7 @@ namespace EssenceSharp.ClientServices {
 			get {return environmentName != null;}
 		}
 
-		public ESNamespace getEnvironment(ESKernel kernel) {
+		public NamespaceObject getEnvironment(ESKernel kernel) {
 			return SpecifiesEnvironmentName ?
 				kernel.findOrCreateNamespace(EnvironmentName) :
 				kernel.SmalltalkNamespace;

@@ -56,8 +56,6 @@ namespace EssenceSharp.CompilationServices {
 		protected ESKernel								kernel						= null;
 		protected ESParser								parser						= null;
 		protected ASTGenerator								abstractSyntaxTreeGenerator			= null;
-		protected ESNamespace								defaultEnvironment				= null;
-		protected bool									defaultEnvironmentIsMethodClass			= false;
 
 		protected int									errorCount					= 0;
 		protected System.Action<String, SourceSpan, int, Severity> 			reportError 					= null;
@@ -147,11 +145,6 @@ namespace EssenceSharp.CompilationServices {
 				parser = value;
 				bindToParser();}
 		}
-
-		public ESNamespace DefaultEnvironment {
-			get {return defaultEnvironment;}
-			set {defaultEnvironment = value;}
-		}
 		
 		public int ErrorCount {
 			get {return errorCount + Parser.ErrorCount;}
@@ -185,21 +178,21 @@ namespace EssenceSharp.CompilationServices {
 
 		#endregion
 
-		public virtual bool evaluate(ESNamespace environment, bool rootEnvironmentIsMethodClass, Object[] arguments, out Object value) {
-			return evaluate(environment, rootEnvironmentIsMethodClass, null, arguments, out value);
+		public virtual bool evaluate(NamespaceObject environment, Object[] arguments, out Object value) {
+			return evaluate(environment, null, arguments, out value);
 		}
 
-		public virtual bool evaluate(ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, Object[] arguments, out Object value) {
-			return evaluate(ScriptType.BlockDeclaration, environment, rootEnvironmentIsMethodClass, selfValue, arguments, out value);
+		public virtual bool evaluate(NamespaceObject environment, Object selfValue, Object[] arguments, out Object value) {
+			return evaluate(ScriptType.BlockDeclaration, environment, selfValue, arguments, out value);
 		}
 
-		public virtual bool evaluateSelfExpression(ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, Object[] arguments, out Object value) {
-			return evaluate(ScriptType.SelfExpression, environment, rootEnvironmentIsMethodClass, selfValue, arguments, out value);
+		public virtual bool evaluateSelfExpression(NamespaceObject environment, Object selfValue, Object[] arguments, out Object value) {
+			return evaluate(ScriptType.SelfExpression, environment, selfValue, arguments, out value);
 		}
 
-		public virtual bool evaluate(ScriptType rootParseNodeType, ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, Object[] arguments, out Object value) {
+		public virtual bool evaluate(ScriptType rootParseNodeType, NamespaceObject environment, Object selfValue, Object[] arguments, out Object value) {
 			ESBlock compiledBlock;
-			if (compile(rootParseNodeType, environment, rootEnvironmentIsMethodClass, selfValue, rootParseNodeType == ScriptType.SelfExpression ? parametersFor(arguments) : null, out compiledBlock)) {
+			if (compile(rootParseNodeType, environment, selfValue, rootParseNodeType == ScriptType.SelfExpression ? parametersFor(arguments) : null, out compiledBlock)) {
 				value = arguments == null || arguments.Length < 1 ? compiledBlock.value0() : compiledBlock.valueWithArguments(arguments);
 				return true;
 			}
@@ -208,21 +201,21 @@ namespace EssenceSharp.CompilationServices {
 			return false;
 		}
 
-		public virtual bool compile(ESNamespace environment, bool rootEnvironmentIsMethodClass, out ESBlock block) {
-			return compile(ScriptType.BlockDeclaration, environment, rootEnvironmentIsMethodClass, null, null, out block);
+		public virtual bool compile(NamespaceObject environment, out ESBlock block) {
+			return compile(ScriptType.BlockDeclaration, environment, null, null, out block);
 		}
 
-		public virtual bool compile(ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, out ESBlock block) {
-			return compile(ScriptType.BlockDeclaration, environment, rootEnvironmentIsMethodClass, selfValue, null, out block);
+		public virtual bool compile(NamespaceObject environment, Object selfValue, out ESBlock block) {
+			return compile(ScriptType.BlockDeclaration, environment, selfValue, null, out block);
 		}
 
-		public virtual bool compileSelfExpression(ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, List<ParameterExpression> rootParameters, out ESBlock block) {
-			return compile(ScriptType.SelfExpression, environment, rootEnvironmentIsMethodClass, selfValue, rootParameters, out block);
+		public virtual bool compileSelfExpression(NamespaceObject environment, Object selfValue, List<ParameterExpression> rootParameters, out ESBlock block) {
+			return compile(ScriptType.SelfExpression, environment, selfValue, rootParameters, out block);
 		}
 		
-		public virtual bool compile(ScriptType rootParseNodeType, ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, List<ParameterExpression> rootParameters, out ESBlock block) {
+		public virtual bool compile(ScriptType rootParseNodeType, NamespaceObject environment, Object selfValue, List<ParameterExpression> rootParameters, out ESBlock block) {
 			Expression<FuncNs.Func<Object>> lambda;
-			if (compile(rootParseNodeType, environment, rootEnvironmentIsMethodClass, selfValue, rootParameters, out lambda)) {
+			if (compile(rootParseNodeType, environment, selfValue, rootParameters, out lambda)) {
 				var function = lambda.Compile();
 				if (function == null) {
 					block = null;
@@ -236,14 +229,14 @@ namespace EssenceSharp.CompilationServices {
 			return false;
 		}
 
-		public virtual bool compileMethod(ESBehavior methodClass, ESSymbol protocol, out ESMethod compiledMethod) {
+		public virtual bool compileMethod(BehavioralObject methodClass, ESSymbol protocol, out ESMethod compiledMethod) {
 
 			ESMethod method = null;
 			if (compileMethod( 
 				methodClass, 
 				(MethodDeclarationNode methodDeclarationNode, Delegate function) => {
 					if (function == null) return false;
-					method = kernel.newMethod(methodClass, methodDeclarationNode, protocol);
+					method = kernel.newMethod(methodClass, methodClass, methodDeclarationNode, protocol);
 					return true;
 				})) {
 				compiledMethod = method;
@@ -263,10 +256,8 @@ namespace EssenceSharp.CompilationServices {
 
 		#region Partial Compilations
 
-		public virtual bool compile(ScriptType rootParseNodeType, ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, List<ParameterExpression> rootParameters, out BlockLiteralNode blockLiteralNode) {
+		public virtual bool compile(ScriptType rootParseNodeType, Object selfValue, List<ParameterExpression> rootParameters, out BlockLiteralNode blockLiteralNode) {
 
-			defaultEnvironment = environment ?? Kernel.SmalltalkNamespace;
-			this.defaultEnvironmentIsMethodClass = rootEnvironmentIsMethodClass && defaultEnvironment is ESBehavior;
 			ParseTreeNode rootParseNode;
 			List<String> parameterNames = null;
 			if (rootParameters != null) {
@@ -296,10 +287,10 @@ namespace EssenceSharp.CompilationServices {
 
 		}
 
-		public virtual bool compile(ScriptType rootParseNodeType, ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, List<ParameterExpression> rootParameters, out Expression expression) {
+		public virtual bool compile(ScriptType rootParseNodeType, NamespaceObject environment, Object selfValue, List<ParameterExpression> rootParameters, out Expression expression) {
 			BlockLiteralNode blockLiteralNode;
-			if (compile(rootParseNodeType, environment, rootEnvironmentIsMethodClass, selfValue, rootParameters, out blockLiteralNode)) {
-				expression = blockLiteralNode.asCLRExpression(environment);
+			if (compile(rootParseNodeType, selfValue, rootParameters, out blockLiteralNode)) {
+				expression = blockLiteralNode.asCLRExpression(environment, environment as BehavioralObject);
 				var undeclaredVariables = blockLiteralNode.UndeclaredVariables;
 				if (undeclaredVariables != null && undeclaredVariables.Count > 0)
 					handleUndeclaredVariableReferences(undeclaredVariables, SourceSpan.None);
@@ -310,10 +301,10 @@ namespace EssenceSharp.CompilationServices {
 			return false;
 		}
 
-		public virtual bool compile(ScriptType rootParseNodeType, ESNamespace environment, bool rootEnvironmentIsMethodClass, Object selfValue, List<ParameterExpression> rootParameters, out Expression<FuncNs.Func<Object>> lambda) {
+		public virtual bool compile(ScriptType rootParseNodeType, NamespaceObject environment, Object selfValue, List<ParameterExpression> rootParameters, out Expression<FuncNs.Func<Object>> lambda) {
 
 			Expression rootExpression;
-			if (compile(rootParseNodeType, environment, rootEnvironmentIsMethodClass, selfValue, rootParameters, out rootExpression)) {
+			if (compile(rootParseNodeType, environment, selfValue, rootParameters, out rootExpression)) {
 				lambda = Expression.Lambda<FuncNs.Func<Object>>(rootExpression, false, new ParameterExpression[0]);
 				return true;
 			}
@@ -323,10 +314,8 @@ namespace EssenceSharp.CompilationServices {
 
 		}
 
-		public virtual bool compileMethod(ESBehavior methodClass, Functor1<bool, MethodDeclarationNode> compileMethodFromMethodDeclarationNode) {
+		public virtual bool compileMethod(BehavioralObject methodClass, Functor1<bool, MethodDeclarationNode> compileMethodFromMethodDeclarationNode) {
 
-			defaultEnvironment = methodClass ?? Kernel.SmalltalkNamespace;
-			defaultEnvironmentIsMethodClass = defaultEnvironment is ESBehavior;
 			ParseTreeNode rootParseNode = parser.methodParseTree();
 			if (parser.ErrorCount > 0) return false;
 			switch (rootParseNode.ParseNodeType) {
@@ -343,9 +332,9 @@ namespace EssenceSharp.CompilationServices {
 
 		}
 
-		public virtual bool compileMethod(ESBehavior methodClass, Functor2<bool, MethodDeclarationNode, LambdaExpression> compileMethodFromLambdaExpression) {
+		public virtual bool compileMethod(BehavioralObject methodClass, Functor2<bool, MethodDeclarationNode, LambdaExpression> compileMethodFromLambdaExpression) {
 			return compileMethod(methodClass, (MethodDeclarationNode methodDeclarationNode) => {
-								var lambda = methodDeclarationNode.lambdaFor(methodClass);
+								var lambda = methodDeclarationNode.lambdaFor(methodClass, methodClass);
 								var undeclaredVariables = methodDeclarationNode.UndeclaredVariables;
 								if (undeclaredVariables != null && undeclaredVariables.Count > 0)
 									handleUndeclaredVariableReferences(undeclaredVariables, SourceSpan.None);
@@ -353,7 +342,7 @@ namespace EssenceSharp.CompilationServices {
 								return compileMethodFromLambdaExpression(methodDeclarationNode, lambda);});
 		}
 
-		public virtual bool compileMethod(ESBehavior methodClass, Functor2<bool, MethodDeclarationNode, Delegate> createCompiledMethodFromDelegate) {
+		public virtual bool compileMethod(BehavioralObject methodClass, Functor2<bool, MethodDeclarationNode, Delegate> createCompiledMethodFromDelegate) {
 			return compileMethod(methodClass, (MethodDeclarationNode methodDeclarationNode, LambdaExpression lambdaExpression) => {
 								return createCompiledMethodFromDelegate(methodDeclarationNode, lambdaExpression.Compile());});
 		}

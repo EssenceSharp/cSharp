@@ -527,12 +527,12 @@ namespace EssenceSharp.Runtime {
 			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function);
 		}
 
-		public ESMethod newMethod(ESSymbol selector, Delegate function, ESBehavior homeClass) {
-			return new ESMethod(canonicalMethodClass, selector, function, homeClass);
+		public ESMethod newMethod(ESSymbol selector, Delegate function, NamespaceObject environment, BehavioralObject homeClass) {
+			return new ESMethod(canonicalMethodClass, selector, function, environment, homeClass);
 		}
 
-		public ESMethod newMethod(ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior homeClass) {
-			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function, homeClass);
+		public ESMethod newMethod(ESSymbol selector, InlineOperation inlineOperation, Delegate function, NamespaceObject environment, BehavioralObject homeClass) {
+			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function, environment, homeClass);
 		}
 
 		public ESMethod newMethod(ESSymbol selector, Delegate function, ESSymbol protocol) {
@@ -543,20 +543,64 @@ namespace EssenceSharp.Runtime {
 			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function, protocol);
 		}
 
-		public ESMethod newMethod(ESSymbol selector, Delegate function, ESBehavior homeClass, ESSymbol protocol) {
-			return new ESMethod(canonicalMethodClass, selector, function, homeClass, protocol);
+		public ESMethod newMethod(ESSymbol selector, Delegate function, NamespaceObject environment, BehavioralObject homeClass, ESSymbol protocol) {
+			return new ESMethod(canonicalMethodClass, selector, function, environment, homeClass, protocol);
 		}
 
-		public ESMethod newMethod(ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior homeClass, ESSymbol protocol) {
-			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function, homeClass, protocol);
+		public ESMethod newMethod(ESSymbol selector, InlineOperation inlineOperation, Delegate function, NamespaceObject environment, BehavioralObject homeClass, ESSymbol protocol) {
+			return new ESMethod(canonicalMethodClass, selector, inlineOperation, function, environment, homeClass, protocol);
 		}
 
-		public ESMethod newMethod(ESBehavior homeClass, MethodDeclarationNode methodDeclarationNode) {
-			return new ESMethod(canonicalMethodClass, homeClass, methodDeclarationNode);
+		public ESMethod newMethod(NamespaceObject environment, BehavioralObject homeClass, MethodDeclarationNode methodDeclarationNode) {
+			return new ESMethod(canonicalMethodClass, environment, homeClass, methodDeclarationNode);
 		}
 
-		public ESMethod newMethod(ESBehavior homeClass, MethodDeclarationNode methodDeclarationNode, ESSymbol protocol) {
-			return new ESMethod(canonicalMethodClass, homeClass, methodDeclarationNode, protocol);
+		public ESMethod newMethod(NamespaceObject environment, BehavioralObject homeClass, MethodDeclarationNode methodDeclarationNode, ESSymbol protocol) {
+			return new ESMethod(canonicalMethodClass, environment, homeClass, methodDeclarationNode, protocol);
+		}
+
+		public ESMethod newMethodToSendDoesNotUnderstand(BehavioralObject homeClass, ESSymbol selector) {
+			var methodHeaderBuilder = new StringBuilder();
+			long arity = 0;
+			switch (selector.Type) {
+				case SymbolType.Identifier:
+					methodHeaderBuilder.Append(selector.PrimitiveValue);
+					break;
+				case SymbolType.BinaryMessageSelector:
+					arity = 1;
+					methodHeaderBuilder.Append(selector.PrimitiveValue);
+					methodHeaderBuilder.Append(" a1");
+					break;
+				case SymbolType.Keyword:
+					arity = selector.NumArgs;
+					var argIndex = 1;
+					selector.keywordsDo(keyword => {
+						methodHeaderBuilder.Append(keyword); 
+						methodHeaderBuilder.Append(": a"); 
+						methodHeaderBuilder.Append(argIndex++); 
+						methodHeaderBuilder.Append(" ");});
+					break;
+				default:
+					throwInvalidArgumentException(homeClass, "bindMethod:toSystemSelector:", "essenceSelector", selector);
+					break;
+			}
+			var methodDeclarationBuilder = new StringBuilder();
+			methodDeclarationBuilder.AppendLine(methodHeaderBuilder.ToString());
+			methodDeclarationBuilder.AppendLine();
+			methodDeclarationBuilder.Append("        ^self doesNotUnderstand: (Message selector: #");
+			methodDeclarationBuilder.Append(selector.PrimitiveValue);
+			methodDeclarationBuilder.Append(" arguments: {");
+			for (var i = 0; i < arity; i++) {
+				methodDeclarationBuilder.Append("a");
+				methodDeclarationBuilder.Append(i + 1);
+				if (arity - i > 1) methodDeclarationBuilder.Append(". ");
+			}
+			methodDeclarationBuilder.AppendLine("})");
+			ESMethod mappedMethod;
+			if (!compileMethod(new StringReader(methodDeclarationBuilder.ToString()), homeClass, symbolFor("error handling"), out mappedMethod)) {
+				throw new InternalSystemError("Unexpected compilation error in ESBehavior.bindMethodToSystemSelector() -- probably not user or programmer error");
+			}
+			return mappedMethod;
 		}
 
 		#endregion
@@ -1511,17 +1555,17 @@ namespace EssenceSharp.Runtime {
 			typeToClassMap[hostSystemType] = esClass;
 		}
 
-		public ESNamespace getNamespace(String qualifiedNamespaceName, AccessPrivilegeLevel requestorPrivilege) {
+		public NamespaceObject getNamespace(String qualifiedNamespaceName, AccessPrivilegeLevel requestorPrivilege) {
 			var pathname = pathnameFromString(qualifiedNamespaceName);
 			var value = pathname.valueInNamespaceIfAbsent(RootNamespace, requestorPrivilege, ImportTransitivity.Intransitive, null);
 			return value as ESNamespace;
 		}
 
-		public ESNamespace findOrCreateNamespace(String qualifiedNsName) {
+		public NamespaceObject findOrCreateNamespace(String qualifiedNsName) {
 			return findOrCreateNamespace(qualifiedNsName.elementsFromString('.', null));
 		}
 
-		public ESNamespace findOrCreateNamespace(String[] qualifiedNsName) {
+		public NamespaceObject findOrCreateNamespace(String[] qualifiedNsName) {
 
 			var environment = RootNamespace;
 			ESBindingReference binding;
@@ -1569,104 +1613,104 @@ namespace EssenceSharp.Runtime {
 
 		#region Self Expressions
 
-		public virtual bool compileSelfExpression(FileInfo file, ESNamespace environment, Object selfValue, out ESBlock block) {
+		public virtual bool compileSelfExpression(FileInfo file, NamespaceObject environment, Object selfValue, out ESBlock block) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
 				return compileSelfExpression(sourceStream, environment, selfValue, out block);
 			}
 		}
 
-		public virtual bool compileSelfExpression(FileInfo file, ParsingOptions parsingOptions, ESNamespace environment, Object selfValue, out ESBlock block) {
+		public virtual bool compileSelfExpression(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, out ESBlock block) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
 				return compileSelfExpression(sourceStream, parsingOptions, environment, selfValue, out block);
 			}
 		}
 
-		public virtual bool compileSelfExpression(SourceUnit sourceUnit, ESNamespace environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
+		public virtual bool compileSelfExpression(SourceUnit sourceUnit, NamespaceObject environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream);
 				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
-				return compiler.compileSelfExpression(environment, environment is ESBehavior, selfValue, null, out block);
+				return compiler.compileSelfExpression(environment, selfValue, null, out block);
 			}
 		}
 
-		public virtual bool compileSelfExpression(SourceUnit sourceUnit, ParsingOptions parsingOptions, ESNamespace environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
+		public virtual bool compileSelfExpression(SourceUnit sourceUnit, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream, parsingOptions);
 				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
-				return compiler.compileSelfExpression(environment, environment is ESBehavior, selfValue, null, out block);
+				return compiler.compileSelfExpression(environment, selfValue, null, out block);
 			}
 		}
 
-		public virtual bool compileSelfExpression(TextReader sourceStream, ESNamespace environment, Object selfValue, out ESBlock block) {
+		public virtual bool compileSelfExpression(TextReader sourceStream, NamespaceObject environment, Object selfValue, out ESBlock block) {
 			var compiler = newCompiler(sourceStream);
-			return compiler.compileSelfExpression(environment, environment is ESBehavior, selfValue, null, out block);
+			return compiler.compileSelfExpression(environment, selfValue, null, out block);
 		}
 
-		public virtual bool compileSelfExpression(TextReader sourceStream, ParsingOptions parsingOptions, ESNamespace environment, Object selfValue, out ESBlock block) {
+		public virtual bool compileSelfExpression(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, out ESBlock block) {
 			var compiler = newCompiler(sourceStream, parsingOptions);
-			return compiler.compileSelfExpression(environment, environment is ESBehavior, selfValue, null, out block);
+			return compiler.compileSelfExpression(environment, selfValue, null, out block);
 		}
 
 		#endregion
 
 		#region Executable Code
 
-		public virtual bool compile(FileInfo file, ESNamespace environment, Object selfValue, out ESBlock block) {
+		public virtual bool compile(FileInfo file, NamespaceObject environment, Object selfValue, out ESBlock block) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
 				return compile(sourceStream,  environment, selfValue, out block);
 			}
 		}
 
-		public virtual bool compile(FileInfo file, ParsingOptions parsingOptions, ESNamespace environment, Object selfValue, out ESBlock block) {
+		public virtual bool compile(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, out ESBlock block) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
 				return compile(sourceStream, parsingOptions,  environment, selfValue, out block);
 			}
 		}
 
-		public virtual bool compile(SourceUnit sourceUnit, ESNamespace environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
+		public virtual bool compile(SourceUnit sourceUnit, NamespaceObject environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream);
 				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
-				return compiler.compile(environment, environment is ESBehavior, selfValue, out block);
+				return compiler.compile(environment, selfValue, out block);
 			}
 		}
 
-		public virtual bool compile(SourceUnit sourceUnit, ParsingOptions parsingOptions, ESNamespace environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
+		public virtual bool compile(SourceUnit sourceUnit, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream, parsingOptions);
 				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
-				return compiler.compile(environment, environment is ESBehavior, selfValue, out block);
+				return compiler.compile(environment, selfValue, out block);
 			}
 		}
 
-		public virtual bool compile(TextReader sourceStream, ESNamespace environment, Object selfValue, out ESBlock block) {
+		public virtual bool compile(TextReader sourceStream, NamespaceObject environment, Object selfValue, out ESBlock block) {
 			var compiler = newCompiler(sourceStream);
-			return compiler.compile(environment, environment is ESBehavior, selfValue, out block);
+			return compiler.compile(environment, selfValue, out block);
 		}
 
 
-		public virtual bool compile(TextReader sourceStream, ParsingOptions parsingOptions, ESNamespace environment, Object selfValue, out ESBlock block) {
+		public virtual bool compile(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, out ESBlock block) {
 			var compiler = newCompiler(sourceStream, parsingOptions);
-			return compiler.compile(environment, environment is ESBehavior, selfValue, out block);
+			return compiler.compile(environment, selfValue, out block);
 		}
 
 		#endregion
 
 		#region Method Declarations
 
-		public virtual bool compileMethod(FileInfo file, ESBehavior methodClass, ESSymbol protocol, out ESMethod method) {
+		public virtual bool compileMethod(FileInfo file, BehavioralObject methodClass, ESSymbol protocol, out ESMethod method) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
 				return compileMethod(sourceStream, methodClass, protocol, out method);
 			}
 		}
 
-		public virtual bool compileMethod(FileInfo file, ParsingOptions parsingOptions, ESBehavior methodClass, ESSymbol protocol, out ESMethod method) {
+		public virtual bool compileMethod(FileInfo file, ParsingOptions parsingOptions, BehavioralObject methodClass, ESSymbol protocol, out ESMethod method) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
 				return compileMethod(sourceStream, parsingOptions, methodClass, protocol, out method);
 			}
 		}
 
-		public virtual bool compileMethod(SourceUnit sourceUnit, ESBehavior methodClass, ESSymbol protocol, ErrorSink errorSink, out ESMethod method) {
+		public virtual bool compileMethod(SourceUnit sourceUnit, BehavioralObject methodClass, ESSymbol protocol, ErrorSink errorSink, out ESMethod method) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream);
 				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
@@ -1674,7 +1718,7 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		public virtual bool compileMethod(SourceUnit sourceUnit, ParsingOptions parsingOptions, ESBehavior methodClass, ESSymbol protocol, ErrorSink errorSink, out ESMethod method) {
+		public virtual bool compileMethod(SourceUnit sourceUnit, ParsingOptions parsingOptions, BehavioralObject methodClass, ESSymbol protocol, ErrorSink errorSink, out ESMethod method) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream, parsingOptions);
 				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
@@ -1682,13 +1726,13 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 		
-		public virtual bool compileMethod(TextReader sourceStream, ESBehavior methodClass, ESSymbol protocol, out ESMethod method) {
+		public virtual bool compileMethod(TextReader sourceStream, BehavioralObject methodClass, ESSymbol protocol, out ESMethod method) {
 			var compiler = newCompiler(sourceStream);
 			return compiler.compileMethod(methodClass, protocol, out method);
 		}
 
 
-		public virtual bool compileMethod(TextReader sourceStream, ParsingOptions parsingOptions, ESBehavior methodClass, ESSymbol protocol, out ESMethod method) {
+		public virtual bool compileMethod(TextReader sourceStream, ParsingOptions parsingOptions, BehavioralObject methodClass, ESSymbol protocol, out ESMethod method) {
 			var compiler = newCompiler(sourceStream, parsingOptions);
 			return compiler.compileMethod(methodClass, protocol, out method);
 		}
@@ -1701,42 +1745,42 @@ namespace EssenceSharp.Runtime {
 
 		#region Self Expressions
 
-		public virtual bool evaluateAsSelfExpression(FileInfo file, ESNamespace environment, Object selfValue, out Object value) {
+		public virtual bool evaluateAsSelfExpression(FileInfo file, NamespaceObject environment, Object selfValue, out Object value) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
 				return evaluateAsSelfExpression(sourceStream, environment, selfValue, out value);
 			}
 		}
 
-		public virtual bool evaluateAsSelfExpression(FileInfo file, ParsingOptions parsingOptions, ESNamespace environment, Object selfValue, out Object value) {
+		public virtual bool evaluateAsSelfExpression(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, out Object value) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
 				return evaluateAsSelfExpression(sourceStream, parsingOptions, environment, selfValue, out value);
 			}
 		}
 
-		public virtual bool evaluateAsSelfExpression(SourceUnit sourceUnit, ESNamespace environment, ErrorSink errorSink, Object selfValue, out Object value) {
+		public virtual bool evaluateAsSelfExpression(SourceUnit sourceUnit, NamespaceObject environment, ErrorSink errorSink, Object selfValue, out Object value) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream);
 				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
-				return compiler.evaluateSelfExpression(environment, environment is ESBehavior, selfValue, null, out value);
+				return compiler.evaluateSelfExpression(environment, selfValue, null, out value);
 			}
 		}
 
-		public virtual bool evaluateAsSelfExpression(SourceUnit sourceUnit, ParsingOptions parsingOptions, ESNamespace environment, ErrorSink errorSink, Object selfValue, out Object value) {
+		public virtual bool evaluateAsSelfExpression(SourceUnit sourceUnit, ParsingOptions parsingOptions, NamespaceObject environment, ErrorSink errorSink, Object selfValue, out Object value) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream, parsingOptions);
 				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
-				return compiler.evaluateSelfExpression(environment, environment is ESBehavior, selfValue, null, out value);
+				return compiler.evaluateSelfExpression(environment, selfValue, null, out value);
 			}
 		}
 
-		public virtual bool evaluateAsSelfExpression(TextReader sourceStream, ESNamespace environment, Object selfValue, out Object value) {
+		public virtual bool evaluateAsSelfExpression(TextReader sourceStream, NamespaceObject environment, Object selfValue, out Object value) {
 			var compiler = newCompiler(sourceStream);
-			return compiler.evaluateSelfExpression(environment, environment is ESBehavior, selfValue, null, out value);
+			return compiler.evaluateSelfExpression(environment, selfValue, null, out value);
 		}
 
-		public virtual bool evaluateAsSelfExpression(TextReader sourceStream, ParsingOptions parsingOptions, ESNamespace environment, Object selfValue, out Object value) {
+		public virtual bool evaluateAsSelfExpression(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, out Object value) {
 			var compiler = newCompiler(sourceStream, parsingOptions);
-			return compiler.evaluateSelfExpression(environment, environment is ESBehavior, selfValue, null, out value);
+			return compiler.evaluateSelfExpression(environment, selfValue, null, out value);
 		}
 
 
@@ -1744,19 +1788,19 @@ namespace EssenceSharp.Runtime {
 
 		#region Executable Code
 
-		public virtual bool evaluate(FileInfo file, ESNamespace environment, out Object value) {
+		public virtual bool evaluate(FileInfo file, NamespaceObject environment, out Object value) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
 				return evaluate(sourceStream, environment, out value);
 			}
 		}
 
-		public virtual bool evaluate(FileInfo file, ParsingOptions parsingOptions, ESNamespace environment, out Object value) {
+		public virtual bool evaluate(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, out Object value) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
 				return evaluate(sourceStream, parsingOptions, environment, out value);
 			}
 		}
 
-		public virtual bool evaluate(SourceUnit sourceUnit, ESNamespace environment, ErrorSink errorSink, out Object value) {
+		public virtual bool evaluate(SourceUnit sourceUnit, NamespaceObject environment, ErrorSink errorSink, out Object value) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream);
 				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
@@ -1764,7 +1808,7 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		public virtual bool evaluate(SourceUnit sourceUnit, ParsingOptions parsingOptions, ESNamespace environment, ErrorSink errorSink, out Object value) {
+		public virtual bool evaluate(SourceUnit sourceUnit, ParsingOptions parsingOptions, NamespaceObject environment, ErrorSink errorSink, out Object value) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream, parsingOptions);
 				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
@@ -1772,12 +1816,12 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		public virtual bool evaluate(TextReader sourceStream, ESNamespace environment, out Object value) {
+		public virtual bool evaluate(TextReader sourceStream, NamespaceObject environment, out Object value) {
 			var compiler = newCompiler(sourceStream);
 			return compiler.evaluate(environment, environment is ESBehavior, null, out value);
 		}
 
-		public virtual bool evaluate(TextReader sourceStream, ParsingOptions parsingOptions, ESNamespace environment, out Object value) {
+		public virtual bool evaluate(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, out Object value) {
 			var compiler = newCompiler(sourceStream, parsingOptions);
 			return compiler.evaluate(environment, environment is ESBehavior, null, out value);
 		}
@@ -1818,7 +1862,7 @@ namespace EssenceSharp.Runtime {
 
 		}
 
-		public Object throwInvalidArgumentException(ESBehavior esClass, String opName, String parameterName, Object argValue) {
+		public Object throwInvalidArgumentException(BehavioralObject esClass, String opName, String parameterName, Object argValue) {
 			var sb = new StringBuilder();
 			sb.AppendLine("Invalid argument value: ");
 			sb.Append("\tContext = ");

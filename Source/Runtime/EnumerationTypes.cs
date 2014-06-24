@@ -125,6 +125,9 @@ namespace EssenceSharp.Runtime {
 								// is called either the canonical instance or the sole instance. Note that the superclass of the Metaclass of any root 
 								// Behavior (e.g., the metaclass of class Object) is (and must be) the class Class. Instances may optionally have 
 								// programmer-accessible named instance variables. 
+		Trait,
+		ClassTrait,
+		MetaclassTrait,
 		HostSystemObject,				// A "host system object" is simply an instance of any CLR type which is not a formal part of the Essence# runtime 
 								// system. One of the requirements for an Essence# class to represent a CLR type (which may or may not be a "class" 
 								// as the CLR defines that term) is that its instance type must be #HostSystemObject.

@@ -413,17 +413,17 @@ namespace EssenceSharp.Runtime {
 
 	public class ESImportSpec : IEquatable<ESImportSpec> {
 
-		protected ESNamespace										source;
+		protected NamespaceObject										source;
 		protected AccessPrivilegeLevel									accessPrivilegeLevel			= Runtime.AccessPrivilegeLevel.Local;
 		protected ImportTransitivity									transitivity				= ImportTransitivity.Intransitive;
 
-		public ESImportSpec(ESNamespace source, AccessPrivilegeLevel accessPrivilegeLevel, ImportTransitivity transitivity) {
+		public ESImportSpec(NamespaceObject source, AccessPrivilegeLevel accessPrivilegeLevel, ImportTransitivity transitivity) {
 			this.source = source;
 			this.accessPrivilegeLevel = accessPrivilegeLevel;
 			this.transitivity = transitivity;
 		}
 
-		public ESNamespace Source {
+		public NamespaceObject Source {
 			get {return source;}
 		}
 
@@ -462,7 +462,7 @@ namespace EssenceSharp.Runtime {
 
 		protected String /* The public name to which the entity is bound in the source namespace */	nameInSource;
 
-		public ESSpecifImportSpec(ESNamespace source, AccessPrivilegeLevel accessPrivilegeLevel, ImportTransitivity transitivity, String nameInSource) : base(source, accessPrivilegeLevel, transitivity) {
+		public ESSpecifImportSpec(NamespaceObject source, AccessPrivilegeLevel accessPrivilegeLevel, ImportTransitivity transitivity, String nameInSource) : base(source, accessPrivilegeLevel, transitivity) {
 			this.nameInSource = nameInSource;
 		}
 
@@ -477,7 +477,50 @@ namespace EssenceSharp.Runtime {
 
 	}
 
-	public class ESNamespace : ESAbstractDictionary<String, BindingHandle, ESBindingReference> {
+	public interface NamespaceObject : ESGenericDictionary<String, BindingHandle, ESBindingReference> {
+
+		long Identity {get;}
+		long VersionId {get;}
+		bool IsClrNamespace {get;}
+		ESSymbol Name {get;}
+		String NameString {get;}
+		ESPathname pathname();
+		String PathnameString {get;}
+		String HostSystemNamespace {get;}
+		String HostSystemName {get;}
+		String QualifiedHostSystemName {get;}
+		void setName(ESSymbol newName);
+		void renameFromTo(ESSymbol prevName, ESSymbol newName);
+		String AssemblyNameString {get;set;}
+		String AssemblyPathname {get;set;}
+		void setAssemblyPath(FileInfo assemblyPath);
+		Assembly Assembly {get;set;}
+		ESNamespace Environment {get;}
+		void setEnvironment(ESNamespace newEnvironment);
+		void fromRootDo(System.Action<long, ESNamespace> enumerator2);
+
+		ESBindingReference declareConstant(String key, Object constantValue, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction);
+		ESBindingReference declareVariable(String key, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction);
+		ESBindingReference importVariableFrom(Scope scope, String key, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction);
+		bool declareInSelf();
+		bool declareInSelf(bool overridePreviousBinding);
+		bool declareInSelfAs(String alias, bool overridePreviousBinding);
+		ESNamespace defineNamespace(String nsName, AccessPrivilegeLevel accessPrivilegeLevel, FuncNs.Func<Object, Object> configureNamespace);
+		ESClass defineClass(String className, AccessPrivilegeLevel accessPrivilegeLevel, FuncNs.Func<Object, Object> configureClass);
+
+		ESBindingReference localBindingAt(String key, AccessPrivilegeLevel requestorPrivilege);
+		ESBindingReference bindingAt(String key, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, FuncNs.Func<ESBindingReference> notFoundAction);
+
+		void initializeSpecificImports();
+		void initializeGeneralImports();
+		void initializeImports();
+		void addImport(ESImportSpec importSpec);
+		void addImports(List<ESImportSpec> importSpecs);
+		void importAs(String localName, ESSpecifImportSpec specificImport);
+
+	}
+
+	public class ESNamespace : ESAbstractDictionary<String, BindingHandle, ESBindingReference>, NamespaceObject {
 
 		#region Static variables and functions
 
@@ -942,12 +985,13 @@ namespace EssenceSharp.Runtime {
 
 		#region Namespace protocol: Lookup/Search
 
-		protected ESBindingReference importedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, System.Collections.Generic.HashSet<ESNamespace> transitiveClosure) {
+		protected ESBindingReference importedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, HashSet<ESNamespace> transitiveClosure) {
 			ESBindingReference binding = null;
 			ESSpecifImportSpec specificImportSpec;
 			if (specificImports.TryGetValue(key, out specificImportSpec)) {
 				if ((int)requestorPrivilege >= (int)specificImportSpec.AccessPrivilegeLevel) {
-					binding = specificImportSpec.Source.searchForBindingAt(
+					var source = specificImportSpec.Source as ESNamespace;
+					binding = source.searchForBindingAt(
 							specificImportSpec.NameInSource, 
 							AccessPrivilegeLevel.Public,
 							specificImportSpec.Transitivity,
@@ -957,7 +1001,8 @@ namespace EssenceSharp.Runtime {
 			if (binding == null) {
 				foreach (var importSpec in generalImports) {
 					if ((int)requestorPrivilege >= (int)importSpec.AccessPrivilegeLevel) {
-						binding = importSpec.Source.searchForBindingAt(
+						var source = importSpec.Source as ESNamespace;
+						binding = source.searchForBindingAt(
 								key, 
 								AccessPrivilegeLevel.Public,
 								importSpec.Transitivity,
@@ -969,7 +1014,7 @@ namespace EssenceSharp.Runtime {
 			return binding;
 		}
 
-		protected virtual ESBindingReference inheritedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, System.Collections.Generic.HashSet<ESNamespace> transitiveClosure) {
+		protected virtual ESBindingReference inheritedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, HashSet<ESNamespace> transitiveClosure) {
 			return environment == null ? 
 				null : 
 				environment.searchForBindingAt(
@@ -979,9 +1024,9 @@ namespace EssenceSharp.Runtime {
 						transitiveClosure);
 		}
 
-		protected ESBindingReference searchForBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, System.Collections.Generic.HashSet<ESNamespace> transitiveClosure) {
+		protected ESBindingReference searchForBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, HashSet<ESNamespace> transitiveClosure) {
 			if (ReferenceEquals(transitiveClosure,	null)) {
-				transitiveClosure = new System.Collections.Generic.HashSet<ESNamespace>();
+				transitiveClosure = new HashSet<ESNamespace>();
 				transitiveClosure.Add(this);
 			} else if (transitiveClosure.Contains(this)) {
 				return null;

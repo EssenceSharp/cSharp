@@ -47,15 +47,19 @@ using EssenceSharp.Exceptions.System.PrimitiveFailures;
 
 namespace EssenceSharp.Runtime {
 
-	public class ObjectIdentityComparator : IEqualityComparer<Object> {
+	public class IdentityComparator<ValueType> : IEqualityComparer<ValueType> {
 
-		public new bool Equals(Object left, Object right) {
-			return left == right;
+		public new bool Equals(ValueType left, ValueType right) {
+			return ReferenceEquals(left, right);
 		}
 
-		public int GetHashCode(Object anObject) {
+		public int GetHashCode(ValueType anObject) {
 			return RuntimeHelpers.GetHashCode(anObject);
 		}
+
+	}
+
+	public class ObjectIdentityComparator : IdentityComparator<Object> {
 
 	}
 

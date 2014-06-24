@@ -69,7 +69,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		protected DynamicBindingGuru				dynamicBindingGuru;
 		protected ESKernel					kernel;
-		protected ESNamespace					environment;
+		protected NamespaceObject					environment;
 		protected ESSymbol					name;			// Name of the referenced variable (may be a qualified ("dotted") reference)
 		protected String					nameString;
 		protected readonly Functor0<ESBindingReference>		addToUndeclared;
@@ -78,7 +78,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public NamedVariableBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name) : this(dynamicBindingGuru, name, null) {
 		}
 
-		public NamedVariableBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, ESNamespace environment) {
+		public NamedVariableBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, NamespaceObject environment) {
 			this.dynamicBindingGuru	= dynamicBindingGuru;
 			kernel			= dynamicBindingGuru.Kernel;
 			this.name		= name;
@@ -92,7 +92,7 @@ namespace EssenceSharp.Runtime.Binding {
 					return bindingRef;};
 		}
 
-		public ESNamespace DefaultEnvironment {
+		public NamespaceObject DefaultEnvironment {
 			get { return environment;}
 			set {environment = value;}
 		}
@@ -117,13 +117,13 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public abstract class Registry : BinderRegistry {
 
-			protected readonly ESNamespace defaultNamespace;
+			protected readonly NamespaceObject defaultNamespace;
 
 			protected Registry(DynamicBindingGuru dynamicBindingGuru) : base(dynamicBindingGuru) {
 				defaultNamespace = kernel.SmalltalkNamespace;
 			}
 
-			public ESNamespace DefaultNamespace {
+			public NamespaceObject DefaultNamespace {
 				get { return defaultNamespace;}
 			}
 

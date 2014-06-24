@@ -51,47 +51,9 @@ using EssenceSharp.Exceptions.System.PrimitiveFailures;
 
 namespace EssenceSharp.Runtime {
 
-	public interface BehaviorSpec : NamedSlotsObject {
-
-		ESKernel Kernel {
-			get;
-		}
-
- 		bool HasSuperclass {
-			get;
-		}
-
-		#region Named instance variables
-
-		ESSymbol[] InstanceVariableNames {
-			get;
-		}
-
-		ESSymbol basicInstVarNameAt(long index);
-		
-		ESSymbol instVarNameAt(long index);
-		
-		long instVarIndexFor(ESSymbol instanceVariableName);
-		
-		long BasicInstSize {
-			get;
-		}
-		
-		long SuperInstSize {
-			get;
-		}
-		
-		long InstSize {
-			get;
-		}
-		
-		void allInstVarNamesAndIndexesDo(System.Action<ESSymbol, long> enumerator2);
-
-		#endregion
+	public interface MethodBinder {
 		
 		#region Compiled Methods -- Smalltalk Protocol
-		
-		ESMethod basicCompiledMethodAt(ESSymbol selector);
 		
 		ESMethod compiledMethodAt(ESSymbol selector);
 
@@ -103,13 +65,13 @@ namespace EssenceSharp.Runtime {
 		
 		bool includesSelector(ESSymbol selector);
 		
-		bool canUnderstand(ESSymbol selector);
-		
 		long selectorCount();
 		
 		ESSymbol[] selectors();
 		
 		void selectorsDo(FuncNs.Func<Object, Object> enumerator1);
+
+		void methodsDo(Action<ESMethod> enumerator1);
 
 		void selectorsAndMethodsDo(FuncNs.Func<Object, Object, Object> enumerator2);
 		
@@ -127,8 +89,6 @@ namespace EssenceSharp.Runtime {
 		
 		bool includesSystemSelector(String systemSelector, long numArgs);
 		
-		bool canUnderstandSystemMessage(String systemSelector, long numArgs);
-		
 		long systemSelectorCount();
 		
 		void systemSelectorsDo(FuncNs.Func<Object, Object, Object> enumerator2);
@@ -137,15 +97,632 @@ namespace EssenceSharp.Runtime {
 		
 		#endregion
 
+	}
+
+	public interface BehavioralObject : MethodBinder, NamespaceObject {
+
+		ESKernel Kernel {get;}
+ 		bool HasSuperclass {get;}
+		ESBehavior Superclass {get;}
+		ESMethod basicCompiledMethodAt(ESSymbol selector);
+		bool canUnderstand(ESSymbol selector);
+		bool canUnderstandSystemMessage(String systemSelector, long numArgs);
+
 		#region Compiling Methods
 
 		ESMethod compileMethod(ESSymbol protocol, TextReader sourceStream);
 
 		#endregion
 
+		#region Named instance variables
+
+		ESSymbol[] InstanceVariableNames {get;}
+		ESSymbol basicInstVarNameAt(long index);
+		ESSymbol instVarNameAt(long index);
+		long instVarIndexFor(ESSymbol instanceVariableName);
+		long BasicInstSize {get;}
+		long SuperInstSize {get;}
+		long InstSize {get;}
+		void allInstVarNamesAndIndexesDo(System.Action<ESSymbol, long> enumerator2);
+
+		#endregion
+
 	}
 
-	public class ESBehavior : ESNamespace, BehaviorSpec {
+	public abstract class ESAbstractBehavior  : ESNamespace, BehavioralObject {
+
+		#region Static variables and methods
+
+		internal static readonly ESSymbol[]						emptyInstanceVariableNames	 	= new ESSymbol[0];
+		internal static readonly Dictionary<ESSymbol, long>				emptyInstanceVariableIndexes 		= new Dictionary<ESSymbol, long>();
+
+		#endregion
+
+		#region Instance variables
+
+		protected ESKernel								kernel; 
+		protected IDictionary<ESSymbol, ESMethod> 					methodDictionary; 
+		protected IDictionary<long, IDictionary<String, ESMethod>>			hostSystemMethodDictionary; 
+		protected bool									constraintsMustBeSatisfied		= false;
+
+		#endregion
+
+		#region Constructors
+
+		internal ESAbstractBehavior() : base(null) {
+			initialize();
+		}
+
+		protected ESAbstractBehavior(ESBehavior metaClass) : base(metaClass) {
+			initialize();
+		}
+
+		public ESAbstractBehavior(ESBehavior metaClass, ESKernel kernel) : this(metaClass) {
+			setKernel(kernel);
+		}
+
+		#endregion
+
+		#region General protocol
+
+		public override ObjectStateArchitecture Architecture {
+			get {return ObjectStateArchitecture.Behavior;}
+		}
+		
+		public override bool IsBehavior {
+			get {return true;}
+		}
+
+		public virtual bool IsHostSystemMetaclass {
+			get {return false;}
+		}
+
+		#endregion
+
+		#region Internal Protocol
+
+		protected virtual void initialize() {
+			methodDictionary = newMethodDictionary();
+			hostSystemMethodDictionary = newHostSystemMethodDictionary();
+		}
+
+		public ESKernel Kernel {
+			get {return kernel;}
+		}
+
+		protected void setKernel(ESKernel newKernel) {
+			if (kernel == newKernel) return;
+			if (kernel != null) unbindFromKernel();
+			kernel = newKernel;
+			if (kernel != null) bindToKernel();
+		}
+
+		protected virtual void unbindFromKernel() {
+			// By default, do nothing
+		}
+
+		protected virtual void bindToKernel() {
+			// By default, do nothing
+		}
+		
+		protected IDictionary<ESSymbol, ESMethod> newMethodDictionary() {
+			return new Dictionary<ESSymbol, ESMethod>();
+		}
+
+		protected IDictionary<long, IDictionary<String, ESMethod>> newHostSystemMethodDictionary() {
+			return new Dictionary<long, IDictionary<String, ESMethod>>();
+		}
+
+		public IEqualityComparer<Object> ObjectIdentityComparator {
+			get {return kernel.ObjectIdentityComparator;}
+		}
+
+		protected override String AnonymousName {
+			get {return "AnAnonymousBehavior";}
+		}
+
+		public virtual bool InstancesCanHaveNamedSlots {
+			get {return false;}
+		}
+
+		public virtual void validate() {
+			constraintsMustBeSatisfied = true;
+		}
+
+		#endregion
+
+		#region Inheritance hierarchy
+
+ 		public virtual bool HasSuperclass {
+			get {return false;}
+		}
+		
+		public virtual ESBehavior Superclass {
+			get {return null;}
+		}
+
+		public virtual bool canInheritFrom(ESBehavior aSuperclass) {
+			return false;
+		}
+
+		public virtual bool includesBehavior(ESBehavior aBehavior) {
+			return this == aBehavior;
+		}
+		
+		public virtual bool inheritsFrom(ESBehavior aBehavior) {
+			return false;
+		}
+		
+		#endregion
+
+		#region Named instance variables
+
+		public virtual ESSymbol[] InstanceVariableNames {
+			get {return emptyInstanceVariableNames;}
+		}
+
+		protected virtual void invalidateInstanceVariableNames() {
+			recompile();
+			base.incrementVersion();
+		}
+
+		public virtual ESSymbol basicInstVarNameAt(long index) {
+			return null;
+		}
+		
+		public virtual ESSymbol instVarNameAt(long index) {
+			if (index < 0) return null;
+			long superInstSize = SuperInstSize;
+			if (index < superInstSize) return superInstSize > 0 ? Superclass.instVarNameAt(index) : null;
+			return null;			
+		}
+		
+		protected virtual Dictionary<ESSymbol, long> InstanceVariableIndexes {
+			get {return emptyInstanceVariableIndexes;}
+		}
+		
+		public virtual long instVarIndexFor(ESSymbol instanceVariableName) {
+			return HasSuperclass ? Superclass.instVarIndexFor(instanceVariableName) : -1;
+		}
+		
+		public virtual long BasicInstSize {
+			get {return 0;}
+		}
+		
+		public long SuperInstSize {
+			get {return HasSuperclass ? Superclass.InstSize : 0;}
+		}
+		
+		public long InstSize {
+			get {return SuperInstSize + BasicInstSize;}
+		}
+		
+		public virtual void allInstVarNamesAndIndexesDo(System.Action<ESSymbol, long> enumerator2) {
+			if (HasSuperclass) Superclass.allInstVarNamesAndIndexesDo(enumerator2);
+			
+		}
+
+		#endregion
+		
+		#region Compiled Methods -- Smalltalk Protocol
+		
+		protected ESMethod basicCompiledMethodAt(ESSymbol selector, bool addIfAbsent) {
+			ESMethod method;
+			if (methodDictionary.TryGetValue(selector, out method)) {
+				return method;
+			} else if (addIfAbsent) {
+				method = kernel.newMethod(selector, null, this, this);
+				methodDictionary[selector] = method;
+				return method;
+			} else {
+				return null;
+			}
+		}
+		
+		public ESMethod basicCompiledMethodAt(ESSymbol selector) {
+			return basicCompiledMethodAt(selector, false);
+		}
+		
+		public ESMethod compiledMethodAt(ESSymbol selector) {
+			ESMethod method;
+			if (methodDictionary.TryGetValue(selector, out method)) {
+				return method;
+			} else {
+				return HasSuperclass ? Superclass.compiledMethodAt(selector) : null;
+			}
+		}
+
+		public ESMethod addMethod(ESMethod newMethod) {
+			return addMethodBoundToSystemSelector(newMethod, null);
+		}
+		
+		public ESMethod addMethodBoundToSystemSelector(ESMethod newMethod, String systemSelector) {
+			if (newMethod == null) {
+				kernel.throwInvalidArgumentException(Class, "addMethod:", "newMethod", newMethod);
+				return null;
+			}
+			ESSymbol selector = newMethod.Selector;
+			if (selector == null) {
+				kernel.throwInvalidArgumentException(Class, "addMethod:", "newMethod", newMethod);
+				return null;
+			}
+			ESMethod residentMethod;
+			if (methodDictionary.TryGetValue(selector, out residentMethod)) {
+				residentMethod.become(newMethod);				
+			} else {
+				residentMethod = newMethod.newCopyIn(this);
+				methodDictionary[selector] = residentMethod;
+			}
+			incrementVersion();
+
+			if (systemSelector == null) return residentMethod;
+			systemSelector = String.Intern(systemSelector);
+
+			long numArgs = residentMethod.NumArgs;
+			IDictionary<String, ESMethod> hostMethodDict;
+			if (!hostSystemMethodDictionary.TryGetValue(numArgs, out hostMethodDict)) {
+				hostMethodDict = new Dictionary<String, ESMethod>();
+				hostSystemMethodDictionary[numArgs] = hostMethodDict;
+			}
+			hostMethodDict[systemSelector] = residentMethod;
+			residentMethod.addToProtocol(kernel.symbolFor("host system API"));
+			return residentMethod;
+		}
+
+		public bool removeSelector(ESSymbol selector) {
+			if (methodDictionary.Remove(selector)) {
+				incrementVersion();
+				return true;
+			}
+			return false;
+		}
+		
+		public bool includesSelector(ESSymbol selector) {
+			return methodDictionary.ContainsKey(selector);
+		}
+		
+		public bool canUnderstand(ESSymbol selector) {
+			if (methodDictionary.ContainsKey(selector)) return true;
+			return HasSuperclass ? Superclass.canUnderstand(selector) : false;		
+		}
+		
+		public long selectorCount() {
+			return methodDictionary.Count;
+		}
+		
+		public ESSymbol[] selectors() {
+			ESSymbol[] symbols = new ESSymbol[methodDictionary.Count];
+			int index = 0;
+			foreach (var assoc in methodDictionary) {
+				symbols[index++] = assoc.Key;
+			}
+			return symbols;
+		}
+		
+		public void selectorsDo(FuncNs.Func<Object, Object> enumerator1) {
+			foreach (var assoc in methodDictionary) {
+				enumerator1(assoc.Key);
+			}
+		}
+
+		public void methodsDo(Action<ESMethod> enumerator1) {
+			foreach (var assoc in methodDictionary) {
+				enumerator1(assoc.Value);
+			}
+		}
+
+		public void selectorsAndMethodsDo(FuncNs.Func<Object, Object, Object> enumerator2) {
+			foreach (var assoc in methodDictionary) {
+				enumerator2(assoc.Key, assoc.Value);
+			}
+		}
+		
+		#endregion
+		
+		#region Compiled Methods -- Host System Protocol
+
+		// Operations on methods whose selectors conform to host system (CLR) naming conventions
+
+		public ESMethod compiledMethodAtSystemSelector(String systemSelector, long numArgs) {
+			IDictionary<String, ESMethod> hostSysMethodDict;
+			if (hostSystemMethodDictionary.TryGetValue(numArgs, out hostSysMethodDict)) {
+				ESMethod method;
+				if (hostSysMethodDict.TryGetValue(systemSelector, out method)) {
+					return method;
+				} else {
+					return HasSuperclass ? Superclass.compiledMethodAtSystemSelector(systemSelector, numArgs) : null;
+				}
+			} else {
+				return HasSuperclass ? Superclass.compiledMethodAtSystemSelector(systemSelector, numArgs) : null;
+			}
+		}
+		
+		public ESMethod bindMethodToSystemSelector(ESSymbol essenceSelector, String systemSelector) {
+			if (essenceSelector == null) {
+				kernel.throwInvalidArgumentException(Class, "bindMethod:toSystemSelector:", "essenceSelector", essenceSelector);
+				return null;
+			}
+			if (systemSelector == null) {
+				kernel.throwInvalidArgumentException(Class, "bindMethod:toSystemSelector:", "systemSelector", systemSelector);
+				return null;
+			}
+			systemSelector = String.Intern(systemSelector);
+			ESMethod mappedMethod;
+			if (methodDictionary.TryGetValue(essenceSelector, out mappedMethod)) return addMethodBoundToSystemSelector(mappedMethod, systemSelector);
+			mappedMethod = kernel.newMethodToSendDoesNotUnderstand(this, essenceSelector);
+			return addMethodBoundToSystemSelector(mappedMethod, systemSelector);
+		}
+		
+		public bool unbindMethodFromSystemSelector(String systemSelector, long numArgs) {			
+			if (systemSelector == null) return false;
+			IDictionary<String, ESMethod> hostSysMethodDict;
+			if (!hostSystemMethodDictionary.TryGetValue(numArgs, out hostSysMethodDict)) return false;
+			if (hostSysMethodDict.Remove(systemSelector)) {
+				incrementVersion();
+				return true;
+			}
+			return false;		
+		}
+		
+		public bool includesSystemSelector(String systemSelector, long numArgs) {
+			IDictionary<String, ESMethod> hostMethodDict;
+			if (!hostSystemMethodDictionary.TryGetValue(numArgs, out hostMethodDict)) return false;
+			return hostMethodDict.ContainsKey(systemSelector);		
+		}
+		
+		public bool canUnderstandSystemMessage(String systemSelector, long numArgs) {
+			IDictionary<String, ESMethod> hostSysMethodDict;
+			if (hostSystemMethodDictionary.TryGetValue(numArgs, out hostSysMethodDict)) {
+				if (hostSysMethodDict.ContainsKey(systemSelector)) return true;
+			}
+			return HasSuperclass ? Superclass.canUnderstandSystemMessage(systemSelector, numArgs) : false;	
+		}
+		
+		public long systemSelectorCount() {
+			long count = 0;
+			foreach (var hostSysMethodDict in hostSystemMethodDictionary) count += hostSysMethodDict.Value.Count;
+			return count;
+		}
+		
+		public void systemSelectorsDo(FuncNs.Func<Object, Object, Object> enumerator2) {
+			foreach (var numArgsAssoc in hostSystemMethodDictionary) {
+				foreach (var selectorAssoc in numArgsAssoc.Value)
+				enumerator2(selectorAssoc.Key, numArgsAssoc.Key);
+			}		
+		}
+
+		public void systemSelectorsAndMethodsDo(FuncNs.Func<Object, Object, Object, Object> enumerator3) {
+			foreach (var numArgsAssoc in hostSystemMethodDictionary) 
+				foreach (var selectorAssoc in numArgsAssoc.Value)
+					enumerator3(selectorAssoc.Key, numArgsAssoc.Key, selectorAssoc.Value);
+		}
+		
+		#endregion
+
+		#region Compiling Methods
+
+		public ESMethod compileMethod(ESSymbol protocol, TextReader sourceStream) {
+			ESMethod method;
+			if (kernel.compileMethod(sourceStream, this, protocol, out method)) {
+				addMethod(method);
+				return method;
+			} else {
+				return null;
+			}
+		}
+
+		public void recompile() {
+			foreach (var kvp in methodDictionary) kvp.Value.recompile();
+		}
+
+		public virtual void recompileAll() {
+			recompile();
+		}
+
+		#endregion
+
+		#region Interoperability
+
+		public override DynamicMetaObject GetMetaObject(Expression parameter) {
+			return new ESBehaviorDynamicMetaObject(parameter, BindingRestrictions.Empty, this, Class);
+		}
+		
+		public override int GetHashCode() {
+			return RuntimeHelpers.GetHashCode(this);
+		}
+
+		public override bool Equals(Object comparand) {
+			return this == comparand;
+		}      
+		
+		public override bool Equals(ESObject comparand) {
+			return this == comparand;
+		}    
+
+		#endregion
+  
+		public new abstract class Primitives : PrimitiveDomain {
+
+			#region Primitive Definitions
+		
+			public Object _superclass_(Object receiver) {
+				return ((ESBehavior)receiver).Superclass;
+			}
+
+			public Object _includesBehavior_(Object receiver, Object aBehavior) {
+				return ((ESBehavior)receiver).includesBehavior((ESBehavior)aBehavior);
+			}
+
+			public Object _inheritsFrom_(Object receiver, Object aBehavior) {
+				return ((ESBehavior)receiver).inheritsFrom((ESBehavior)aBehavior);
+			}
+
+			public Object _basicCompiledMethodAt_(Object receiver, Object selector) {
+				return ((ESBehavior)receiver).basicCompiledMethodAt(kernel.asESSymbol(selector));
+			}
+
+			public Object _compiledMethodAt_(Object receiver, Object selector) {
+				return ((ESBehavior)receiver).compiledMethodAt(kernel.asESSymbol(selector));
+			}
+
+			public Object _addMethod_(Object receiver, Object method) {
+				return ((ESBehavior)receiver).addMethod((ESMethod)method);
+			}	
+
+			public Object _addMethodBoundToSystemSelector_(Object receiver, Object method, Object systemSelector) {
+				return ((ESBehavior)receiver).addMethodBoundToSystemSelector((ESMethod)method, asHostString(systemSelector));
+			}	
+
+			public Object _protocolMethod_(Object receiver, Object protocol, Object method) {
+				var compiledMethod = (ESMethod)method;
+				compiledMethod.addToProtocol(kernel.asESSymbol(protocol));
+				return ((ESBehavior)receiver).addMethod(compiledMethod);
+			}	
+
+			public Object _protocolSystemSelectorMethod_(Object receiver, Object protocol, Object systemSelector, Object method) {
+				var compiledMethod = (ESMethod)method;
+				compiledMethod.addToProtocol(kernel.asESSymbol(protocol));
+				return ((ESBehavior)receiver).addMethodBoundToSystemSelector(compiledMethod, asHostString(systemSelector));
+			}	
+
+			public Object _compileMethodFromString_(Object receiver, Object protocol, Object methodText) {
+				var methodString = asHostString(methodText);
+				return ((ESBehavior)receiver).compileMethod(kernel.asESSymbol(protocol), new StringReader(methodString));
+			}
+
+			public Object _removeSelector_(Object receiver, Object selector) {
+				return ((ESBehavior)receiver).removeSelector(kernel.asESSymbol(selector));
+			}
+
+			public Object _includesSelector_(Object receiver, Object selector) {
+				return ((ESBehavior)receiver).includesSelector(kernel.asESSymbol(selector));
+			}
+
+			public Object _canUnderstand_(Object receiver, Object selector) {
+				return ((ESBehavior)receiver).canUnderstand(kernel.asESSymbol(selector));
+			}
+
+			public Object _selectorCount_(Object receiver) {
+				ESBehavior theReceiver = (ESBehavior)receiver;
+				return theReceiver.selectorCount();
+			}
+
+			public Object _selectors_(Object receiver) {
+				ESBehavior theReceiver = (ESBehavior)receiver;
+				return kernel.instanceFrom(theReceiver.selectors());
+			}
+
+			public Object _selectorsDo_(Object receiver, Object enumerator1) {
+				((ESBehavior)receiver).selectorsDo(asFunctor1(enumerator1));
+				return receiver;
+			}
+
+			public Object _selectorsAndMethodsDo_(Object receiver, Object enumerator2) {
+				((ESBehavior)receiver).selectorsAndMethodsDo(asFunctor2(enumerator2));
+				return receiver;
+			}
+
+			public Object _compiledMethodAtSystemSelector_(Object receiver, Object systemSelector, Object numArgs) {
+				return ((ESBehavior)receiver).compiledMethodAtSystemSelector(asHostString(systemSelector), asHostLong(numArgs));
+			}
+
+			public Object _bindMethodAtToSystemSelector_(Object receiver, Object essenceSelector, Object systemSelector) {
+				return ((ESBehavior)receiver).bindMethodToSystemSelector(kernel.asESSymbol(essenceSelector), asHostString(systemSelector));
+			}
+
+			public Object _unbindMethodFromSystemSelector_(Object receiver, Object systemSelector, Object numArgs) {
+				return ((ESBehavior)receiver).unbindMethodFromSystemSelector(asHostString(systemSelector), asHostLong(numArgs));
+			}
+
+			public Object _includesSystemSelector_(Object receiver, Object systemSelector, Object numArgs) {
+				return ((ESBehavior)receiver).includesSystemSelector(asHostString(systemSelector), asHostLong(numArgs));
+			}
+
+			public Object _systemSelectorCount_(Object receiver) {
+				return ((ESBehavior)receiver).systemSelectorCount();
+			}
+
+			public Object _systemSelectorsDo_(Object receiver, Object enumerator2) {
+				((ESBehavior)receiver).systemSelectorsDo(asFunctor2(enumerator2));
+				return receiver;
+			}
+
+			public Object _systemSelectorsAndMethodsDo_(Object receiver, Object enumerator3) {
+				((ESBehavior)receiver).systemSelectorsAndMethodsDo(asFunctor3(enumerator3));
+				return receiver;
+			}
+		
+			public Object _instanceVariableNames_(Object receiver) {
+				return kernel.newArray(Array.ConvertAll<ESSymbol, Object>(((ESBehavior)receiver).InstanceVariableNames, symbol => symbol));
+			}
+		
+			public Object _basicInstVarNameAt_(Object receiver, Object index) {
+				return ((ESBehavior)receiver).basicInstVarNameAt(asHostLong(index) - 1);
+			}
+		
+			public Object _instVarNameAt_(Object receiver, Object index) {
+				return ((ESBehavior)receiver).instVarNameAt(asHostLong(index) - 1);
+			}
+
+			public Object _instVarIndexFor_(Object receiver, Object instanceVariableName) {
+				return ((ESBehavior)receiver).instVarIndexFor(kernel.asESSymbol(instanceVariableName)) + 1;
+			}
+		
+			public Object _basicInstSize_(Object receiver) {
+				return ((ESBehavior)receiver).BasicInstSize;
+			}
+		
+			public Object _instSize_(Object receiver) {
+				return ((ESBehavior)receiver).InstSize;
+			}
+		
+			#endregion
+
+			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("superclass",						new FuncNs.Func<Object, Object>(_superclass_));
+				publishPrimitive("includesBehavior:",					new FuncNs.Func<Object, Object, Object>(_includesBehavior_));
+				publishPrimitive("inheritsFrom:",					new FuncNs.Func<Object, Object, Object>(_inheritsFrom_));
+
+				publishPrimitive("basicCompiledMethodAt:",				new FuncNs.Func<Object, Object, Object>(_basicCompiledMethodAt_));
+				publishPrimitive("compiledMethodAt:",					new FuncNs.Func<Object, Object, Object>(_compiledMethodAt_));
+				publishPrimitive("addMethod:",						new FuncNs.Func<Object, Object, Object>(_addMethod_));
+				publishPrimitive("addMethod:systemSelector:",				new FuncNs.Func<Object, Object, Object, Object>(_addMethodBoundToSystemSelector_));
+				publishPrimitive("protocol:method:",					new FuncNs.Func<Object, Object, Object, Object>(_protocolMethod_));
+				publishPrimitive("protocol:systemSelector:method:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_protocolSystemSelectorMethod_));
+				publishPrimitive("compileMethodInProtocol:fromString:",			new FuncNs.Func<Object, Object, Object, Object>(_compileMethodFromString_));
+				publishPrimitive("removeSelector:",					new FuncNs.Func<Object, Object, Object>(_removeSelector_));
+				publishPrimitive("includesSelector:",					new FuncNs.Func<Object, Object, Object>(_includesSelector_));
+				publishPrimitive("canUnderstand:",					new FuncNs.Func<Object, Object, Object>(_canUnderstand_));
+				publishPrimitive("selectorCount",					new FuncNs.Func<Object, Object>(_selectorCount_));
+				publishPrimitive("selectors",						new FuncNs.Func<Object, Object>(_selectors_));
+				publishPrimitive("selectorsDo:",					new FuncNs.Func<Object, Object, Object>(_selectorsDo_));
+				publishPrimitive("selectorsAndMethodsDo:",				new FuncNs.Func<Object, Object, Object>(_selectorsAndMethodsDo_));
+
+				publishPrimitive("compiledMethodAtSystemSelector:numArgs:",		new FuncNs.Func<Object, Object, Object, Object>(_compiledMethodAtSystemSelector_));
+				publishPrimitive("bindMethodAt:toSystemSelector:",			new FuncNs.Func<Object, Object, Object, Object>(_bindMethodAtToSystemSelector_));
+				publishPrimitive("unbindindMethodFromSystemSelector:numArgs:",		new FuncNs.Func<Object, Object, Object, Object>(_unbindMethodFromSystemSelector_));
+				publishPrimitive("includesSystemSelector:numArgs:",			new FuncNs.Func<Object, Object, Object, Object>(_includesSystemSelector_));
+				publishPrimitive("systemSelectorCount",					new FuncNs.Func<Object, Object>(_systemSelectorCount_));
+				publishPrimitive("systemSelectorsDo:",					new FuncNs.Func<Object, Object, Object>(_systemSelectorsDo_));
+				publishPrimitive("systemSelectorsAndMethodsDo:",			new FuncNs.Func<Object, Object, Object>(_systemSelectorsAndMethodsDo_));
+
+				publishPrimitive("instanceVariableNames",				new FuncNs.Func<Object, Object>(_instanceVariableNames_));
+				publishPrimitive("basictInstVarNameAt:",				new FuncNs.Func<Object, Object, Object>(_basicInstVarNameAt_));
+				publishPrimitive("instVarNameAt:",					new FuncNs.Func<Object, Object, Object>(_instVarNameAt_));
+				publishPrimitive("instVarIndexFor:",					new FuncNs.Func<Object, Object, Object>(_instVarIndexFor_));
+				publishPrimitive("basicInstSize",					new FuncNs.Func<Object, Object>(_basicInstSize_));
+				publishPrimitive("instSize",						new FuncNs.Func<Object, Object>(_instSize_));
+
+			}
+
+		}
+
+	}
+
+	public class ESBehavorIdentityComparator : IdentityComparator<ESBehavior> {}
+
+	public class ESBehavior : ESAbstractBehavior {
 
 		#region Static variables and methods
 
@@ -387,118 +964,82 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		internal static readonly ESSymbol[]						emptyInstanceVariableNames	 	= new ESSymbol[0];
-		internal static readonly Dictionary<ESSymbol, long>				emptyInstanceVariableIndexes 		= new Dictionary<ESSymbol, long>();
-
 		#endregion
 
-		protected ESKernel								kernel; 
 		protected ESBehavior								superclass; 
-		protected HashSet<ESBehavior>							subclasses; 
-		protected IDictionary<ESSymbol, ESMethod> 					methodDictionary; 
-		protected IDictionary<long, IDictionary<String, ESMethod>>			hostSystemMethodDictionary; 
-		protected ObjectEqualityComparator						instanceEqualityComparator; 
-		protected FuncNs.Func<Object, Object, Object>					instanceEqualityFunctor; 
-		protected FuncNs.Func<Object, Object>						instanceHashFunctor; 
+		protected HashSet<ESBehavior>							subclasses;
+
 		protected Type									instanceType; 
 		protected bool									isInstanceTypeLocked			= false;
 		protected ObjectStateArchitecture 						instanceArchitecture			= ObjectStateArchitecture.NamedSlots;
-		protected bool									constraintsMustBeSatisfied		= false;
 		protected bool									isInstanceArchitectureLocked		= false;
-			
-		internal ESBehavior(ObjectStateArchitecture instanceArchitecture) : base(null) {
-			this.instanceArchitecture = instanceArchitecture;
-			initialize();
-		}
+
+		protected ObjectEqualityComparator						instanceEqualityComparator; 
+		protected FuncNs.Func<Object, Object, Object>					instanceEqualityFunctor; 
+		protected FuncNs.Func<Object, Object>						instanceHashFunctor; 
+
+		#region Constructors
 
 		protected ESBehavior(ESBehavior metaClass) : base(metaClass) {
-			initialize();
 		}
 
-		public ESBehavior(ESBehavior metaClass, ESKernel kernel) : this(metaClass) {
-			setKernel(kernel);
+		internal ESBehavior(ObjectStateArchitecture instanceArchitecture) : base() {
+			this.instanceArchitecture = instanceArchitecture;
+		}
+			
+		protected ESBehavior(ESBehavior metaClass, ObjectStateArchitecture instanceArchitecture) : base(metaClass) {
+			this.instanceArchitecture = instanceArchitecture;
+		}
+			
+		public ESBehavior(ESBehavior metaClass, ESKernel kernel, ObjectStateArchitecture instanceArchitecture) : base(metaClass, kernel) {
+			this.instanceArchitecture = instanceArchitecture;
+		}
+
+		public ESBehavior(ESBehavior metaClass, ESKernel kernel) : base(metaClass, kernel) {
 		}
 			
 		protected ESBehavior(ESBehavior metaClass, ObjectStateArchitecture instanceArchitecture, ESBehavior superclass) 
-					: base(metaClass) {
-			this.instanceArchitecture = instanceArchitecture;
-			initialize();
+					: this(metaClass, instanceArchitecture) {
 			setSuperclass(superclass);
 		}
-			
+				
 		public ESBehavior(ESBehavior metaClass, ESKernel kernel, ObjectStateArchitecture instanceArchitecture, ESBehavior superclass) 
-					: this(metaClass, instanceArchitecture, superclass) {
-			setKernel(kernel);
-		}
-		
-		public override ObjectStateArchitecture Architecture {
-			get {return ObjectStateArchitecture.Behavior;}
-		}
-		
-		public override bool IsBehavior {
-			get {return true;}
-		}
-		
-		public override ESBehavior asESBehavior() {
-			return this;
+					: this(metaClass, kernel, instanceArchitecture) {
+			setSuperclass(superclass);
 		}
 
-		public virtual bool IsHostSystemMetaclass {
-			get {return false;}
-		}
+		#endregion
 
-		#region Internal Protocol
-
-		protected void initialize() {
-			methodDictionary = newMethodDictionary();
-			hostSystemMethodDictionary = newHostSystemMethodDictionary();
-			subclasses = new HashSet<ESBehavior>(new ESBehavorIdentityComparator());
-		}
-
-		public ESKernel Kernel {
-			get {return kernel;}
-		}
-
-		protected void setKernel(ESKernel newKernel) {
-			if (kernel == newKernel) return;
-			if (kernel != null) unbindFromKernel();
-			kernel = newKernel;
-			if (kernel != null) bindToKernel();
-		}
-
-		protected virtual void unbindFromKernel() {
-			// By default, do nothing
-		}
-
-		protected virtual void bindToKernel() {
-			instanceEqualityComparator = kernel.newObjectEqualityComparator();
-			instanceEqualityFunctor = instanceEqualityComparator.EqualityFunctor;
-			instanceHashFunctor = instanceEqualityComparator.HashFunctor;
-		}
-		
-		protected IDictionary<ESSymbol, ESMethod> newMethodDictionary() {
-			return new Dictionary<ESSymbol, ESMethod>();
-		}
-
-		protected IDictionary<long, IDictionary<String, ESMethod>> newHostSystemMethodDictionary() {
-			return new Dictionary<long, IDictionary<String, ESMethod>>();
-		}
-
-		public IEqualityComparer<Object> ObjectIdentityComparator {
-			get {return kernel.ObjectIdentityComparator;}
-		}
-
-		public IEqualityComparer<Object> InstanceEqualityComparator {
-			get {return instanceEqualityComparator;}
-		}
-
-		protected override String AnonymousName {
-			get {return "AnAnonymousBehavior";}
-		}
+		#region General protocol
 
 		protected override void incrementVersion() {
 			base.incrementVersion();
 			foreach (var subclass in subclasses) subclass.incrementVersion();
+		}
+
+		#endregion
+
+		#region Internal protocol
+	
+		public override ESBehavior asESBehavior() {
+			return this;
+		}
+
+		protected override void initialize() {
+			base.initialize();
+			subclasses = new HashSet<ESBehavior>(new ESBehavorIdentityComparator());
+		}
+	
+		protected override void bindToKernel() {
+			base.bindToKernel();
+			instanceEqualityComparator = kernel.newObjectEqualityComparator();
+			instanceEqualityFunctor = instanceEqualityComparator.EqualityFunctor;
+			instanceHashFunctor = instanceEqualityComparator.HashFunctor;
+		}
+
+		public override void validate() {
+			base.validate();
+			assertValidInheritanceStructure(Superclass);
 		}
 
 		public virtual ObjectStateArchitecture InstanceArchitecture {
@@ -512,7 +1053,7 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		public bool InstancesCanHaveNamedSlots {
+		public override bool InstancesCanHaveNamedSlots {
 			get {
 				switch (InstanceArchitecture) {
 					case ObjectStateArchitecture.Stateless:
@@ -524,7 +1065,7 @@ namespace EssenceSharp.Runtime {
 					case ObjectStateArchitecture.HostSystemObject:
 						return false;
 					case ObjectStateArchitecture.Abstract:
-						return superclass ==  null ? false : superclass.SubclassInstancesCanHaveNamedSlots;
+						return HasSuperclass ? Superclass.SubclassInstancesCanHaveNamedSlots : false;
 					default:
 						return true;
 				}
@@ -543,15 +1084,25 @@ namespace EssenceSharp.Runtime {
 						return false;
 					case ObjectStateArchitecture.Abstract:
 					case ObjectStateArchitecture.Stateless:
-						return superclass == null ? true : superclass.SubclassInstancesCanHaveNamedSlots;
+						return HasSuperclass ? Superclass.SubclassInstancesCanHaveNamedSlots : true;
 					default:
 						return true;
 				}
 			}
 		}
 
-		protected virtual Type ReflectionType {
-			get { return InstanceType;}
+		public IEqualityComparer<Object> InstanceEqualityComparator {
+			get {return instanceEqualityComparator;}
+		}
+
+		public bool instanceHasSameValueAs(Object instance, Object comparand) {
+			if (instanceEqualityFunctor == null) return ReferenceEquals(instance, comparand);
+			return (bool)instanceEqualityFunctor(instance, comparand);
+		}
+
+		public int instanceHashCode(Object instance) {
+			if (instanceHashFunctor == null) return RuntimeHelpers.GetHashCode(instance);
+			return (int)instanceHashFunctor(instance);
 		}
 
 		public Type InstanceType {
@@ -601,6 +1152,36 @@ namespace EssenceSharp.Runtime {
 
 		protected void invalidateInstanceType() {
 			setInstanceType(getInstanceType());
+		}
+
+		public Type typeFromQualifiedName(String qualifiedTypeName, bool raiseExceptionOnErrorOrNotFound) {
+			Type type = null;
+			var assembly = Assembly;
+			if (assembly != null) {
+				type = assembly.GetType(qualifiedTypeName, false);
+				if (type != null) return type;
+			}
+			return Type.GetType(qualifiedTypeName, raiseExceptionOnErrorOrNotFound);
+		}
+
+		protected virtual Type ReflectionType {
+			get { return InstanceType;}
+		}
+
+		public ESSymbol nameInEnvironmentFor(Type hostSystemType) {
+			return kernel.symbolFor(new TypeName(hostSystemType).NameWithGenericArguments);
+		}
+
+		public override Assembly Assembly {
+			get {	if (assembly == null) {
+					if (instanceType == null) return base.Assembly;
+					assembly = instanceType.Assembly;
+				}
+				return assembly;
+			}
+			set {	if (assembly == value) return;
+				assembly = value;
+				if (instanceType != null && assembly != instanceType.Assembly) invalidateInstanceType();}
 		}
 
 		#region getInstanceType()
@@ -689,97 +1270,6 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		public Type typeFromQualifiedName(String qualifiedTypeName, bool raiseExceptionOnErrorOrNotFound) {
-			Type type = null;
-			var assembly = Assembly;
-			if (assembly != null) {
-				type = assembly.GetType(qualifiedTypeName, false);
-				if (type != null) return type;
-			}
-			return Type.GetType(qualifiedTypeName, raiseExceptionOnErrorOrNotFound);
-		}
-
-		public ESSymbol nameInEnvironmentFor(Type hostSystemType) {
-			return kernel.symbolFor(new TypeName(hostSystemType).NameWithGenericArguments);
-		}
-
-		public override Assembly Assembly {
-			get {	if (assembly == null) {
-					if (instanceType == null) return base.Assembly;
-					assembly = instanceType.Assembly;
-				}
-				return assembly;
-			}
-			set {	if (assembly == value) return;
-				assembly = value;
-				if (instanceType != null && assembly != instanceType.Assembly) invalidateInstanceType();}
-		}
-
-		public bool instanceHasSameValueAs(Object instance, Object comparand) {
-			if (instanceEqualityFunctor == null) return ReferenceEquals(instance, comparand);
-			return (bool)instanceEqualityFunctor(instance, comparand);
-		}
-
-		public int instanceHashCode(Object instance) {
-			if (instanceHashFunctor == null) return RuntimeHelpers.GetHashCode(instance);
-			return (int)instanceHashFunctor(instance);
-		}
-
-		public void validate() {
-			constraintsMustBeSatisfied = true;
-			assertValidInheritanceStructure(Superclass);
-		}
-
-		#endregion
-
-		#region Namespace Protocol
-		
-		internal override void nameChanged() {
-			if (hostSystemName == null && InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) invalidateInstanceType();
-		}
-		
-		internal override void hostSystemNameChanged() {
-			if (hostSystemName == null || InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
-				invalidateInstanceType();
-			} else {
-				InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
-			}
-		}
-		
-		internal override void hostSystemNamespaceChanged() {
-			if (hostSystemNamespace == null || InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
-				invalidateInstanceType();
-			} else {
-				InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
-			}
-		}
-
-		protected ESBindingReference bindingForSubclassAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, System.Collections.Generic.HashSet<ESNamespace> transitiveClosure) {
-			ESBindingReference binding = localBindingAt(key, requestorPrivilege);
-			if (binding != null) return binding;
-			binding = importedBindingAt(key, (AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), transitiveClosure);
-			if (binding != null) return binding;
-			return superclass == null ? 
-				null : 
-				superclass.bindingForSubclassAt(key, 
-					(AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
-					importTransitivity, 
-					transitiveClosure);
-		}
-
-		protected override ESBindingReference inheritedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, System.Collections.Generic.HashSet<ESNamespace> transitiveClosure) {
-			ESBindingReference binding = null;
-			if (superclass != null) {
-				binding = superclass.bindingForSubclassAt(
-						key, 
-						(AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
-						importTransitivity, 
-						transitiveClosure);
-			}
-			return binding ?? base.inheritedBindingAt(key, requestorPrivilege, importTransitivity, transitiveClosure);
-
-		}
-
 		#endregion
 
 		#region Inheritance hierarchy
@@ -790,6 +1280,24 @@ namespace EssenceSharp.Runtime {
 
 		protected void throwIncompatibleSuperclassException(ESBehavior incompatibleSuperclass) {
 			throwIncompatibleSuperclassException(InstanceArchitecture, incompatibleSuperclass);
+		}
+
+ 		public override bool HasSuperclass {
+			get {return superclass != null;}
+		}
+		
+		public override ESBehavior Superclass {
+			get {return superclass;}
+		}
+
+		protected bool canInheritFrom(ObjectStateArchitecture instanceArchitecture, ESBehavior aSuperclass) {
+			if (aSuperclass == null) return true;
+			if (!isValidInheritanceRelationship(instanceArchitecture, aSuperclass.InstanceArchitecture)) return false;
+			return canInheritFrom(instanceArchitecture, aSuperclass.Superclass);
+		}
+
+		public override bool canInheritFrom(ESBehavior aSuperclass) {
+			return canInheritFrom(InstanceArchitecture, aSuperclass);
 		}
 
 		public void assertValidInheritanceStructure(ESBehavior superclass) {
@@ -806,24 +1314,6 @@ namespace EssenceSharp.Runtime {
 						break;
 				}			
 			}
-		}
-
- 		public bool HasSuperclass {
-			get {return superclass != null;}
-		}
-		
-		public ESBehavior Superclass {
-			get {return superclass;}
-		}
-
-		protected bool canInheritFrom(ObjectStateArchitecture instanceArchitecture, ESBehavior aSuperclass) {
-			if (aSuperclass == null) return true;
-			if (!isValidInheritanceRelationship(instanceArchitecture, aSuperclass.InstanceArchitecture)) return false;
-			return canInheritFrom(instanceArchitecture, aSuperclass.Superclass);
-		}
-
-		public bool canInheritFrom(ESBehavior aSuperclass) {
-			return canInheritFrom(InstanceArchitecture, aSuperclass);
 		}
 
 		public void setSuperclass(ESBehavior newSuperclass) {
@@ -894,7 +1384,7 @@ namespace EssenceSharp.Runtime {
 			setSuperclass(newSuperclass);
 		}
 
-		public bool includesBehavior(ESBehavior aBehavior) {
+		public override bool includesBehavior(ESBehavior aBehavior) {
 			// The receiver may either be a subclass of <aBehavior>, or it may be identical to <aBehavior>
 			if (ReferenceEquals(this, aBehavior)) return true;
 			ESBehavior mySuperclass = Superclass;
@@ -903,7 +1393,7 @@ namespace EssenceSharp.Runtime {
 				mySuperclass.includesBehavior(aBehavior);
 		}
 		
-		public bool inheritsFrom(ESBehavior aBehavior) {
+		public override bool inheritsFrom(ESBehavior aBehavior) {
 			// The receiver must be a SUBCLASS of <aBehavior>
 			if (aBehavior == null) return true;
 			ESBehavior mySuperclass = Superclass;
@@ -911,310 +1401,55 @@ namespace EssenceSharp.Runtime {
 				false :
 				mySuperclass.includesBehavior(aBehavior);
 		}
-		
-		#endregion
-
-		#region Named instance variables
-
-		public virtual ESSymbol[] InstanceVariableNames {
-			get {return emptyInstanceVariableNames;}
-		}
-
-		protected virtual void invalidateInstanceVariableNames() {
-			recompile();
-			base.incrementVersion();
-			foreach (var subclass in subclasses) subclass.invalidateInstanceVariableNames();	
-		}
-
-		public virtual ESSymbol basicInstVarNameAt(long index) {
-			return null;
-		}
-		
-		public virtual ESSymbol instVarNameAt(long index) {
-			if (index < 0) return null;
-			long superInstSize = SuperInstSize;
-			if (index < superInstSize) return superInstSize > 0 ? superclass.instVarNameAt(index) : null;
-			return null;			
-		}
-		
-		protected virtual Dictionary<ESSymbol, long> InstanceVariableIndexes {
-			get {return emptyInstanceVariableIndexes;}
-		}
-		
-		public virtual long instVarIndexFor(ESSymbol instanceVariableName) {
-			return superclass == null ? -1 : superclass.instVarIndexFor(instanceVariableName);
-		}
-		
-		public virtual long BasicInstSize {
-			get {return 0;}
-		}
-		
-		public long SuperInstSize {
-			get {return superclass == null ? 0 : superclass.InstSize;}
-		}
-		
-		public long InstSize {
-			get {return SuperInstSize + BasicInstSize;}
-		}
-		
-		public virtual void allInstVarNamesAndIndexesDo(System.Action<ESSymbol, long> enumerator2) {
-			if (superclass == null) return;
-			superclass.allInstVarNamesAndIndexesDo(enumerator2);
-		}
 
 		#endregion
+
+		#region Namespace protocol
 		
-		#region Compiled Methods -- Smalltalk Protocol
+		internal override void nameChanged() {
+			if (hostSystemName == null && InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) invalidateInstanceType();
+		}
 		
-		protected ESMethod basicCompiledMethodAt(ESSymbol selector, bool addIfAbsent) {
-			ESMethod method;
-			if (methodDictionary.TryGetValue(selector, out method)) {
-				return method;
-			} else if (addIfAbsent) {
-				method = kernel.newMethod(selector, null, this);
-				methodDictionary[selector] = method;
-				return method;
+		internal override void hostSystemNameChanged() {
+			if (hostSystemName == null || InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
+				invalidateInstanceType();
 			} else {
-				return null;
+				InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
 			}
 		}
 		
-		public ESMethod basicCompiledMethodAt(ESSymbol selector) {
-			return basicCompiledMethodAt(selector, false);
-		}
-		
-		public ESMethod compiledMethodAt(ESSymbol selector) {
-			ESMethod method;
-			if (methodDictionary.TryGetValue(selector, out method)) {
-				return method;
+		internal override void hostSystemNamespaceChanged() {
+			if (hostSystemNamespace == null || InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
+				invalidateInstanceType();
 			} else {
-				return superclass == null ? null : superclass.compiledMethodAt(selector);
+				InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
 			}
 		}
 
-		public ESMethod addMethod(ESMethod newMethod) {
-			return addMethodBoundToSystemSelector(newMethod, null);
-		}
-		
-		public ESMethod addMethodBoundToSystemSelector(ESMethod newMethod, String systemSelector) {
-			if (newMethod == null) {
-				kernel.throwInvalidArgumentException(Class, "addMethod:", "newMethod", newMethod);
-				return null;
-			}
-			ESSymbol selector = newMethod.Selector;
-			if (selector == null) {
-				kernel.throwInvalidArgumentException(Class, "addMethod:", "newMethod", newMethod);
-				return null;
-			}
-			ESMethod residentMethod;
-			if (methodDictionary.TryGetValue(selector, out residentMethod)) {
-				residentMethod.become(newMethod);				
-			} else {
-				residentMethod = newMethod.newCopyIn(this);
-				methodDictionary[selector] = residentMethod;
-			}
-			incrementVersion();
-
-			if (systemSelector == null) return residentMethod;
-			systemSelector = String.Intern(systemSelector);
-
-			long numArgs = residentMethod.NumArgs;
-			IDictionary<String, ESMethod> hostMethodDict;
-			if (!hostSystemMethodDictionary.TryGetValue(numArgs, out hostMethodDict)) {
-				hostMethodDict = new Dictionary<String, ESMethod>();
-				hostSystemMethodDictionary[numArgs] = hostMethodDict;
-			}
-			hostMethodDict[systemSelector] = residentMethod;
-			residentMethod.addToProtocol(kernel.symbolFor("host system API"));
-			return residentMethod;
+		protected ESBindingReference bindingForSubclassAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, System.Collections.Generic.HashSet<ESNamespace> transitiveClosure) {
+			ESBindingReference binding = localBindingAt(key, requestorPrivilege);
+			if (binding != null) return binding;
+			binding = importedBindingAt(key, (AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), transitiveClosure);
+			if (binding != null) return binding;
+			return superclass == null ? 
+				null : 
+				superclass.bindingForSubclassAt(key, 
+					(AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
+					importTransitivity, 
+					transitiveClosure);
 		}
 
-		public bool removeSelector(ESSymbol selector) {
-			if (methodDictionary.Remove(selector)) {
-				incrementVersion();
-				return true;
+		protected override ESBindingReference inheritedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, System.Collections.Generic.HashSet<ESNamespace> transitiveClosure) {
+			ESBindingReference binding = null;
+			if (superclass != null) {
+				binding = superclass.bindingForSubclassAt(
+						key, 
+						(AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
+						importTransitivity, 
+						transitiveClosure);
 			}
-			return false;
-		}
-		
-		public bool includesSelector(ESSymbol selector) {
-			return methodDictionary.ContainsKey(selector);
-		}
-		
-		public bool canUnderstand(ESSymbol selector) {
-			if (methodDictionary.ContainsKey(selector)) return true;
-			ESBehavior mySuperclass = Superclass;
-			if (mySuperclass == null) return false;
-			return mySuperclass.canUnderstand(selector);
-		}
-		
-		public long selectorCount() {
-			return methodDictionary.Count;
-		}
-		
-		public ESSymbol[] selectors() {
-			ESSymbol[] symbols = new ESSymbol[methodDictionary.Count];
-			int index = 0;
-			foreach (var assoc in methodDictionary) {
-				symbols[index++] = assoc.Key;
-			}
-			return symbols;
-		}
-		
-		public void selectorsDo(FuncNs.Func<Object, Object> enumerator1) {
-			foreach (var assoc in methodDictionary) {
-				enumerator1(assoc.Key);
-			}
-		}
+			return binding ?? base.inheritedBindingAt(key, requestorPrivilege, importTransitivity, transitiveClosure);
 
-		public void selectorsAndMethodsDo(FuncNs.Func<Object, Object, Object> enumerator2) {
-			foreach (var assoc in methodDictionary) {
-				enumerator2(assoc.Key, assoc.Value);
-			}
-		}
-		
-		#endregion
-		
-		#region Compiled Methods -- Host System Protocol
-
-		// Operations on methods whose selectors conform to host system (CLR) naming conventions
-
-		public ESMethod compiledMethodAtSystemSelector(String systemSelector, long numArgs) {
-			IDictionary<String, ESMethod> hostSysMethodDict;
-			if (hostSystemMethodDictionary.TryGetValue(numArgs, out hostSysMethodDict)) {
-				ESMethod method;
-				if (hostSysMethodDict.TryGetValue(systemSelector, out method)) {
-					return method;
-				} else {
-					return superclass == null ? null : superclass.compiledMethodAtSystemSelector(systemSelector, numArgs);
-				}
-			} else {
-				return superclass == null ? null : superclass.compiledMethodAtSystemSelector(systemSelector, numArgs);
-			}
-		}
-		
-		public ESMethod bindMethodToSystemSelector(ESSymbol essenceSelector, String systemSelector) {
-			if (essenceSelector == null) {
-				kernel.throwInvalidArgumentException(Class, "bindMethod:toSystemSelector:", "essenceSelector", essenceSelector);
-				return null;
-			}
-			if (systemSelector == null) {
-				kernel.throwInvalidArgumentException(Class, "bindMethod:toSystemSelector:", "systemSelector", systemSelector);
-				return null;
-			}
-			systemSelector = String.Intern(systemSelector);
-			ESMethod mappedMethod;
-			if (methodDictionary.TryGetValue(essenceSelector, out mappedMethod)) return addMethodBoundToSystemSelector(mappedMethod, systemSelector);
-
-			var methodHeaderBuilder = new StringBuilder();
-			long arity = 0;
-			switch (essenceSelector.Type) {
-				case SymbolType.Identifier:
-					methodHeaderBuilder.Append(essenceSelector.PrimitiveValue);
-					break;
-				case SymbolType.BinaryMessageSelector:
-					arity = 1;
-					methodHeaderBuilder.Append(essenceSelector.PrimitiveValue);
-					methodHeaderBuilder.Append(" a1");
-					break;
-				case SymbolType.Keyword:
-					arity = essenceSelector.NumArgs;
-					var argIndex = 1;
-					essenceSelector.keywordsDo(keyword => {
-						methodHeaderBuilder.Append(keyword); 
-						methodHeaderBuilder.Append(": a"); 
-						methodHeaderBuilder.Append(argIndex++); 
-						methodHeaderBuilder.Append(" ");});
-					break;
-				default:
-					kernel.throwInvalidArgumentException(Class, "bindMethod:toSystemSelector:", "essenceSelector", essenceSelector);
-					break;
-			}
-			var methodDeclarationBuilder = new StringBuilder();
-			methodDeclarationBuilder.AppendLine(methodHeaderBuilder.ToString());
-			methodDeclarationBuilder.AppendLine();
-			methodDeclarationBuilder.Append("        ^self doesNotUnderstand: (Message selector: #");
-			methodDeclarationBuilder.Append(essenceSelector.PrimitiveValue);
-			methodDeclarationBuilder.Append(" arguments: {");
-			for (var i = 0; i < arity; i++) {
-				methodDeclarationBuilder.Append("a");
-				methodDeclarationBuilder.Append(i + 1);
-				if (arity - i > 1) methodDeclarationBuilder.Append(". ");
-			}
-			methodDeclarationBuilder.AppendLine("})");
-			if (!kernel.compileMethod(new StringReader(methodDeclarationBuilder.ToString()), this, kernel.symbolFor("error handling"), out mappedMethod)) {
-				throw new InternalSystemError("Unexpected compilation error in ESBehavior.bindMethodToSystemSelector() -- probably not user or programmer error");
-			}
-			return addMethodBoundToSystemSelector(mappedMethod, systemSelector);
-		}
-		
-		public bool unbindMethodFromSystemSelector(String systemSelector, long numArgs) {
-			if (systemSelector == null) return false;
-			IDictionary<String, ESMethod> hostSysMethodDict;
-			if (!hostSystemMethodDictionary.TryGetValue(numArgs, out hostSysMethodDict)) return false;
-			if (hostSysMethodDict.Remove(systemSelector)) {
-				incrementVersion();
-				return true;
-			}
-			return false;
-		}
-		
-		public bool includesSystemSelector(String systemSelector, long numArgs) {
-			IDictionary<String, ESMethod> hostMethodDict;
-			if (!hostSystemMethodDictionary.TryGetValue(numArgs, out hostMethodDict)) return false;
-			return hostMethodDict.ContainsKey(systemSelector);
-		}
-		
-		public bool canUnderstandSystemMessage(String systemSelector, long numArgs) {
-			IDictionary<String, ESMethod> hostSysMethodDict;
-			if (hostSystemMethodDictionary.TryGetValue(numArgs, out hostSysMethodDict)) {
-				if (hostSysMethodDict.ContainsKey(systemSelector)) return true;
-			}
-			ESBehavior mySuperclass = Superclass;
-			if (mySuperclass == null) return false;
-			return mySuperclass.canUnderstandSystemMessage(systemSelector, numArgs);
-		}
-		
-		public long systemSelectorCount() {
-			long count = 0;
-			foreach (var hostSysMethodDict in hostSystemMethodDictionary) count += hostSysMethodDict.Value.Count;
-			return count;
-		}
-		
-		public void systemSelectorsDo(FuncNs.Func<Object, Object, Object> enumerator2) {
-			foreach (var numArgsAssoc in hostSystemMethodDictionary) {
-				foreach (var selectorAssoc in numArgsAssoc.Value)
-				enumerator2(selectorAssoc.Key, numArgsAssoc.Key);
-			}
-		}
-
-		public void systemSelectorsAndMethodsDo(FuncNs.Func<Object, Object, Object, Object> enumerator3) {
-			foreach (var numArgsAssoc in hostSystemMethodDictionary) 
-				foreach (var selectorAssoc in numArgsAssoc.Value)
-					enumerator3(selectorAssoc.Key, numArgsAssoc.Key, selectorAssoc.Value);
-		}
-		
-		#endregion
-
-		#region Compiling Methods
-
-		public ESMethod compileMethod(ESSymbol protocol, TextReader sourceStream) {
-			ESMethod method;
-			if (kernel.compileMethod(sourceStream, this, protocol, out method)) {
-				addMethod(method);
-				return method;
-			} else {
-				return null;
-			}
-		}
-
-		public void recompile() {
-			foreach (var kvp in methodDictionary) kvp.Value.recompile();
-		}
-
-		public void recompileAll() {
-			recompile();
-			foreach (var subclass in subclasses) subclass.recompileAll();			
 		}
 
 		#endregion
@@ -1439,6 +1674,24 @@ namespace EssenceSharp.Runtime {
 		
 		#endregion
 
+		#region Named instance variables
+
+		protected override void invalidateInstanceVariableNames() {
+			base.invalidateInstanceVariableNames();
+			foreach (var subclass in subclasses) subclass.invalidateInstanceVariableNames();	
+		}
+
+		#endregion
+
+		#region Compiling methods
+
+		public override void recompileAll() {
+			base.recompileAll();
+			foreach (var subclass in subclasses) subclass.recompileAll();			
+		}
+
+		#endregion
+
 		#region Host System Object Reflection
 
 		public virtual BindingFlags HostObjectMethodInvokeBindingFlags {
@@ -1583,27 +1836,11 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		public override DynamicMetaObject GetMetaObject(Expression parameter) {
-			return new ESBehaviorDynamicMetaObject(parameter, BindingRestrictions.Empty, this, Class);
-		}
-		
-		public override int GetHashCode() {
-			return RuntimeHelpers.GetHashCode(this);
-		}
-
-		public override bool Equals(Object comparand) {
-			return this == comparand;
-		}      
-		
-		public override bool Equals(ESObject comparand) {
-			return this == comparand;
-		}    
-  
 		public override T valueBy<T>(Operation<T> operation) {
 		    return operation.applyToBehavior(this);
 		}
 
-		public new class Primitives : PrimitiveDomain {
+		public new class Primitives : ESAbstractBehavior.Primitives {
 
 			protected override void bindToKernel() {
 				domainClass = kernel.BehaviorClass;
@@ -1614,25 +1851,7 @@ namespace EssenceSharp.Runtime {
 			}
 
 			#region Primitive Definitions
-		
-			public Object _instanceType_(Object receiver) {
-				return ((ESBehavior)receiver).InstanceType;
-			}
-		
-			public Object _setInstanceType_(Object receiver, Object instanceTypeObject) {
-				Type instanceType;
-				try {
-					instanceType = (Type)instanceTypeObject;
-				} catch (InvalidCastException ex) {
-					throw new PrimitiveFailException(ex);
-				}
-				return ((ESBehavior)receiver).InstanceType = (Type)instanceType;
-			}
-		
-			public Object _superclass_(Object receiver) {
-				return ((ESBehavior)receiver).Superclass;
-			}
-		
+
 			public Object _setSuperclass_(Object receiver, Object superclass) {
 				((ESBehavior)receiver).setSuperclass((ESBehavior)superclass);
 				return receiver;
@@ -1648,115 +1867,12 @@ namespace EssenceSharp.Runtime {
 				return receiver;
 			}
 
-			public Object _includesBehavior_(Object receiver, Object aBehavior) {
-				return ((ESBehavior)receiver).includesBehavior((ESBehavior)aBehavior);
-			}
-
-			public Object _inheritsFrom_(Object receiver, Object aBehavior) {
-				return ((ESBehavior)receiver).inheritsFrom((ESBehavior)aBehavior);
-			}
-
 			public Object _instanceEqualityComparer_(Object receiver) {
 				return ((ESBehavior)receiver).InstanceEqualityComparator;
 			}
 
 			public Object _newObjectEqualityComparer_(Object receiver) {
 				return ((ESBehavior)receiver).Kernel.newObjectEqualityComparator();
-			}
-
-			public Object _basicCompiledMethodAt_(Object receiver, Object selector) {
-				return ((ESBehavior)receiver).basicCompiledMethodAt(kernel.asESSymbol(selector));
-			}
-
-			public Object _compiledMethodAt_(Object receiver, Object selector) {
-				return ((ESBehavior)receiver).compiledMethodAt(kernel.asESSymbol(selector));
-			}
-
-			public Object _addMethod_(Object receiver, Object method) {
-				return ((ESBehavior)receiver).addMethod((ESMethod)method);
-			}	
-
-			public Object _addMethodBoundToSystemSelector_(Object receiver, Object method, Object systemSelector) {
-				return ((ESBehavior)receiver).addMethodBoundToSystemSelector((ESMethod)method, asHostString(systemSelector));
-			}	
-
-			public Object _protocolMethod_(Object receiver, Object protocol, Object method) {
-				var compiledMethod = (ESMethod)method;
-				compiledMethod.addToProtocol(kernel.asESSymbol(protocol));
-				return ((ESBehavior)receiver).addMethod(compiledMethod);
-			}	
-
-			public Object _protocolSystemSelectorMethod_(Object receiver, Object protocol, Object systemSelector, Object method) {
-				var compiledMethod = (ESMethod)method;
-				compiledMethod.addToProtocol(kernel.asESSymbol(protocol));
-				return ((ESBehavior)receiver).addMethodBoundToSystemSelector(compiledMethod, asHostString(systemSelector));
-			}	
-
-			public Object _compileMethodFromString_(Object receiver, Object protocol, Object methodText) {
-				var methodString = asHostString(methodText);
-				return ((ESBehavior)receiver).compileMethod(kernel.asESSymbol(protocol), new StringReader(methodString));
-			}
-
-			public Object _removeSelector_(Object receiver, Object selector) {
-				return ((ESBehavior)receiver).removeSelector(kernel.asESSymbol(selector));
-			}
-
-			public Object _includesSelector_(Object receiver, Object selector) {
-				return ((ESBehavior)receiver).includesSelector(kernel.asESSymbol(selector));
-			}
-
-			public Object _canUnderstand_(Object receiver, Object selector) {
-				return ((ESBehavior)receiver).canUnderstand(kernel.asESSymbol(selector));
-			}
-
-			public Object _selectorCount_(Object receiver) {
-				ESBehavior theReceiver = (ESBehavior)receiver;
-				return theReceiver.selectorCount();
-			}
-
-			public Object _selectors_(Object receiver) {
-				ESBehavior theReceiver = (ESBehavior)receiver;
-				return kernel.instanceFrom(theReceiver.selectors());
-			}
-
-			public Object _selectorsDo_(Object receiver, Object enumerator1) {
-				((ESBehavior)receiver).selectorsDo(asFunctor1(enumerator1));
-				return receiver;
-			}
-
-			public Object _selectorsAndMethodsDo_(Object receiver, Object enumerator2) {
-				((ESBehavior)receiver).selectorsAndMethodsDo(asFunctor2(enumerator2));
-				return receiver;
-			}
-
-			public Object _compiledMethodAtSystemSelector_(Object receiver, Object systemSelector, Object numArgs) {
-				return ((ESBehavior)receiver).compiledMethodAtSystemSelector(asHostString(systemSelector), asHostLong(numArgs));
-			}
-
-			public Object _bindMethodAtToSystemSelector_(Object receiver, Object essenceSelector, Object systemSelector) {
-				return ((ESBehavior)receiver).bindMethodToSystemSelector(kernel.asESSymbol(essenceSelector), asHostString(systemSelector));
-			}
-
-			public Object _unbindMethodFromSystemSelector_(Object receiver, Object systemSelector, Object numArgs) {
-				return ((ESBehavior)receiver).unbindMethodFromSystemSelector(asHostString(systemSelector), asHostLong(numArgs));
-			}
-
-			public Object _includesSystemSelector_(Object receiver, Object systemSelector, Object numArgs) {
-				return ((ESBehavior)receiver).includesSystemSelector(asHostString(systemSelector), asHostLong(numArgs));
-			}
-
-			public Object _systemSelectorCount_(Object receiver) {
-				return ((ESBehavior)receiver).systemSelectorCount();
-			}
-
-			public Object _systemSelectorsDo_(Object receiver, Object enumerator2) {
-				((ESBehavior)receiver).systemSelectorsDo(asFunctor2(enumerator2));
-				return receiver;
-			}
-
-			public Object _systemSelectorsAndMethodsDo_(Object receiver, Object enumerator3) {
-				((ESBehavior)receiver).systemSelectorsAndMethodsDo(asFunctor3(enumerator3));
-				return receiver;
 			}
 
 			public Object _instanceArchitecture_(Object receiver) {
@@ -1774,28 +1890,18 @@ namespace EssenceSharp.Runtime {
 				return receiver;
 			}
 		
-			public Object _instanceVariableNames_(Object receiver) {
-				return kernel.newArray(Array.ConvertAll<ESSymbol, Object>(((ESBehavior)receiver).InstanceVariableNames, symbol => symbol));
+			public Object _instanceType_(Object receiver) {
+				return ((ESBehavior)receiver).InstanceType;
 			}
 		
-			public Object _basicInstVarNameAt_(Object receiver, Object index) {
-				return ((ESBehavior)receiver).basicInstVarNameAt(asHostLong(index) - 1);
-			}
-		
-			public Object _instVarNameAt_(Object receiver, Object index) {
-				return ((ESBehavior)receiver).instVarNameAt(asHostLong(index) - 1);
-			}
-
-			public Object _instVarIndexFor_(Object receiver, Object instanceVariableName) {
-				return ((ESBehavior)receiver).instVarIndexFor(kernel.asESSymbol(instanceVariableName)) + 1;
-			}
-		
-			public Object _basicInstSize_(Object receiver) {
-				return ((ESBehavior)receiver).BasicInstSize;
-			}
-		
-			public Object _instSize_(Object receiver) {
-				return ((ESBehavior)receiver).InstSize;
+			public Object _setInstanceType_(Object receiver, Object instanceTypeObject) {
+				Type instanceType;
+				try {
+					instanceType = (Type)instanceTypeObject;
+				} catch (InvalidCastException ex) {
+					throw new PrimitiveFailException(ex);
+				}
+				return ((ESBehavior)receiver).InstanceType = (Type)instanceType;
 			}
 		
 			public Object _new_(Object receiver) {
@@ -1814,48 +1920,19 @@ namespace EssenceSharp.Runtime {
 
 			public override void publishCanonicalPrimitives() {
 
-				publishPrimitive("instanceType",					new FuncNs.Func<Object, Object>(_instanceType_));
-				publishPrimitive("instanceType:",					new FuncNs.Func<Object, Object, Object>(_setInstanceType_));
-				publishPrimitive("superclass",						new FuncNs.Func<Object, Object>(_superclass_));
+				base.publishCanonicalPrimitives();
+
 				publishPrimitive("superclass:",						new FuncNs.Func<Object, Object, Object>(_setSuperclass_));
 				publishPrimitive("addSubclass:",					new FuncNs.Func<Object, Object, Object>(_addSubclass_));
 				publishPrimitive("removeSubclass:",					new FuncNs.Func<Object, Object, Object>(_removeSubclass_));
-				publishPrimitive("includesBehavior:",					new FuncNs.Func<Object, Object, Object>(_includesBehavior_));
-				publishPrimitive("inheritsFrom:",					new FuncNs.Func<Object, Object, Object>(_inheritsFrom_));
+
 				publishPrimitive("instanceEqualityComparer",				new FuncNs.Func<Object, Object>(_instanceEqualityComparer_));
 				publishPrimitive("newObjectEqualityComparer",				new FuncNs.Func<Object, Object>(_newObjectEqualityComparer_));
 
-				publishPrimitive("basicCompiledMethodAt:",				new FuncNs.Func<Object, Object, Object>(_basicCompiledMethodAt_));
-				publishPrimitive("compiledMethodAt:",					new FuncNs.Func<Object, Object, Object>(_compiledMethodAt_));
-				publishPrimitive("addMethod:",						new FuncNs.Func<Object, Object, Object>(_addMethod_));
-				publishPrimitive("addMethod:systemSelector:",				new FuncNs.Func<Object, Object, Object, Object>(_addMethodBoundToSystemSelector_));
-				publishPrimitive("protocol:method:",					new FuncNs.Func<Object, Object, Object, Object>(_protocolMethod_));
-				publishPrimitive("protocol:systemSelector:method:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_protocolSystemSelectorMethod_));
-				publishPrimitive("compileMethodInProtocol:fromString:",			new FuncNs.Func<Object, Object, Object, Object>(_compileMethodFromString_));
-				publishPrimitive("removeSelector:",					new FuncNs.Func<Object, Object, Object>(_removeSelector_));
-				publishPrimitive("includesSelector:",					new FuncNs.Func<Object, Object, Object>(_includesSelector_));
-				publishPrimitive("canUnderstand:",					new FuncNs.Func<Object, Object, Object>(_canUnderstand_));
-				publishPrimitive("selectorCount",					new FuncNs.Func<Object, Object>(_selectorCount_));
-				publishPrimitive("selectors",						new FuncNs.Func<Object, Object>(_selectors_));
-				publishPrimitive("selectorsDo:",					new FuncNs.Func<Object, Object, Object>(_selectorsDo_));
-				publishPrimitive("selectorsAndMethodsDo:",				new FuncNs.Func<Object, Object, Object>(_selectorsAndMethodsDo_));
-
-				publishPrimitive("compiledMethodAtSystemSelector:numArgs:",		new FuncNs.Func<Object, Object, Object, Object>(_compiledMethodAtSystemSelector_));
-				publishPrimitive("bindMethodAt:toSystemSelector:",			new FuncNs.Func<Object, Object, Object, Object>(_bindMethodAtToSystemSelector_));
-				publishPrimitive("unbindindMethodFromSystemSelector:numArgs:",		new FuncNs.Func<Object, Object, Object, Object>(_unbindMethodFromSystemSelector_));
-				publishPrimitive("includesSystemSelector:numArgs:",			new FuncNs.Func<Object, Object, Object, Object>(_includesSystemSelector_));
-				publishPrimitive("systemSelectorCount",					new FuncNs.Func<Object, Object>(_systemSelectorCount_));
-				publishPrimitive("systemSelectorsDo:",					new FuncNs.Func<Object, Object, Object>(_systemSelectorsDo_));
-				publishPrimitive("systemSelectorsAndMethodsDo:",			new FuncNs.Func<Object, Object, Object>(_systemSelectorsAndMethodsDo_));
-
 				publishPrimitive("instanceArchitecture",				new FuncNs.Func<Object, Object>(_instanceArchitecture_));
 				publishPrimitive("instanceArchitecture:",				new FuncNs.Func<Object, Object, Object>(_setInstanceArchitecture_));
-				publishPrimitive("instanceVariableNames",				new FuncNs.Func<Object, Object>(_instanceVariableNames_));
-				publishPrimitive("basictInstVarNameAt:",				new FuncNs.Func<Object, Object, Object>(_basicInstVarNameAt_));
-				publishPrimitive("instVarNameAt:",					new FuncNs.Func<Object, Object, Object>(_instVarNameAt_));
-				publishPrimitive("instVarIndexFor:",					new FuncNs.Func<Object, Object, Object>(_instVarIndexFor_));
-				publishPrimitive("basicInstSize",					new FuncNs.Func<Object, Object>(_basicInstSize_));
-				publishPrimitive("instSize",						new FuncNs.Func<Object, Object>(_instSize_));
+				publishPrimitive("instanceType",					new FuncNs.Func<Object, Object>(_instanceType_));
+				publishPrimitive("instanceType:",					new FuncNs.Func<Object, Object, Object>(_setInstanceType_));
 
 				publishPrimitive("new",							new FuncNs.Func<Object, Object>(_new_));
 				publishPrimitive("newWithSize:",					new FuncNs.Func<Object, Object, Object>(_newWithSize_));
@@ -1864,7 +1941,7 @@ namespace EssenceSharp.Runtime {
 			}
 
 		}
-		
+
 	}
 
 	public abstract class ESAbstractClass : ESBehavior {
@@ -2310,14 +2387,13 @@ namespace EssenceSharp.Runtime {
 
 	}
 
-	public class ESBehavorIdentityComparator : IEqualityComparer<ESBehavior> {
-
-		public new bool Equals(ESBehavior left, ESBehavior right) {
-			return left == right;
+	public class ESTrait : ESAbstractBehavior {
+		
+		public ESTrait(ESBehavior esClass) : base(esClass) {
 		}
-
-		public int GetHashCode(ESBehavior anObject) {
-			return RuntimeHelpers.GetHashCode(anObject);
+		
+		public override ObjectStateArchitecture Architecture {
+			get {return ObjectStateArchitecture.Trait;}
 		}
 
 	}

@@ -183,7 +183,7 @@ namespace EssenceSharp.Runtime {
 				if (function == null) setFunctionToDefault(out function); }
 		}
 		
-		public abstract ESNamespace Environment {
+		public abstract NamespaceObject Environment {
 			get;
 		}
 		
@@ -195,7 +195,7 @@ namespace EssenceSharp.Runtime {
 			get;
 		}
 
-		public abstract ESBehavior HomeClass {
+		public abstract BehavioralObject HomeClass {
 			get;
 		}
 		
@@ -399,13 +399,13 @@ namespace EssenceSharp.Runtime {
 			get {return true;}
 		}
 		
-		public override ESNamespace Environment {
-			get {return HasHomeClass ? HomeClass : null;}
-		}
-		
 		public ESCompiledCode LexicalContext {
 			get {return lexicalContext;}
 			set {lexicalContext = value;}
+		}
+		
+		public override NamespaceObject Environment {
+			get {return lexicalContext == null ? null : lexicalContext.Environment;}
 		}
 		
 		public override ESMethod HomeMethod {
@@ -416,7 +416,7 @@ namespace EssenceSharp.Runtime {
 			get {return lexicalContext == null ? false : lexicalContext.HasHomeClass;}
 		}
 		
-		public override ESBehavior HomeClass {
+		public override BehavioralObject HomeClass {
 			get {return lexicalContext == null ? null : lexicalContext.HomeClass;}
 		}
 		
@@ -1337,10 +1337,11 @@ namespace EssenceSharp.Runtime {
 
 	public class ESMethod : ESCompiledCode {
 		
-		protected ESBehavior 										homeClass;
+		protected NamespaceObject									environment;
+		protected BehavioralObject 									homeClass;
 		protected ESSymbol										selector;
-		protected InlineOperation									inlineOperation;
 		protected MethodDeclarationNode									methodDeclarationNode;
+		protected InlineOperation									inlineOperation;
 		protected HashSet<ESSymbol>									protocols;
 		
 		internal ESMethod(ESBehavior esClass) : base(esClass) {
@@ -1349,51 +1350,48 @@ namespace EssenceSharp.Runtime {
 		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function) : this(esClass, selector, function, null, null) {
 		}
 		
-		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, ESBehavior homeClass) : this(esClass, selector, function, homeClass, null) {
+		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, NamespaceObject environment, BehavioralObject homeClass) : this(esClass, selector, function, environment, homeClass, null) {
 		}
 		
-		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, ESSymbol protocol) : this(esClass, selector, function, null, protocol) {
+		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, ESSymbol protocol) : this(esClass, selector, function, null, null, protocol) {
 		}
 		
-		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, ESBehavior homeClass, ESSymbol protocol) : this(esClass, selector, null, function, homeClass, protocol) {
+		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function, NamespaceObject environment, BehavioralObject homeClass, ESSymbol protocol) : this(esClass, selector, null, function, environment, homeClass, protocol) {
 		}
 		
 		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function) : this(esClass, selector, inlineOperation, function, null, null) {
 		}
 		
-		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior homeClass) : this(esClass, selector, inlineOperation, function, homeClass, null) {
+		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, NamespaceObject environment, BehavioralObject homeClass) : this(esClass, selector, inlineOperation, function, environment, homeClass, null) {
 		}
 
-		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESSymbol protocol) : this(esClass, selector, inlineOperation, function, null, protocol) {
+		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESSymbol protocol) : this(esClass, selector, inlineOperation, function, null, null, protocol) {
 		}
 		
-		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, ESBehavior homeClass, ESSymbol protocol) : base(esClass) {
+		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, NamespaceObject environment, BehavioralObject homeClass, ESSymbol protocol) : base(esClass) {
+			this.environment	= environment ?? homeClass;
+			this.homeClass		= homeClass ?? environment as BehavioralObject;
 			Selector		= selector;
 			this.inlineOperation	= inlineOperation;
 			Function		= function;
-			setHomeClass(homeClass);
 			addToProtocol(protocol);
 		}
 		
-		public ESMethod(ESBehavior esClass, ESBehavior homeClass, MethodDeclarationNode methodDeclarationNode) : this(esClass, homeClass, methodDeclarationNode, null) {
+		public ESMethod(ESBehavior esClass, NamespaceObject environment, BehavioralObject homeClass, MethodDeclarationNode methodDeclarationNode) : this(esClass, environment, homeClass, methodDeclarationNode, null) {
 		}
 		
-		public ESMethod(ESBehavior esClass, ESBehavior homeClass, MethodDeclarationNode methodDeclarationNode, ESSymbol protocol) 
+		public ESMethod(ESBehavior esClass, NamespaceObject environment, BehavioralObject homeClass, MethodDeclarationNode methodDeclarationNode, ESSymbol protocol) 
 			: this(esClass, 
 				methodDeclarationNode.Selector,
 				methodDeclarationNode.InlineOperation,
-				methodDeclarationNode.functionFor(homeClass),
-				homeClass,
+				methodDeclarationNode.functionFor(environment ?? homeClass, homeClass ?? environment as BehavioralObject),
+				homeClass, homeClass,
 				protocol) {
 			this.methodDeclarationNode = methodDeclarationNode;
 		}
 
 		public override ObjectStateArchitecture Architecture {
 			get {return ObjectStateArchitecture.Method;}
-		}
-		
-		public MethodDeclarationNode MethodDeclarationNode {
-			get {return methodDeclarationNode;}
 		}
 
 		public override bool IsMethod {
@@ -1402,6 +1400,10 @@ namespace EssenceSharp.Runtime {
 		
 		public override ESMethod asESMethod() {
 			return this;
+		}
+		
+		public MethodDeclarationNode MethodDeclarationNode {
+			get {return methodDeclarationNode;}
 		}
 
 		public MethodOperationType OperationType {
@@ -1416,8 +1418,8 @@ namespace EssenceSharp.Runtime {
 			get {return inlineOperation;}
 		}
 		
-		public override ESNamespace Environment {
-			get {return homeClass;}
+		public override NamespaceObject Environment {
+			get {return environment;}
 		}
 
 		public override ESMethod HomeMethod {
@@ -1428,7 +1430,7 @@ namespace EssenceSharp.Runtime {
 			get {return homeClass != null;}
 		}
 
-		public override ESBehavior HomeClass {
+		public override BehavioralObject HomeClass {
 			get {return homeClass;}
 		}
 		
@@ -1451,33 +1453,42 @@ namespace EssenceSharp.Runtime {
  			get {return protocols;}
 		}
 
-		internal void setHomeClass(ESBehavior newHomeClass) {
-			bool isNewHomeClass = homeClass != newHomeClass;
-			homeClass = newHomeClass;
-			if (isNewHomeClass) recompile();
+		internal void setEnvironmentAndHomeClass(NamespaceObject newEnvironment, BehavioralObject newHomeClass) {
+			var isNewEnvironment = environment != newEnvironment;
+			var isNewHomeClass = homeClass != newHomeClass;
+			if (isNewEnvironment || isNewHomeClass) { 
+				environment = newEnvironment;
+				homeClass = newHomeClass;
+				recompile();
+			}
 		}
 
 		public void recompile() {
 			if (homeClass == null || methodDeclarationNode == null) return;
-			Function = methodDeclarationNode.functionFor(homeClass);
+			Function = methodDeclarationNode.functionFor(Environment, HomeClass);
 		}
 
 		internal void become(ESMethod other) {
-			inlineOperation = other.InlineOperation;
 			methodDeclarationNode = other.MethodDeclarationNode;
+			inlineOperation = other.InlineOperation;
 			var otherHomeClass = other.HomeClass;
-			bool isNewHomeClass = homeClass != otherHomeClass;
-			if (isNewHomeClass) {
-				recompile();
+			if (homeClass == otherHomeClass) { 
+				var otherFunction = other.Function;
+				if (otherFunction == null) {
+					recompile();
+				} else { 
+					Function = otherFunction;
+				}
 			} else { 
-				Function = other.Function;
+				homeClass = otherHomeClass;
+				recompile();
 			}
 			if (other.ProtocolCount > 0) foreach (var protocol in other.Protocols) addToProtocol(protocol);
 		}
 		
-		public ESMethod newCopyIn(ESBehavior newHomeClass) {
+		public ESMethod newCopyIn(BehavioralObject newHomeClass) {
 			var newCopy = (ESMethod)copy();
-			newCopy.setHomeClass(newHomeClass);
+			newCopy.setEnvironmentAndHomeClass(Environment, newHomeClass);
 			return newCopy;
 		}
 
@@ -1508,10 +1519,10 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
-			if (HomeClass == null) {
+			if (homeClass == null) {
 				append(" ??");
 			} else {
-				append(HomeClass.Name.PrimitiveValue);
+				append(homeClass.Name.PrimitiveValue);
 			}
 			append(">>");
 			if (selector == null) {

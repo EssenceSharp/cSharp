@@ -220,7 +220,7 @@ namespace EssenceSharp.Runtime {
 			return Class.Kernel.newString(slots);
 		}
 		
-		public override ESBindingReference bindingInNamespaceIfAbsent(ESNamespace environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, Functor0<ESBindingReference> ifAbsentAction) {
+		public override ESBindingReference bindingInNamespaceIfAbsent(NamespaceObject environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, Functor0<ESBindingReference> ifAbsentAction) {
 			if (PathElementCount > 1) return asESPathname().bindingInNamespaceIfAbsent(environment, requestorRights, importTransitivity, ifAbsentAction);
 			var binding = environment.bindingAt(PrimitiveValue, requestorRights, importTransitivity, null);
 			return binding == null ?
@@ -228,7 +228,7 @@ namespace EssenceSharp.Runtime {
 				binding;
 		}
 		
-		public override Object valueInNamespaceIfAbsent(ESNamespace environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, FuncNs.Func<Object> ifAbsentAction) {
+		public override Object valueInNamespaceIfAbsent(NamespaceObject environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, FuncNs.Func<Object> ifAbsentAction) {
 			var binding = bindingInNamespaceIfAbsent(environment, requestorRights, importTransitivity, null);
 			return binding == null ?
 				ifAbsentAction == null ? null : asFunctor0(ifAbsentAction)() :
@@ -301,17 +301,10 @@ namespace EssenceSharp.Runtime {
 		
 	}
 
-	public class ESSymbolIdentityComparator : IEqualityComparer<ESSymbol> {
-
-		public new bool Equals(ESSymbol left, ESSymbol right) {
-			return left == right;
-		}
-
-		public int GetHashCode(ESSymbol anObject) {
-			return RuntimeHelpers.GetHashCode(anObject);
-		}
+	public class ESSymbolIdentityComparator : IdentityComparator<ESSymbol> {
 
 	}
+
 	public class SymbolRegistry {
 		
 		protected static readonly String	empty				= "";

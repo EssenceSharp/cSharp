@@ -44,10 +44,10 @@ namespace EssenceSharp.ClientServices {
 	public abstract class ESScriptCode : ScriptCode {
 
 		protected SourceUnit		sourceUnit;
-		protected ESNamespace		bindingNamespace;
+		protected NamespaceObject	bindingNamespace;
 		protected TimeSpan		durationToRun			= TimeSpan.Zero;
 
-		public ESScriptCode(SourceUnit sourceUnit, ESNamespace bindingNamespace) : base(sourceUnit) {
+		public ESScriptCode(SourceUnit sourceUnit, NamespaceObject bindingNamespace) : base(sourceUnit) {
 			this.sourceUnit			= sourceUnit;
 			this.bindingNamespace		= bindingNamespace;
 		}
@@ -64,7 +64,7 @@ namespace EssenceSharp.ClientServices {
 			get {return Code.Function;}
 		}
 
-		public ESNamespace BindingNamespace {
+		public NamespaceObject BindingNamespace {
 			get {return bindingNamespace;}
 		}
 
@@ -100,7 +100,7 @@ namespace EssenceSharp.ClientServices {
 
 		protected ESBlock		block;
 
-		public ESBlockScriptCode(SourceUnit sourceUnit, ESNamespace bindingNamespace, ESBlock block) : base(sourceUnit, bindingNamespace) {
+		public ESBlockScriptCode(SourceUnit sourceUnit, NamespaceObject bindingNamespace, ESBlock block) : base(sourceUnit, bindingNamespace) {
 			this.block		= block;
 		}
 
@@ -139,7 +139,7 @@ namespace EssenceSharp.ClientServices {
 		protected ESMethod		method;
 		protected Object		defaultReceiver;
 
-		public ESMethodScriptCode(SourceUnit sourceUnit, ESNamespace bindingNamespace, Object defaultReceiver, ESMethod method) : base(sourceUnit, bindingNamespace) {
+		public ESMethodScriptCode(SourceUnit sourceUnit, NamespaceObject bindingNamespace, Object defaultReceiver, ESMethod method) : base(sourceUnit, bindingNamespace) {
 			this.defaultReceiver	= defaultReceiver;
 			this.method		= method;
 		}

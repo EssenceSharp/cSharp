@@ -296,7 +296,34 @@ namespace EssenceSharp.Runtime {
 
 	}
 
-	public abstract class ESAbstractDictionary<KeyType, ValueType, AssociationType> : ESNamedSlotsObject, IDictionary<KeyType, ValueType> 
+	public interface ESGenericDictionary<KeyType, ValueType, AssociationType> : NamedSlotsObject, IDictionary<KeyType, ValueType> 
+		where AssociationType : ESAbstractAssociation<KeyType, ValueType> 
+		where KeyType : class
+		where ValueType : class {
+
+		bool isEmpty {get;}
+
+		AssociationType associationAt(KeyType key);
+		AssociationType associationAtIfAbsent(KeyType key, FuncNs.Func<AssociationType> notFoundAction);
+		ValueType at(KeyType key);
+		ValueType atIfAbsent(KeyType key, FuncNs.Func<ValueType> notFoundAction);
+		ValueType atIfAbsentPut(KeyType key, FuncNs.Func<ValueType> computeValueToBeAdded);
+		void add(AssociationType newAssociation);
+		void atPut(KeyType key, ValueType value);
+		void atImmutablyPut(KeyType key, ValueType value);
+		bool includesKey(KeyType key);
+		Object removeKey(KeyType key);
+		Object removeKeyIfAbsent(KeyType key, FuncNs.Func<Object> notFoundAction);
+		void removeAll();
+		void associationsDo(FuncNs.Func<AssociationType, Object> enumerator1);
+		void keysDo(FuncNs.Func<KeyType, Object> enumerator1);
+		void valuesDo(FuncNs.Func<ValueType, Object> enumerator1);
+		void keysAndValuesDo(FuncNs.Func<KeyType, ValueType, Object> enumerator2);
+
+	}
+
+	public abstract class ESAbstractDictionary<KeyType, ValueType, AssociationType> 
+		: ESNamedSlotsObject, ESGenericDictionary<KeyType, ValueType, AssociationType> 
 		where AssociationType : ESAbstractAssociation<KeyType, ValueType> 
 		where KeyType : class
 		where ValueType : class {
