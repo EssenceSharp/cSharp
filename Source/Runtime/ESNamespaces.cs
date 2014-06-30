@@ -33,6 +33,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 #if CLR2
 using FuncNs = Microsoft.Scripting.Utils;
 #else
@@ -52,7 +53,7 @@ namespace EssenceSharp.Runtime {
 			get;
 		}
 
-		bool IsHostVariable {
+		bool IsScopeVariableHandle {
 			get;
 		}
 
@@ -84,7 +85,7 @@ namespace EssenceSharp.Runtime {
 			get {return false;}
 		}
 
-		public virtual bool IsHostVariable {
+		public virtual bool IsScopeVariableHandle {
 			get {return false;}
 		}
 
@@ -144,19 +145,19 @@ namespace EssenceSharp.Runtime {
 
 	}
 
-	public class HostVariableBindingHandle : AbstractBindingHandle {
+	public class ScopeVariableBindingHandle : AbstractBindingHandle {
 
 		protected IScopeVariable									scopeVariable;
 
-		public HostVariableBindingHandle(IScopeVariable scopeVariable) : base() {
+		public ScopeVariableBindingHandle(IScopeVariable scopeVariable) : base() {
 			this.scopeVariable = scopeVariable;
 		}
 
-		public HostVariableBindingHandle(IScopeVariable scopeVariable, bool isImmutable) :base(isImmutable) {
+		public ScopeVariableBindingHandle(IScopeVariable scopeVariable, bool isImmutable) :base(isImmutable) {
 			this.scopeVariable = scopeVariable;
 		}
 
-		public override bool IsHostVariable {
+		public override bool IsScopeVariableHandle {
 			get {return true;}
 		}
 
@@ -248,7 +249,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public ESBindingReference withValue(Object newValue) {
-			var mutableCopy = (ESBindingReference)base.copy();
+			var mutableCopy = (ESBindingReference)base.shallowCopy();
 			mutableCopy.setValue(newValue);
 			if (IsImmutable) {
 				mutableCopy.beImmutable();
@@ -259,7 +260,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public ESBindingReference withKeyAndValue(String newKey, Object newValue) {
-			var mutableCopy = (ESBindingReference)base.copy();
+			var mutableCopy = (ESBindingReference)base.shallowCopy();
 			mutableCopy.setKeyAndValue(newKey, newValue);
 			if (IsImmutable) {
 				mutableCopy.beImmutable();
@@ -295,8 +296,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : PrimitiveDomain {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.BindingReferenceClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.BindingReferenceClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -330,7 +331,7 @@ namespace EssenceSharp.Runtime {
 			public Object _setAccessPrivilege_(Object receiver, Object accessPrivilege) {
 				AccessPrivilegeLevel accessPrivilegeLevel;
 				try {
-					accessPrivilegeLevel = (AccessPrivilegeLevel)Enum.Parse(typeof(AccessPrivilegeLevel), kernel.asESSymbol(accessPrivilege));
+					accessPrivilegeLevel = (AccessPrivilegeLevel)Enum.Parse(typeof(AccessPrivilegeLevel), objectSpace.asESSymbol(accessPrivilege));
 				} catch {
 					throw new PrimInvalidOperandException("accessPrivilege: <accessPrivilege> must be a Symbol or String identifying a valid access privilege level.");
 				}
@@ -339,7 +340,7 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _key_(Object receiver) {
-				return kernel.symbolFor(((ESBindingReference)receiver).Key);
+				return objectSpace.symbolFor(((ESBindingReference)receiver).Key);
 			}
 		
 			public Object _value_(Object receiver) {
@@ -501,12 +502,13 @@ namespace EssenceSharp.Runtime {
 
 		ESBindingReference declareConstant(String key, Object constantValue, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction);
 		ESBindingReference declareVariable(String key, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction);
-		ESBindingReference importVariableFrom(Scope scope, String key, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction);
+		ESBindingReference importScopeVariableFrom(Scope scope, String key, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction);
 		bool declareInSelf();
 		bool declareInSelf(bool overridePreviousBinding);
 		bool declareInSelfAs(String alias, bool overridePreviousBinding);
 		ESNamespace defineNamespace(String nsName, AccessPrivilegeLevel accessPrivilegeLevel, FuncNs.Func<Object, Object> configureNamespace);
 		ESClass defineClass(String className, AccessPrivilegeLevel accessPrivilegeLevel, FuncNs.Func<Object, Object> configureClass);
+		ESInstanceTrait defineTrait(String traitName, AccessPrivilegeLevel accessPrivilegeLevel, FuncNs.Func<Object, Object> configureTrait);
 
 		ESBindingReference localBindingAt(String key, AccessPrivilegeLevel requestorPrivilege);
 		ESBindingReference bindingAt(String key, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, FuncNs.Func<ESBindingReference> notFoundAction);
@@ -519,6 +521,8 @@ namespace EssenceSharp.Runtime {
 		void importAs(String localName, ESSpecifImportSpec specificImport);
 
 	}
+
+	public class ESNamesapceIdentityComparator : IdentityComparator<ESNamespace> {}
 
 	public class ESNamespace : ESAbstractDictionary<String, BindingHandle, ESBindingReference>, NamespaceObject {
 
@@ -568,7 +572,7 @@ namespace EssenceSharp.Runtime {
 			setEnvironment(environment);
 		}
 
-		protected override IDictionary<String, ESBindingReference> newBindings(long capacity, IEqualityComparer<String> keyComparator) {
+		protected override Dictionary<String, ESBindingReference> newBindings(long capacity, IEqualityComparer<String> keyComparator) {
 			return new Dictionary<String, ESBindingReference>((int)capacity, keyComparator);
 		}
 
@@ -589,7 +593,18 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected override ESBindingReference newAssociation(String key, BindingHandle value) {
-			return Class.Kernel.newBindingReference(key, value);
+			return Class.ObjectSpace.newBindingReference(key, value);
+		}
+
+		public override void postCopy() {
+			base.postCopy();
+			identity		= identityGenerator++;
+			versionId		= versionIdGenerator++;
+			var oldSpecificImports	= specificImports;
+			var oldSGeneralImports	= generalImports;
+			initializeImports();
+			foreach (var kvp in oldSpecificImports) specificImports[kvp.Key] = kvp.Value;
+			generalImports.AddRange(oldSGeneralImports);
 		}
 
 		#region Dictionary protocol
@@ -615,7 +630,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public bool IsClrNamespace {
-			get {return this == Class.Kernel.ClrNamespace;}
+			get {return this == Class.ObjectSpace.ClrNamespace;}
 		}
 
 		protected virtual String AnonymousName {
@@ -623,7 +638,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual ESSymbol Name {
-			get {return name ?? Class.Kernel.symbolFor(AnonymousName);}
+			get {return name ?? Class.ObjectSpace.symbolFor(AnonymousName);}
 		}
 
 		public String NameString {
@@ -631,11 +646,12 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual ESPathname pathname() {
+			if (environment == null) return Class.ObjectSpace.pathnameFromString(NameString);
 			ESPathname pn = null;
 			int index = 0;
 			fromRootDo((long depth, ESNamespace pathElement) => {
 				if (pn == null) {
-					pn = Class.Kernel.newPathname(depth - 1);
+					pn = Class.ObjectSpace.newPathname(depth - 1);
 				} else {
 					pn[index++] = pathElement.NameString;
 				}
@@ -766,30 +782,30 @@ namespace EssenceSharp.Runtime {
 		
 		public virtual String AssemblyNameString {
 			get {return Assembly.FullName;}
-			set {	Class.Kernel.bindNamespaceToAssemblyNamed(this, new AssemblyName(value));
-				Assembly = Class.Kernel.assemblyFor(this, true);}
+			set {	Class.ObjectSpace.bindNamespaceToAssemblyNamed(this, new AssemblyName(value));
+				Assembly = Class.ObjectSpace.assemblyFor(this, true);}
 		}
 
 		public String AssemblyPathname {
-			get {	var path = Class.Kernel.assemblyPathFor(this);
+			get {	var path = Class.ObjectSpace.assemblyPathFor(this);
 				return path == null ? null : path.FullName;}
 			set {setAssemblyPath(new FileInfo(value));}
 		}
 
 		public void setAssemblyPath(FileInfo assemblyPath) {
-			Class.Kernel.bindNamespaceToAssemblyAt(this, assemblyPath);
-			Assembly = Class.Kernel.assemblyFor(this, true);
+			Class.ObjectSpace.bindNamespaceToAssemblyAt(this, assemblyPath);
+			Assembly = Class.ObjectSpace.assemblyFor(this, true);
 		}
 
 		public virtual Assembly Assembly {
 			get {	if (assembly == null) {
-					var assm = Class.Kernel.assemblyFor(this, true);
+					var assm = Class.ObjectSpace.assemblyFor(this, true);
 					if (assm == null) {
 						if (environment != null) {
 							assm = environment.Assembly;
 						} 
 					}
-					assembly = assm ?? typeof(ESKernel).Assembly;
+					assembly = assm ?? typeof(ESObjectSpace).Assembly;
 				}
 				return assembly;}
 			set {assembly = value;}
@@ -837,7 +853,7 @@ namespace EssenceSharp.Runtime {
 		public ESBindingReference declareConstant(String key, Object constantValue, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction) {
 			ESBindingReference binding;
 			if (bindings.TryGetValue(key, out binding)) return onCollisionAction == null ? null : onCollisionAction();
-			binding = Class.Kernel.newBindingReference(key, constantValue, accessPrivilegeLevel);
+			binding = Class.ObjectSpace.newBindingReference(key, constantValue, accessPrivilegeLevel);
 			binding.beImmutable();
 			bindings[key] = binding;
 			return binding;
@@ -846,13 +862,13 @@ namespace EssenceSharp.Runtime {
 		public ESBindingReference declareVariable(String key, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction) {
 			ESBindingReference binding;
 			if (bindings.TryGetValue(key, out binding)) return onCollisionAction == null ? null : onCollisionAction();
-			binding = Class.Kernel.newBindingReference(key, new DirectBindingHandle(null), accessPrivilegeLevel);
+			binding = Class.ObjectSpace.newBindingReference(key, new DirectBindingHandle(null), accessPrivilegeLevel);
 			binding.keyBeImmutable();
 			bindings[key] = binding;
 			return binding;
 		}
 
-		public ESBindingReference importVariableFrom(Scope scope, String key, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction) {
+		public ESBindingReference importScopeVariableFrom(Scope scope, String key, AccessPrivilegeLevel accessPrivilegeLevel, Functor0<ESBindingReference> onCollisionAction) {
 			if (scope == null) return null;
 			var storage = scope.Storage as ScopeStorage;
 			if (storage == null) return null;
@@ -861,13 +877,13 @@ namespace EssenceSharp.Runtime {
 			ESBindingReference binding;
 			if (bindings.TryGetValue(key, out binding)) {
 				var handle = binding.Value;
-				if (!handle.IsHostVariable) return onCollisionAction == null ? null : onCollisionAction();
-				var curentScopeVar = ((HostVariableBindingHandle)handle).ScopeVariable;
+				if (!handle.IsScopeVariableHandle) return onCollisionAction == null ? null : onCollisionAction();
+				var curentScopeVar = ((ScopeVariableBindingHandle)handle).ScopeVariable;
 				if (!ReferenceEquals(variable, curentScopeVar)) {
-					((HostVariableBindingHandle)handle).ScopeVariable = variable;
+					((ScopeVariableBindingHandle)handle).ScopeVariable = variable;
 				}
 			} else {
-				binding = Class.Kernel.newBindingReference(key, new HostVariableBindingHandle(variable), accessPrivilegeLevel);
+				binding = Class.ObjectSpace.newBindingReference(key, new ScopeVariableBindingHandle(variable), accessPrivilegeLevel);
 				binding.keyBeImmutable();
 				bindings[key] = binding;
 			}
@@ -900,16 +916,16 @@ namespace EssenceSharp.Runtime {
 				if (binding.AccessPrivilegeLevel != accessPrivilegeLevel) binding.AccessPrivilegeLevel = accessPrivilegeLevel;
 			} 
 			if (theNamespace == null) {
-				var kernel = Class.Kernel;
-				theNamespace = kernel.newNamespace(this, null);
+				var objectSpace = Class.ObjectSpace;
+				theNamespace = objectSpace.newNamespace(this, null);
 				if (binding == null) {
-					binding = kernel.newBindingReference(nsName, theNamespace, accessPrivilegeLevel);
+					binding = objectSpace.newBindingReference(nsName, theNamespace, accessPrivilegeLevel);
 					bindings[nsName] = binding;
 				} else {
 					binding.setValue(theNamespace);
 					if (binding.AccessPrivilegeLevel != accessPrivilegeLevel) binding.AccessPrivilegeLevel = accessPrivilegeLevel;
 				}
-				theNamespace.basicSetName(kernel.symbolFor(nsName));
+				theNamespace.basicSetName(objectSpace.symbolFor(nsName));
 			}
 			if (configureNamespace != null) configureNamespace(theNamespace);
 			return theNamespace;
@@ -929,19 +945,48 @@ namespace EssenceSharp.Runtime {
 				}
 			} 
 			if (theClass == null) {
-				var kernel = Class.Kernel;
-				theClass = kernel.newClass();
+				var objectSpace = Class.ObjectSpace;
+				theClass = objectSpace.newClass();
 				if (binding == null) {
-					binding = kernel.newBindingReference(className, theClass, accessPrivilegeLevel);
+					binding = objectSpace.newBindingReference(className, theClass, accessPrivilegeLevel);
 					bindings[className] = binding;
 				} else {
 					binding.setValue(theClass);
 				}
 				theClass.setEnvironment(this);
-				theClass.basicSetName(kernel.symbolFor(className));
+				theClass.basicSetName(objectSpace.symbolFor(className));
 			}
 			if (configureClass != null) configureClass(theClass);
 			return theClass;
+		}
+
+		public ESInstanceTrait defineTrait(String traitName, AccessPrivilegeLevel accessPrivilegeLevel, FuncNs.Func<Object, Object> configureTrait) {
+			ESBindingReference binding;
+			ESInstanceTrait theTrait = null;
+			if (bindings.TryGetValue(traitName, out binding)) {
+				var value = binding.Value.Value;
+				if (value != null) {
+					theTrait = value as ESInstanceTrait;
+					if (theTrait == null && binding.IsImmutable) throw new ImmutableBindingException("Cannot change the value of the binding named " + binding.Key);
+				}
+				if (binding.AccessPrivilegeLevel != accessPrivilegeLevel) {
+					binding.AccessPrivilegeLevel = accessPrivilegeLevel;
+				}
+			} 
+			if (theTrait == null) {
+				var objectSpace = Class.ObjectSpace;
+				theTrait = objectSpace.newTrait();
+				if (binding == null) {
+					binding = objectSpace.newBindingReference(traitName, theTrait, accessPrivilegeLevel);
+					bindings[traitName] = binding;
+				} else {
+					binding.setValue(theTrait);
+				}
+				theTrait.setEnvironment(this);
+				theTrait.basicSetName(objectSpace.symbolFor(traitName));
+			}
+			if (configureTrait != null) configureTrait(theTrait);
+			return theTrait;
 		}
 
 		#endregion
@@ -1026,7 +1071,7 @@ namespace EssenceSharp.Runtime {
 
 		protected ESBindingReference searchForBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, HashSet<ESNamespace> transitiveClosure) {
 			if (ReferenceEquals(transitiveClosure,	null)) {
-				transitiveClosure = new HashSet<ESNamespace>();
+				transitiveClosure = new HashSet<ESNamespace>(new ESNamesapceIdentityComparator());
 				transitiveClosure.Add(this);
 			} else if (transitiveClosure.Contains(this)) {
 				return null;
@@ -1057,9 +1102,25 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
+		#region Interoperability
+		
+		public override int GetHashCode() {
+			return RuntimeHelpers.GetHashCode(this);
+		}
+
+		public override bool Equals(Object comparand) {
+			return this == comparand;
+		}      
+		
+		public override bool Equals(ESObject comparand) {
+			return this == comparand;
+		}    
+
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
 			append(NameString);
 		}
+
+		#endregion
 
 		public override T valueBy<T>(Operation<T> operation) {
 		    return operation.applyToNamespace(this);
@@ -1067,8 +1128,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : PrimitiveDomain {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.NamespaceClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.NamespaceClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -1086,17 +1147,17 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _setName_(Object receiver, Object name) {
-				((ESNamespace)receiver).setName(kernel.asESSymbol(name));
+				((ESNamespace)receiver).setName(objectSpace.asESSymbol(name));
 				return receiver;
 			}
 		
 			public Object _renameFromTo_(Object receiver, Object prevName, Object newName) {
-				((ESNamespace)receiver).renameFromTo(kernel.asESSymbol(prevName), kernel.asESSymbol(newName));
+				((ESNamespace)receiver).renameFromTo(objectSpace.asESSymbol(prevName), objectSpace.asESSymbol(newName));
 				return receiver;
 			}
 		
 			public Object _hostSystemName_ (Object receiver) {
-				return kernel.symbolFor(((ESNamespace)receiver).HostSystemName);
+				return objectSpace.symbolFor(((ESNamespace)receiver).HostSystemName);
 			}
 		
 			public Object _setHostSystemName_ (Object receiver, Object hostSystemName) {
@@ -1105,7 +1166,7 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _hostSystemNamespace_ (Object receiver) {
-				return kernel.symbolFor(((ESNamespace)receiver).HostSystemNamespace);
+				return objectSpace.symbolFor(((ESNamespace)receiver).HostSystemNamespace);
 			}
 		
 			public Object _setHostSystemNamespace_ (Object receiver, Object hostSystemNamespace) {
@@ -1114,7 +1175,7 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _assemblyPathname_ (Object receiver) {
-				return kernel.symbolFor(((ESNamespace)receiver).AssemblyPathname);
+				return objectSpace.symbolFor(((ESNamespace)receiver).AssemblyPathname);
 			}
 		
 			public Object _setAssemblyPathname_ (Object receiver, Object assemblyPathname) {
@@ -1123,7 +1184,7 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _assemblyName_ (Object receiver) {
-				return kernel.symbolFor(((ESNamespace)receiver).AssemblyNameString);
+				return objectSpace.symbolFor(((ESNamespace)receiver).AssemblyNameString);
 			}
 		
 			public Object _setAssemblyName_ (Object receiver, Object assemblyName) {
@@ -1214,7 +1275,7 @@ namespace EssenceSharp.Runtime {
 
 			public Object _keysDo_(Object receiver, Object enumerator1) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator1);
-				((ESNamespace)receiver).keysDo(key => f1(kernel.asESSymbol(key)));
+				((ESNamespace)receiver).keysDo(key => f1(objectSpace.asESSymbol(key)));
 				return receiver;
 			}
 
@@ -1226,7 +1287,7 @@ namespace EssenceSharp.Runtime {
 
 			public Object _keysAndValuesDo_(Object receiver, Object enumerator2) {
 				FuncNs.Func<Object, Object, Object> f2 = asFunctor2(enumerator2);
-				((ESNamespace)receiver).keysAndValuesDo((key, reference) => f2(kernel.asESSymbol(key), reference.Value));
+				((ESNamespace)receiver).keysAndValuesDo((key, reference) => f2(objectSpace.asESSymbol(key), reference.Value));
 				return receiver;
 			}
 
@@ -1276,6 +1337,16 @@ namespace EssenceSharp.Runtime {
 				return ((ESNamespace)receiver).defineClass(asHostString(className), access, asFunctor1(configureClass));
 			}
 
+			public Object _defineTrait_(Object receiver, Object traitName, Object accessPrivilegeLevel, Object configureTrait) {
+				AccessPrivilegeLevel access;
+				try {
+					access = (AccessPrivilegeLevel)Enum.Parse(typeof(AccessPrivilegeLevel), asHostString(accessPrivilegeLevel));
+				} catch {
+					throw new PrimInvalidOperandException("defineTrait:withAccess:configure: <accessPrivilegeLevel> must be a Symbol or String identifying a valid access privilege level.");
+				}
+				return ((ESNamespace)receiver).defineTrait(asHostString(traitName), access, asFunctor1(configureTrait));
+			}
+
 			public Object _initializeSpecificImports_(Object receiver) {
 				((ESNamespace)receiver).initializeSpecificImports();
 				return receiver;
@@ -1293,7 +1364,7 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException("import:withAccess: <accessPrivilegeLevel> must be a Symbol or String identifying a valid access privilege level.");
 				}
-				((ESNamespace)receiver).addImport(new ESImportSpec(kernel.asESNamespace(sourceNsSpecification), access, ImportTransitivity.Intransitive));
+				((ESNamespace)receiver).addImport(new ESImportSpec(objectSpace.asESNamespace(sourceNsSpecification), access, ImportTransitivity.Intransitive));
 				return receiver;
 			}
 
@@ -1304,7 +1375,7 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException("importTransitive:withAccess: <accessPrivilegeLevel> must be a Symbol or String identifying a valid access privilege level.");
 				}
-				((ESNamespace)receiver).addImport(new ESImportSpec(kernel.asESNamespace(sourceNsSpecification), access, ImportTransitivity.Transitive));
+				((ESNamespace)receiver).addImport(new ESImportSpec(objectSpace.asESNamespace(sourceNsSpecification), access, ImportTransitivity.Transitive));
 				return receiver;
 			}
 
@@ -1315,7 +1386,7 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException("import:withAccess: <accessPrivilegeLevel> must be a Symbol or String identifying a valid access privilege level.");
 				}
-				((ESNamespace)receiver).importAs(asHostString(localName), new ESSpecifImportSpec(kernel.asESNamespace(sourceNsSpecification), access, ImportTransitivity.Intransitive, kernel.asESSymbol(nameInSource)));
+				((ESNamespace)receiver).importAs(asHostString(localName), new ESSpecifImportSpec(objectSpace.asESNamespace(sourceNsSpecification), access, ImportTransitivity.Intransitive, objectSpace.asESSymbol(nameInSource)));
 				return receiver;
 			}
 
@@ -1326,7 +1397,7 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException("import:withAccess: <accessPrivilegeLevel> must be a Symbol or String identifying a valid access privilege level.");
 				}
-				((ESNamespace)receiver).importAs(asHostString(localName), new ESSpecifImportSpec(kernel.asESNamespace(sourceNsSpecification), access, ImportTransitivity.Transitive, kernel.asESSymbol(nameInSource)));
+				((ESNamespace)receiver).importAs(asHostString(localName), new ESSpecifImportSpec(objectSpace.asESNamespace(sourceNsSpecification), access, ImportTransitivity.Transitive, objectSpace.asESSymbol(nameInSource)));
 				return receiver;
 			}
 		
@@ -1377,6 +1448,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("declareConstant:withValue:access:onCollision:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_declareConstant_));
 				publishPrimitive("defineNamespace:withAccess:configure:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_defineNamespace_));
 				publishPrimitive("defineClass:withAccess:configure:",				new FuncNs.Func<Object, Object, Object, Object, Object>(_defineClass_));
+				publishPrimitive("defineTrait:withAccess:configure:",				new FuncNs.Func<Object, Object, Object, Object, Object>(_defineTrait_));
 
 				publishPrimitive("initializeSpecificImports",					new FuncNs.Func<Object, Object>(_initializeSpecificImports_));
 				publishPrimitive("initializeGeneralImports",					new FuncNs.Func<Object, Object>(_initializeGeneralImports_));

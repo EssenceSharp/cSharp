@@ -38,7 +38,7 @@ namespace EssenceSharp.Exceptions {
 
 		protected String messageText				= "";
 		protected Object tag;
-		protected ESKernel kernel;
+		protected ESObjectSpace objectSpace;
 		protected Object receiver;
 		protected ESMessage message;
 
@@ -53,11 +53,11 @@ namespace EssenceSharp.Exceptions {
 				ClassName = receiver == null ? "UndefinedObject" : receiver.GetType().AssemblyQualifiedName;
 				tag = "MessageNotUnderstood";
 			} else {
-				kernel = message.Class.Kernel;
+				objectSpace = message.Class.ObjectSpace;
 				var selector = message.Selector;
 				MemberName = selector == null ? "<nil selector>" : selector.PrimitiveValue;
-				ClassName = kernel.classOf(receiver).PathnameString;
-				tag = kernel.symbolFor("MessageNotUnderstood");
+				ClassName = objectSpace.classOf(receiver).PathnameString;
+				tag = objectSpace.symbolFor("MessageNotUnderstood");
 				messageText = ClassName + " instances do not know how to respond to the message '" + MemberName + "'";
 			}
 		}

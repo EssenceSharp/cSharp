@@ -53,7 +53,7 @@ namespace EssenceSharp.CompilationServices {
 
 		#region Instance Variables
 
-		protected ESKernel								kernel						= null;
+		protected ESObjectSpace								objectSpace						= null;
 		protected ESParser								parser						= null;
 		protected ASTGenerator								abstractSyntaxTreeGenerator			= null;
 
@@ -69,20 +69,20 @@ namespace EssenceSharp.CompilationServices {
 
 		#region Constructors
 
-		public ESCompiler(ESKernel kernel, TextReader sourceStream) 
-			: this (kernel, sourceStream, SyntaxProfile.Universal) {
+		public ESCompiler(ESObjectSpace objectSpace, TextReader sourceStream) 
+			: this (objectSpace, sourceStream, SyntaxProfile.Universal) {
 		}
 		
-		public ESCompiler(ESKernel kernel, TextReader sourceStream, SyntaxProfile syntaxProfile) 
-			: this (kernel, new ESParser(sourceStream, syntaxProfile)) {
+		public ESCompiler(ESObjectSpace objectSpace, TextReader sourceStream, SyntaxProfile syntaxProfile) 
+			: this (objectSpace, new ESParser(sourceStream, syntaxProfile)) {
 		}
 		
-		public ESCompiler(ESKernel kernel, TextReader sourceStream, ParsingOptions parsingOptions) 
-			: this (kernel, new ESParser(sourceStream, parsingOptions)) {
+		public ESCompiler(ESObjectSpace objectSpace, TextReader sourceStream, ParsingOptions parsingOptions) 
+			: this (objectSpace, new ESParser(sourceStream, parsingOptions)) {
 		}
 
-		public ESCompiler(ESKernel kernel, ESParser parser) {
-			this.kernel = kernel;
+		public ESCompiler(ESObjectSpace objectSpace, ESParser parser) {
+			this.objectSpace = objectSpace;
 			Parser = parser;
 		}
 
@@ -135,8 +135,8 @@ namespace EssenceSharp.CompilationServices {
 
 		#region Properties
 
-		public ESKernel Kernel {
-			get {return kernel;}
+		public ESObjectSpace ObjectSpace {
+			get {return objectSpace;}
 		}
 
 		public ESParser Parser {
@@ -236,7 +236,7 @@ namespace EssenceSharp.CompilationServices {
 				methodClass, 
 				(MethodDeclarationNode methodDeclarationNode, Delegate function) => {
 					if (function == null) return false;
-					method = kernel.newMethod(methodClass, methodClass, methodDeclarationNode, protocol);
+					method = objectSpace.newMethod(methodClass, methodClass, methodDeclarationNode, protocol);
 					return true;
 				})) {
 				compiledMethod = method;
@@ -290,7 +290,8 @@ namespace EssenceSharp.CompilationServices {
 		public virtual bool compile(ScriptType rootParseNodeType, NamespaceObject environment, Object selfValue, List<ParameterExpression> rootParameters, out Expression expression) {
 			BlockLiteralNode blockLiteralNode;
 			if (compile(rootParseNodeType, selfValue, rootParameters, out blockLiteralNode)) {
-				expression = blockLiteralNode.asCLRExpression(environment, environment as BehavioralObject);
+				var hehavior = environment as BehavioralObject;
+				expression = blockLiteralNode.asCLRExpression(environment, hehavior ?? ObjectSpace.classOf(selfValue));
 				var undeclaredVariables = blockLiteralNode.UndeclaredVariables;
 				if (undeclaredVariables != null && undeclaredVariables.Count > 0)
 					handleUndeclaredVariableReferences(undeclaredVariables, SourceSpan.None);

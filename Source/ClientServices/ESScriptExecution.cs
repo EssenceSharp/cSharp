@@ -257,15 +257,15 @@ namespace EssenceSharp.ClientServices {
 			scriptArguments.Add(scriptArg);
 		}
 
-		protected void evaluatScriptArguments(ESKernel kernel, NamespaceObject environment) {
+		protected void evaluatScriptArguments(ESObjectSpace objectSpace, NamespaceObject environment) {
  			var argList = new List<Object>();
 			foreach (var argSpec in scriptArguments) {
 				try { 
 					Object value;
 					FileInfo scriptPath;
 					if (argSpec.SpecifiesPathname) {
-						if (kernel.pathForScript(argSpec.Value, out scriptPath)) {
-							if (kernel.evaluate(scriptPath, environment, out value)) {
+						if (objectSpace.pathForScript(argSpec.Value, out scriptPath)) {
+							if (objectSpace.evaluate(scriptPath, environment, out value)) {
 								argList.Add(value);
 							} else {
 								errors.Add("Syntax error in script used as argument, pathname = " + argSpec.Value);
@@ -273,7 +273,7 @@ namespace EssenceSharp.ClientServices {
 						} else {
 							errors.Add("Script path (used as argument to base script) not found: " + argSpec.Value);
 						}
-					} else if (kernel.evaluate(new StringReader(argSpec.Value), environment, out value)) {
+					} else if (objectSpace.evaluate(new StringReader(argSpec.Value), environment, out value)) {
 						argList.Add(value);
 					} else {
 						errors.Add("Syntax error in argument: " + argSpec.Value);
@@ -294,13 +294,13 @@ namespace EssenceSharp.ClientServices {
 			}
 			Object value = null;
 			try {
-				var kernel = engine.essenceSharpKernel();
-				var environment = kernel.findOrCreateNamespace(EnvironmentName);
+				var objectSpace = engine.essenceSharpKernel();
+				var environment = objectSpace.findOrCreateNamespace(EnvironmentName);
 				foreach (var nsName in imports) {
-					var ns = kernel.findOrCreateNamespace(nsName);
+					var ns = objectSpace.findOrCreateNamespace(nsName);
 					environment.addImport(new ESImportSpec(ns, AccessPrivilegeLevel.InHierarchy, ImportTransitivity.Intransitive));
 				}
-				evaluatScriptArguments(kernel, environment);
+				evaluatScriptArguments(objectSpace, environment);
 				if (errors.Count > 0) {
 					foreach (var error in errors) Console.WriteLine(error);
 					return null;

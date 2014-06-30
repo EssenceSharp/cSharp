@@ -68,7 +68,7 @@ namespace EssenceSharp.Runtime.Binding {
 		protected static readonly AccessPrivilegeLevel		accessPrivilege		= AccessPrivilegeLevel.Local;
 
 		protected DynamicBindingGuru				dynamicBindingGuru;
-		protected ESKernel					kernel;
+		protected ESObjectSpace					objectSpace;
 		protected NamespaceObject					environment;
 		protected ESSymbol					name;			// Name of the referenced variable (may be a qualified ("dotted") reference)
 		protected String					nameString;
@@ -80,15 +80,15 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public NamedVariableBinder(DynamicBindingGuru dynamicBindingGuru, ESSymbol name, NamespaceObject environment) {
 			this.dynamicBindingGuru	= dynamicBindingGuru;
-			kernel			= dynamicBindingGuru.Kernel;
+			objectSpace			= dynamicBindingGuru.ObjectSpace;
 			this.name		= name;
 			this.environment	= environment;
 
 			if (name != null)	nameString = name.PrimitiveValue;
 			addToUndeclared = 
 				() => 
-					{var bindingRef = kernel.newBindingReference(NameString, new DirectBindingHandle((Object)null));
-					kernel.UndeclaredNamespace.add(bindingRef);
+					{var bindingRef = objectSpace.newBindingReference(NameString, new DirectBindingHandle((Object)null));
+					objectSpace.UndeclaredNamespace.add(bindingRef);
 					return bindingRef;};
 		}
 
@@ -110,7 +110,7 @@ namespace EssenceSharp.Runtime.Binding {
 		protected void doAllButFinalBinding(Object[] args, System.Action<BindingHandle> bindNSResidentVariable) {
 
 			var bindingRef = Name.bindingInNamespaceIfAbsent(environment, accessPrivilege, ImportTransitivity.Transitive, addToUndeclared);
-			if (bindingRef == null) kernel.UndeclaredNamespace.add(bindingRef = kernel.newBindingReference(NameString, new DirectBindingHandle(null)));
+			if (bindingRef == null) objectSpace.UndeclaredNamespace.add(bindingRef = objectSpace.newBindingReference(NameString, new DirectBindingHandle(null)));
 			bindNSResidentVariable(bindingRef.Value);
 
 		}
@@ -120,7 +120,7 @@ namespace EssenceSharp.Runtime.Binding {
 			protected readonly NamespaceObject defaultNamespace;
 
 			protected Registry(DynamicBindingGuru dynamicBindingGuru) : base(dynamicBindingGuru) {
-				defaultNamespace = kernel.SmalltalkNamespace;
+				defaultNamespace = objectSpace.SmalltalkNamespace;
 			}
 
 			public NamespaceObject DefaultNamespace {

@@ -85,10 +85,10 @@ namespace EssenceSharp.ClientServices {
 			get {return environmentName != null;}
 		}
 
-		public NamespaceObject getEnvironment(ESKernel kernel) {
+		public NamespaceObject getEnvironment(ESObjectSpace objectSpace) {
 			return SpecifiesEnvironmentName ?
-				kernel.findOrCreateNamespace(EnvironmentName) :
-				kernel.SmalltalkNamespace;
+				objectSpace.findOrCreateNamespace(EnvironmentName) :
+				objectSpace.SmalltalkNamespace;
 		}
 
 		public String MethodProtocol {
@@ -100,10 +100,10 @@ namespace EssenceSharp.ClientServices {
 			get {return methodProtocol != null;}
 		}
 
-		public ESSymbol getMethodProtocol(ESKernel kernel) {
+		public ESSymbol getMethodProtocol(ESObjectSpace objectSpace) {
 			return SpecifiesMethodProtocol ?
-				kernel.symbolFor(MethodProtocol) :
-				kernel.symbolFor("unspecified");
+				objectSpace.symbolFor(MethodProtocol) :
+				objectSpace.symbolFor("unspecified");
 		}
 
 		public Object Receiver {

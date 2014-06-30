@@ -39,10 +39,10 @@ namespace EssenceSharp.ClientServices {
 
 	public static class EssenceLaunchPad {
 
-		private static ESKernel				defaultKernel			= new ESKernel();
+		private static ESObjectSpace				defaultObjectSpace			= new ESObjectSpace();
 
-		public static ESKernel DefaultKernel {
-			get {return defaultKernel;}
+		public static ESObjectSpace DefaultObjectSpace {
+			get {return defaultObjectSpace;}
 		}
 
 		#region DLR Hosting Configuration

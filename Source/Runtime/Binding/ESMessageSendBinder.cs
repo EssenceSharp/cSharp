@@ -34,17 +34,30 @@ using System.Dynamic;
 #endregion
 
 namespace EssenceSharp.Runtime.Binding {
+	
+	public enum MessageReceiverKind {
+		General,
+		Self,
+		Super,
+		ThisContext
+	}
 
 	public class MessageSendBinder : DynamicMetaObjectBinder {
 
-		protected DynamicBindingGuru	dynamicBindingGuru	= null;
+		protected DynamicBindingGuru	dynamicBindingGuru;
 		protected MessageReceiverKind	receiverKind		= MessageReceiverKind.General;
-		protected ESSymbol		selector		= null;
+		protected BehavioralObject	selfReceiverClass;
+		protected ESSymbol		selector;
 
 		protected MessageSendBinder(DynamicBindingGuru dynamicBindingGuru, MessageReceiverKind receiverKind, ESSymbol selector) {
 			this.dynamicBindingGuru	= dynamicBindingGuru;
 			this.receiverKind	= receiverKind;
 			this.selector		= selector;
+		}
+
+		protected MessageSendBinder(DynamicBindingGuru dynamicBindingGuru, MessageReceiverKind receiverKind, BehavioralObject selfReceiverClass, ESSymbol selector) 
+				: this (dynamicBindingGuru, receiverKind, selector) {
+			this.selfReceiverClass	= selfReceiverClass;
 		}
 
 		public DynamicBindingGuru DynamicBindingGuru {
@@ -79,19 +92,29 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public class Registry : BinderRegistry {
 
-			protected Dictionary<ESSymbol, MessageSendBinder>	generalReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
-			// protected Dictionary<ESSymbol, MessageSendBinder>	selfReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
-			protected Dictionary<ESSymbol, MessageSendBinder>	superReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
-			protected Dictionary<ESSymbol, MessageSendBinder>	thisContextReceiverRegistry	= new Dictionary<ESSymbol, MessageSendBinder>();
+			protected Dictionary<BehavioralObject, Dictionary<ESSymbol, MessageSendBinder>>		selfReceiverRegistry		= new Dictionary<BehavioralObject, Dictionary<ESSymbol, MessageSendBinder>>();
+			protected Dictionary<ESSymbol, MessageSendBinder>					generalReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
+			protected Dictionary<ESSymbol, MessageSendBinder>					superReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
+			protected Dictionary<ESSymbol, MessageSendBinder>					thisContextReceiverRegistry	= new Dictionary<ESSymbol, MessageSendBinder>();
 
 			public Registry(DynamicBindingGuru dynamicBindingGuru) : base(dynamicBindingGuru) {
 			}
 
-			public MessageSendBinder canonicalBinderFor(MessageReceiverKind receiverKind, ESSymbol selector) {
+			public MessageSendBinder canonicalBinderFor(MessageReceiverKind receiverKind, BehavioralObject selfReceiverClass, ESSymbol selector) {
 				Dictionary<ESSymbol, MessageSendBinder> registry = null;
+				MessageSendBinder binder;
 				switch (receiverKind) {
-					case MessageReceiverKind.General:
 					case MessageReceiverKind.Self:
+						if (!selfReceiverRegistry.TryGetValue(selfReceiverClass, out registry)) {
+							registry = new Dictionary<ESSymbol, MessageSendBinder>();
+							selfReceiverRegistry[selfReceiverClass] = registry;
+						}
+						if (!registry.TryGetValue(selector, out binder)) {
+							binder = new MessageSendBinder(DynamicBindingGuru, receiverKind, selfReceiverClass, selector);
+							registry[selector] = binder;
+						}
+						return binder;
+					case MessageReceiverKind.General:
 						registry = generalReceiverRegistry;
 						break;
 					case MessageReceiverKind.Super:
@@ -101,7 +124,6 @@ namespace EssenceSharp.Runtime.Binding {
 						registry = thisContextReceiverRegistry;
 						break;
 				}
-				MessageSendBinder binder;
 				if (!registry.TryGetValue(selector, out binder)) {
 					binder = new MessageSendBinder(DynamicBindingGuru, receiverKind, selector);
 					registry[selector] = binder;

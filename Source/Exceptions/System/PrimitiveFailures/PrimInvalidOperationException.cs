@@ -33,15 +33,15 @@ using System;
 
 namespace EssenceSharp.Exceptions.System.PrimitiveFailures {
 
-	public class PrimIllegalOperationException : PrimitiveFailException {
+	public class PrimInvalidOperationException : PrimitiveFailException {
 		
-		public PrimIllegalOperationException() : base() {
+		public PrimInvalidOperationException() : base() {
 		}
 		
-		public PrimIllegalOperationException(String messageText) : base(messageText) {
+		public PrimInvalidOperationException(String messageText) : base(messageText) {
 		}
 		
-		public PrimIllegalOperationException(String messageText, Exception specificException) : base(messageText, specificException) {
+		public PrimInvalidOperationException(String messageText, Exception specificException) : base(messageText, specificException) {
 		}
 
 	}

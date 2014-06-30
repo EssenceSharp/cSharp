@@ -345,8 +345,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : PrimitiveDomain {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.CompiledCodeClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.CompiledCodeClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -380,6 +380,8 @@ namespace EssenceSharp.Runtime {
 		}
 		
 	}
+
+	public class BlockIdentityComparator : IdentityComparator<ESBlock> {}
 	
 	public class ESBlock : ESCompiledCode {
 
@@ -645,7 +647,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value0()", NumArgs, 0, function.GetType(), blockFunctionTypeForNumArgs(0), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value0()", NumArgs, 0, function.GetType(), blockFunctionTypeForNumArgs(0), invalidCastEx);
 				functor = null;
 			}
 			return functor();
@@ -656,7 +658,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value1()", NumArgs, 1, function.GetType(), blockFunctionTypeForNumArgs(1), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value1()", NumArgs, 1, function.GetType(), blockFunctionTypeForNumArgs(1), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1);
@@ -667,7 +669,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value2()", NumArgs, 2, function.GetType(), blockFunctionTypeForNumArgs(2), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value2()", NumArgs, 2, function.GetType(), blockFunctionTypeForNumArgs(2), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2);
@@ -678,7 +680,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value3()", NumArgs, 3, function.GetType(), blockFunctionTypeForNumArgs(3), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value3()", NumArgs, 3, function.GetType(), blockFunctionTypeForNumArgs(3), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3);
@@ -689,7 +691,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value4()", NumArgs, 4, function.GetType(), blockFunctionTypeForNumArgs(4), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value4()", NumArgs, 4, function.GetType(), blockFunctionTypeForNumArgs(4), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4);
@@ -700,7 +702,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value5()", NumArgs, 5, function.GetType(), blockFunctionTypeForNumArgs(5), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value5()", NumArgs, 5, function.GetType(), blockFunctionTypeForNumArgs(5), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5);
@@ -711,7 +713,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value6()", NumArgs, 6, function.GetType(), blockFunctionTypeForNumArgs(6), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value6()", NumArgs, 6, function.GetType(), blockFunctionTypeForNumArgs(6), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6);
@@ -722,7 +724,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value7()", NumArgs, 7, function.GetType(), blockFunctionTypeForNumArgs(7), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value7()", NumArgs, 7, function.GetType(), blockFunctionTypeForNumArgs(7), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7);
@@ -733,7 +735,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value8()", NumArgs, 8, function.GetType(), blockFunctionTypeForNumArgs(8), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value8()", NumArgs, 8, function.GetType(), blockFunctionTypeForNumArgs(8), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8);
@@ -744,7 +746,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value9()", NumArgs, 9, function.GetType(), blockFunctionTypeForNumArgs(9), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value9()", NumArgs, 9, function.GetType(), blockFunctionTypeForNumArgs(9), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9);
@@ -755,7 +757,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value10()", NumArgs, 10, function.GetType(), blockFunctionTypeForNumArgs(10), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value10()", NumArgs, 10, function.GetType(), blockFunctionTypeForNumArgs(10), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
@@ -766,7 +768,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value11()", NumArgs, 11, function.GetType(), blockFunctionTypeForNumArgs(11), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value11()", NumArgs, 11, function.GetType(), blockFunctionTypeForNumArgs(11), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
@@ -777,7 +779,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value12()", NumArgs, 12, function.GetType(), blockFunctionTypeForNumArgs(12), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value12()", NumArgs, 12, function.GetType(), blockFunctionTypeForNumArgs(12), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
@@ -788,7 +790,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value13()", NumArgs, 13, function.GetType(), blockFunctionTypeForNumArgs(13), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value13()", NumArgs, 13, function.GetType(), blockFunctionTypeForNumArgs(13), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
@@ -799,7 +801,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value14()", NumArgs, 14, function.GetType(), blockFunctionTypeForNumArgs(14), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value14()", NumArgs, 14, function.GetType(), blockFunctionTypeForNumArgs(14), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
@@ -810,7 +812,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value15()", NumArgs, 15, function.GetType(), blockFunctionTypeForNumArgs(15), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value15()", NumArgs, 15, function.GetType(), blockFunctionTypeForNumArgs(15), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15);
@@ -821,7 +823,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value16()", NumArgs, 16, function.GetType(), blockFunctionTypeForNumArgs(16), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value16()", NumArgs, 16, function.GetType(), blockFunctionTypeForNumArgs(16), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16);
@@ -832,7 +834,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value17()", NumArgs, 17, function.GetType(), blockFunctionTypeForNumArgs(17), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value17()", NumArgs, 17, function.GetType(), blockFunctionTypeForNumArgs(17), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17);
@@ -843,7 +845,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value18()", NumArgs, 18, function.GetType(), blockFunctionTypeForNumArgs(18), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value18()", NumArgs, 18, function.GetType(), blockFunctionTypeForNumArgs(18), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18);
@@ -854,7 +856,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value19()", NumArgs, 19, function.GetType(), blockFunctionTypeForNumArgs(19), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value19()", NumArgs, 19, function.GetType(), blockFunctionTypeForNumArgs(19), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19);
@@ -865,7 +867,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value20()", NumArgs, 20, function.GetType(), blockFunctionTypeForNumArgs(20), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value20()", NumArgs, 20, function.GetType(), blockFunctionTypeForNumArgs(20), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20);
@@ -876,7 +878,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value21()", NumArgs, 21, function.GetType(), blockFunctionTypeForNumArgs(21), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value21()", NumArgs, 21, function.GetType(), blockFunctionTypeForNumArgs(21), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21);
@@ -887,7 +889,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value22()", NumArgs, 22, function.GetType(), blockFunctionTypeForNumArgs(22), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value22()", NumArgs, 22, function.GetType(), blockFunctionTypeForNumArgs(22), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22);
@@ -898,7 +900,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value23()", NumArgs, 23, function.GetType(), blockFunctionTypeForNumArgs(23), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value23()", NumArgs, 23, function.GetType(), blockFunctionTypeForNumArgs(23), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23);
@@ -909,7 +911,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value24()", NumArgs, 24, function.GetType(), blockFunctionTypeForNumArgs(24), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value24()", NumArgs, 24, function.GetType(), blockFunctionTypeForNumArgs(24), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24);
@@ -920,7 +922,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value25()", NumArgs, 25, function.GetType(), blockFunctionTypeForNumArgs(25), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value25()", NumArgs, 25, function.GetType(), blockFunctionTypeForNumArgs(25), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25);
@@ -931,7 +933,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value26()", NumArgs, 26, function.GetType(), blockFunctionTypeForNumArgs(26), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value26()", NumArgs, 26, function.GetType(), blockFunctionTypeForNumArgs(26), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26);
@@ -942,7 +944,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value27()", NumArgs, 27, function.GetType(), blockFunctionTypeForNumArgs(27), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value27()", NumArgs, 27, function.GetType(), blockFunctionTypeForNumArgs(27), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27);
@@ -953,7 +955,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value28()", NumArgs, 28, function.GetType(), blockFunctionTypeForNumArgs(28), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value28()", NumArgs, 28, function.GetType(), blockFunctionTypeForNumArgs(28), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28);
@@ -964,7 +966,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value29()", NumArgs, 29, function.GetType(), blockFunctionTypeForNumArgs(29), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value29()", NumArgs, 29, function.GetType(), blockFunctionTypeForNumArgs(29), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29);
@@ -975,7 +977,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value30()", NumArgs, 30, function.GetType(), blockFunctionTypeForNumArgs(30), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value30()", NumArgs, 30, function.GetType(), blockFunctionTypeForNumArgs(30), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30);
@@ -986,7 +988,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value31()", NumArgs, 31, function.GetType(), blockFunctionTypeForNumArgs(31), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value31()", NumArgs, 31, function.GetType(), blockFunctionTypeForNumArgs(31), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31);
@@ -997,7 +999,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value32()", NumArgs, 32, function.GetType(), blockFunctionTypeForNumArgs(32), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value32()", NumArgs, 32, function.GetType(), blockFunctionTypeForNumArgs(32), invalidCastEx);
 				functor = null;
 			}
 			return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32);
@@ -1007,8 +1009,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : PrimitiveDomain {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.BlockClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.BlockClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -1335,16 +1337,28 @@ namespace EssenceSharp.Runtime {
 
 	}
 
+	public class MethodIdentityComparator : IdentityComparator<ESMethod> {}
+
 	public class ESMethod : ESCompiledCode {
-		
+
+		#region Static variables and functions
+
+		private static long										identityGenerator			= 0;
+
+		#endregion
+
+		protected long											identity;
 		protected NamespaceObject									environment;
 		protected BehavioralObject 									homeClass;
 		protected ESSymbol										selector;
 		protected MethodDeclarationNode									methodDeclarationNode;
 		protected InlineOperation									inlineOperation;
 		protected HashSet<ESSymbol>									protocols;
-		
+
+		#region Constructors
+
 		internal ESMethod(ESBehavior esClass) : base(esClass) {
+			identity			= identityGenerator++;
 		}
 		
 		public ESMethod(ESBehavior esClass, ESSymbol selector, Delegate function) : this(esClass, selector, function, null, null) {
@@ -1369,31 +1383,38 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public ESMethod(ESBehavior esClass, ESSymbol selector, InlineOperation inlineOperation, Delegate function, NamespaceObject environment, BehavioralObject homeClass, ESSymbol protocol) : base(esClass) {
-			this.environment	= environment ?? homeClass;
-			this.homeClass		= homeClass ?? environment as BehavioralObject;
-			Selector		= selector;
-			this.inlineOperation	= inlineOperation;
-			Function		= function;
+			identity			= identityGenerator++;
+			this.environment		= environment ?? homeClass;
+			this.homeClass			= homeClass ?? environment as BehavioralObject;
+			Selector			= selector;
+			this.inlineOperation		= inlineOperation;
+			Function			= function;
 			addToProtocol(protocol);
 		}
 		
 		public ESMethod(ESBehavior esClass, NamespaceObject environment, BehavioralObject homeClass, MethodDeclarationNode methodDeclarationNode) : this(esClass, environment, homeClass, methodDeclarationNode, null) {
 		}
 		
-		public ESMethod(ESBehavior esClass, NamespaceObject environment, BehavioralObject homeClass, MethodDeclarationNode methodDeclarationNode, ESSymbol protocol) 
-			: this(esClass, 
-				methodDeclarationNode.Selector,
-				methodDeclarationNode.InlineOperation,
-				methodDeclarationNode.functionFor(environment ?? homeClass, homeClass ?? environment as BehavioralObject),
-				homeClass, homeClass,
-				protocol) {
-			this.methodDeclarationNode = methodDeclarationNode;
+		public ESMethod(ESBehavior esClass, NamespaceObject environment, BehavioralObject homeClass, MethodDeclarationNode methodDeclarationNode, ESSymbol protocol) : base(esClass) {
+			identity			= identityGenerator++;
+			this.environment		= environment ?? homeClass;
+			this.homeClass			= homeClass ?? environment as BehavioralObject;
+			this.methodDeclarationNode	= methodDeclarationNode;
+			Selector			= methodDeclarationNode.Selector;
+			this.inlineOperation		= methodDeclarationNode.InlineOperation;
+			Function			= methodDeclarationNode.functionFor(this.environment, this.homeClass);
+			addToProtocol(protocol);
 		}
+
+		#endregion
 
 		public override ObjectStateArchitecture Architecture {
 			get {return ObjectStateArchitecture.Method;}
 		}
 
+		public long Identity {
+			get {return identity;}
+		}
 		public override bool IsMethod {
 			get {return true;}
 		}
@@ -1469,6 +1490,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		internal void become(ESMethod other) {
+			identity = other.Identity;
 			methodDeclarationNode = other.MethodDeclarationNode;
 			inlineOperation = other.InlineOperation;
 			var otherHomeClass = other.HomeClass;
@@ -1487,13 +1509,13 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public ESMethod newCopyIn(BehavioralObject newHomeClass) {
-			var newCopy = (ESMethod)copy();
+			var newCopy = (ESMethod)shallowCopy();
 			newCopy.setEnvironmentAndHomeClass(Environment, newHomeClass);
 			return newCopy;
 		}
 
 		protected HashSet<ESSymbol> newProtocolSet() {
-			return new HashSet<ESSymbol>(new ESSymbolIdentityComparator());
+			return new HashSet<ESSymbol>(new SymbolIdentityComparator());
 		}
 
 		public void protocolsDo(FuncNs.Func<Object, Object> enumerator1) {
@@ -1516,6 +1538,22 @@ namespace EssenceSharp.Runtime {
 
 		public void removeFromAllProtocols() {
 			protocols = null;
+		}
+
+		public HashSet<ESSymbol> MessagesSent {
+			get {return methodDeclarationNode == null ? null : methodDeclarationNode.MessagesSent;}
+		}
+
+		public HashSet<ESSymbol> MessagesSentToSelf {
+			get {return methodDeclarationNode == null ? null : methodDeclarationNode.MessagesSentToSelf;}
+		}
+
+		public HashSet<ESSymbol> MessagesSentToSuper {
+			get {return methodDeclarationNode == null ? null : methodDeclarationNode.MessagesSentToSuper;}
+		}
+
+		public HashSet<ESSymbol> MessagesSentToThisContext {
+			get {return methodDeclarationNode == null ? null : methodDeclarationNode.MessagesSentToThisContext;}
 		}
 
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
@@ -1733,7 +1771,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value0()", NumArgs, 0, function.GetType(), blockFunctionTypeForNumArgs(0), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value0()", NumArgs, 0, function.GetType(), blockFunctionTypeForNumArgs(0), invalidCastEx);
 				functor = null;
 			}
 			return functor(self);
@@ -1744,7 +1782,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value1()", NumArgs, 1, function.GetType(), blockFunctionTypeForNumArgs(1), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value1()", NumArgs, 1, function.GetType(), blockFunctionTypeForNumArgs(1), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1);
@@ -1755,7 +1793,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value2()", NumArgs, 2, function.GetType(), blockFunctionTypeForNumArgs(2), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value2()", NumArgs, 2, function.GetType(), blockFunctionTypeForNumArgs(2), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2);
@@ -1766,7 +1804,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value3()", NumArgs, 3, function.GetType(), blockFunctionTypeForNumArgs(3), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value3()", NumArgs, 3, function.GetType(), blockFunctionTypeForNumArgs(3), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3);
@@ -1777,7 +1815,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value4()", NumArgs, 4, function.GetType(), blockFunctionTypeForNumArgs(4), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value4()", NumArgs, 4, function.GetType(), blockFunctionTypeForNumArgs(4), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4);
@@ -1788,7 +1826,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value5()", NumArgs, 5, function.GetType(), blockFunctionTypeForNumArgs(5), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value5()", NumArgs, 5, function.GetType(), blockFunctionTypeForNumArgs(5), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5);
@@ -1799,7 +1837,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value6()", NumArgs, 6, function.GetType(), blockFunctionTypeForNumArgs(6), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value6()", NumArgs, 6, function.GetType(), blockFunctionTypeForNumArgs(6), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6);
@@ -1810,7 +1848,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value7()", NumArgs, 7, function.GetType(), blockFunctionTypeForNumArgs(7), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value7()", NumArgs, 7, function.GetType(), blockFunctionTypeForNumArgs(7), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7);
@@ -1821,7 +1859,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value8()", NumArgs, 8, function.GetType(), blockFunctionTypeForNumArgs(8), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value8()", NumArgs, 8, function.GetType(), blockFunctionTypeForNumArgs(8), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8);
@@ -1832,7 +1870,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value9()", NumArgs, 9, function.GetType(), blockFunctionTypeForNumArgs(9), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value9()", NumArgs, 9, function.GetType(), blockFunctionTypeForNumArgs(9), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9);
@@ -1843,7 +1881,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value10()", NumArgs, 10, function.GetType(), blockFunctionTypeForNumArgs(10), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value10()", NumArgs, 10, function.GetType(), blockFunctionTypeForNumArgs(10), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
@@ -1854,7 +1892,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value11()", NumArgs, 11, function.GetType(), blockFunctionTypeForNumArgs(11), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value11()", NumArgs, 11, function.GetType(), blockFunctionTypeForNumArgs(11), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
@@ -1865,7 +1903,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value12()", NumArgs, 12, function.GetType(), blockFunctionTypeForNumArgs(12), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value12()", NumArgs, 12, function.GetType(), blockFunctionTypeForNumArgs(12), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
@@ -1876,7 +1914,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value13()", NumArgs, 13, function.GetType(), blockFunctionTypeForNumArgs(13), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value13()", NumArgs, 13, function.GetType(), blockFunctionTypeForNumArgs(13), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
@@ -1887,7 +1925,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value14()", NumArgs, 14, function.GetType(), blockFunctionTypeForNumArgs(14), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value14()", NumArgs, 14, function.GetType(), blockFunctionTypeForNumArgs(14), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
@@ -1898,7 +1936,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value15()", NumArgs, 15, function.GetType(), blockFunctionTypeForNumArgs(15), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value15()", NumArgs, 15, function.GetType(), blockFunctionTypeForNumArgs(15), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15);
@@ -1909,7 +1947,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value16()", NumArgs, 16, function.GetType(), blockFunctionTypeForNumArgs(16), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value16()", NumArgs, 16, function.GetType(), blockFunctionTypeForNumArgs(16), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16);
@@ -1920,7 +1958,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value17()", NumArgs, 17, function.GetType(), blockFunctionTypeForNumArgs(17), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value17()", NumArgs, 17, function.GetType(), blockFunctionTypeForNumArgs(17), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17);
@@ -1931,7 +1969,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value18()", NumArgs, 18, function.GetType(), blockFunctionTypeForNumArgs(18), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value18()", NumArgs, 18, function.GetType(), blockFunctionTypeForNumArgs(18), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18);
@@ -1942,7 +1980,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value19()", NumArgs, 19, function.GetType(), blockFunctionTypeForNumArgs(19), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value19()", NumArgs, 19, function.GetType(), blockFunctionTypeForNumArgs(19), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19);
@@ -1953,7 +1991,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value20()", NumArgs, 20, function.GetType(), blockFunctionTypeForNumArgs(20), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value20()", NumArgs, 20, function.GetType(), blockFunctionTypeForNumArgs(20), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20);
@@ -1964,7 +2002,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value21()", NumArgs, 21, function.GetType(), blockFunctionTypeForNumArgs(21), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value21()", NumArgs, 21, function.GetType(), blockFunctionTypeForNumArgs(21), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21);
@@ -1975,7 +2013,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value22()", NumArgs, 22, function.GetType(), blockFunctionTypeForNumArgs(22), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value22()", NumArgs, 22, function.GetType(), blockFunctionTypeForNumArgs(22), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22);
@@ -1986,7 +2024,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value23()", NumArgs, 23, function.GetType(), blockFunctionTypeForNumArgs(23), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value23()", NumArgs, 23, function.GetType(), blockFunctionTypeForNumArgs(23), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23);
@@ -1997,7 +2035,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value24()", NumArgs, 24, function.GetType(), blockFunctionTypeForNumArgs(24), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value24()", NumArgs, 24, function.GetType(), blockFunctionTypeForNumArgs(24), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24);
@@ -2008,7 +2046,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value25()", NumArgs, 25, function.GetType(), blockFunctionTypeForNumArgs(25), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value25()", NumArgs, 25, function.GetType(), blockFunctionTypeForNumArgs(25), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25);
@@ -2019,7 +2057,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value26()", NumArgs, 26, function.GetType(), blockFunctionTypeForNumArgs(26), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value26()", NumArgs, 26, function.GetType(), blockFunctionTypeForNumArgs(26), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26);
@@ -2030,7 +2068,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value27()", NumArgs, 27, function.GetType(), blockFunctionTypeForNumArgs(27), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value27()", NumArgs, 27, function.GetType(), blockFunctionTypeForNumArgs(27), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27);
@@ -2041,7 +2079,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value28()", NumArgs, 28, function.GetType(), blockFunctionTypeForNumArgs(28), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value28()", NumArgs, 28, function.GetType(), blockFunctionTypeForNumArgs(28), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28);
@@ -2052,7 +2090,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value29()", NumArgs, 29, function.GetType(), blockFunctionTypeForNumArgs(29), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value29()", NumArgs, 29, function.GetType(), blockFunctionTypeForNumArgs(29), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29);
@@ -2063,7 +2101,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value30()", NumArgs, 30, function.GetType(), blockFunctionTypeForNumArgs(30), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value30()", NumArgs, 30, function.GetType(), blockFunctionTypeForNumArgs(30), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30);
@@ -2074,7 +2112,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value31()", NumArgs, 31, function.GetType(), blockFunctionTypeForNumArgs(31), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value31()", NumArgs, 31, function.GetType(), blockFunctionTypeForNumArgs(31), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31);
@@ -2085,7 +2123,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESKernel.throwInvalidFunctionCallException("Block.value32()", NumArgs, 32, function.GetType(), blockFunctionTypeForNumArgs(32), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Block.value32()", NumArgs, 32, function.GetType(), blockFunctionTypeForNumArgs(32), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32);
@@ -2095,8 +2133,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : PrimitiveDomain {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.MethodClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.MethodClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -2139,18 +2177,34 @@ namespace EssenceSharp.Runtime {
 			}
 
 			public Object _addToProtocol_(Object receiver, Object protocol) {
-				((ESMethod)receiver).addToProtocol(kernel.asESSymbol(protocol));
+				((ESMethod)receiver).addToProtocol(objectSpace.asESSymbol(protocol));
 				return receiver;
 			}
 
 			public Object _removeFromProtocol_(Object receiver, Object protocol) {
-				((ESMethod)receiver).removeFromProtocol(kernel.asESSymbol(protocol));
+				((ESMethod)receiver).removeFromProtocol(objectSpace.asESSymbol(protocol));
 				return receiver;
 			}
 
 			public Object _removeFromAllProtocols_(Object receiver) {
 				((ESMethod)receiver).removeFromAllProtocols();
 				return receiver;
+			}
+
+			public Object _messagesSent_(Object receiver) {
+				return ((ESMethod)receiver).MessagesSent;
+			}
+
+			public Object _messagesSentToSelf_(Object receiver) {
+				return ((ESMethod)receiver).MessagesSentToSelf;
+			}
+
+			public Object _messagesSentToSuper_(Object receiver) {
+				return ((ESMethod)receiver).MessagesSentToSuper;
+			}
+
+			public Object _messagesSentToThisContext_(Object receiver) {
+				return ((ESMethod)receiver).MessagesSentToThisContext;
 			}
 
 			public Object _valueWithReceiverWithArguments_(Object receiver, Object self, Object arguments) {
@@ -2308,6 +2362,11 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("addToProtocol:",				new FuncNs.Func<Object, Object, Object>(_addToProtocol_));
 				publishPrimitive("removeFromProtocol:",				new FuncNs.Func<Object, Object, Object>(_removeFromProtocol_));
 				publishPrimitive("removeFromAllProtocols",			new FuncNs.Func<Object, Object>(_removeFromAllProtocols_));
+
+				publishPrimitive("messagesSent",				new FuncNs.Func<Object, Object>(_messagesSent_));
+				publishPrimitive("messagesSentToSelf",				new FuncNs.Func<Object, Object>(_messagesSentToSelf_));
+				publishPrimitive("messagesSentToSuper",				new FuncNs.Func<Object, Object>(_messagesSentToSuper_));
+				publishPrimitive("messagesSentToThisContext",			new FuncNs.Func<Object, Object>(_messagesSentToThisContext_));
 
 				publishPrimitive("valueWithReceiver:withArguments:",		new FuncNs.Func<Object, Object, Object, Object>(_valueWithReceiverWithArguments_));
 

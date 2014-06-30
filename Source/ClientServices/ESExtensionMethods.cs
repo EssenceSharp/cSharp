@@ -338,8 +338,8 @@ namespace Microsoft.Scripting.Hosting {
 			return (EssenceSharpContext)HostingHelpers.GetLanguageContext(engine);
 		}
 
-		public static ESKernel essenceSharpKernel(this ScriptEngine engine) {
-			return engine.essenceSharpContext().Kernel;
+		public static ESObjectSpace essenceSharpKernel(this ScriptEngine engine) {
+			return engine.essenceSharpContext().ObjectSpace;
 		}
 
 	}

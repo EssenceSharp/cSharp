@@ -65,7 +65,7 @@ namespace EssenceSharp.Runtime {
 		
 		public virtual int CompareTo(Object comparandObject) {
 			if (comparandObject == null) {
-				Class.Kernel.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparandObject);
+				Class.ObjectSpace.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparandObject);
 			}
 			if (this == comparandObject) return 0;
 			var comparand = comparandObject as ESIndexedComparableSlotsObject<ValueType>;
@@ -140,7 +140,7 @@ namespace EssenceSharp.Runtime {
 			if (receiver == comparandObject) return 0;
 			var esArray = (ESIndexedComparableSlotsObject<ValueType>)receiver;
 			if (comparandObject == null) {
-				esArray.Class.Kernel.throwInvalidArgumentException(esArray.Class, "CompareTo", "comparand", comparandObject);
+				esArray.Class.ObjectSpace.throwInvalidArgumentException(esArray.Class, "CompareTo", "comparand", comparandObject);
 			}
 			var comparand = comparandObject as ESIndexedComparableSlotsObject<ValueType>;
 			if (comparand == null) {
@@ -201,7 +201,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESArray asESArray() {
-			return Class.Kernel.newArray(Array.ConvertAll<byte, Object>(IndexedSlots, value => (Object)value));
+			return Class.ObjectSpace.newArray(Array.ConvertAll<byte, Object>(IndexedSlots, value => (Object)value));
 		}
 		
 		public override ESByteArray asESByteArray() {
@@ -212,7 +212,7 @@ namespace EssenceSharp.Runtime {
 			byte[] primArray = comparand as byte[];
 			if (primArray == null) {
 				IComparable comparable = comparand as IComparable;
-				if (comparable == null) Class.Kernel.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
+				if (comparable == null) Class.ObjectSpace.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
 				return -Math.Sign(comparable.CompareTo(IndexedSlots));
 			}
 			return ESIndexedComparableSlotsObject<byte>.compare(IndexedSlots, primArray);
@@ -224,8 +224,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESIndexedSlotsObject<byte>.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.ByteArrayClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.ByteArrayClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -294,7 +294,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<byte>));
 				publishPrimitive("identityIncludes:",					new FuncNs.Func<Object, Object, Object>(_identityIncludes_<byte>));
 				publishPrimitive("add:",						new FuncNs.Func<Object, Object, Object>(_appendElement_<byte>));
-				publishPrimitive("copyWith:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<byte>));
+				publishPrimitive("copyAdding:",	/* copyWith: */				new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<byte>));
 				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<byte>));	
 				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<byte>));	
 				publishPrimitive("identityRemoveAll:",					new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<byte>));	
@@ -319,7 +319,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("findtFirst:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
 				publishPrimitive("contains:",						new FuncNs.Func<Object, Object, Object>(_contains_));
 				publishPrimitive("addAll:",						new FuncNs.Func<Object, Object, Object>(_appendAll_));
-				publishPrimitive(",",							new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
+				publishPrimitive("copyAddingAll:",					new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
 				publishPrimitive("copyFrom:to:",					new FuncNs.Func<Object, Object, Object, Object>(_copyFromTo_));
 				publishPrimitive("copyTo:",						new FuncNs.Func<Object, Object, Object>(_prefixTo_));
 				publishPrimitive("copyFrom:",						new FuncNs.Func<Object, Object, Object>(_suffixFrom_));
@@ -396,19 +396,19 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESArray asESArray() {
-			return Class.Kernel.newArray(Array.ConvertAll<char, Object>(IndexedSlots, value => (Object)value));
+			return Class.ObjectSpace.newArray(Array.ConvertAll<char, Object>(IndexedSlots, value => (Object)value));
 		}
 		
 		public override ESPathname asESPathname() {
-			return Class.Kernel.pathnameFromString(asHostString());
+			return Class.ObjectSpace.pathnameFromString(asHostString());
 		}
 		
 		public virtual ESPathname asESPathnameUsingSeparator(char separatorChar) {
-			return Class.Kernel.pathnameFromString(asHostString(), separatorChar, null);
+			return Class.ObjectSpace.pathnameFromString(asHostString(), separatorChar, null);
 		}
 		
 		public virtual ESPathname asESPathnameUsingSeparators(char[] separatorChars) {
-			return Class.Kernel.pathnameFromString(asHostString(), separatorChars, null);
+			return Class.ObjectSpace.pathnameFromString(asHostString(), separatorChars, null);
 		}
 		
 		public override ESString asESString() {
@@ -420,14 +420,14 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESSymbol asESSymbol() {
-			return Class.Kernel.symbolFor(asHostString());
+			return Class.ObjectSpace.symbolFor(asHostString());
 		}
 
 		public override ESNamespace asESNamespace() {
-			var kernel = Class.Kernel;
-			return kernel.asESNamespace(
+			var objectSpace = Class.ObjectSpace;
+			return objectSpace.asESNamespace(
 				valueInNamespaceIfAbsent(
-					kernel.RootNamespace, 
+					objectSpace.RootNamespace, 
 					AccessPrivilegeLevel.Public, 
 					ImportTransitivity.Transitive, 
 					delegate() {throw new PrimitiveFailException("Specified namespace is not accessible");}));
@@ -439,7 +439,7 @@ namespace EssenceSharp.Runtime {
 				char[] primArray = comparand as char[];
 				if (primArray == null) {
 					IComparable comparable = comparand as IComparable;
-					if (comparable == null) Class.Kernel.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparand);
+					if (comparable == null) Class.ObjectSpace.throwInvalidArgumentException(Class, "CompareTo", "comparand", comparand);
 					return -Math.Sign(comparable.CompareTo(IndexedSlots));
 				} else {
 					return compare<char>(IndexedSlots, primArray);
@@ -474,8 +474,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESIndexedSlotsObject<char>.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.StringClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.StringClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -547,7 +547,7 @@ namespace EssenceSharp.Runtime {
 			public Object _bindingInNamespaceIfAbsent_ (Object receiver, Object environment, Object importTransitivity, Object ifAbsentAction) {
 				ImportTransitivity transitivity;
 				try {
-					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), kernel.asESSymbol(importTransitivity));
+					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), objectSpace.asESSymbol(importTransitivity));
 				} catch {
 					throw new PrimInvalidOperandException("valueInNamespaceIfAbsent: <importTransitivity> must be a Symbol or String identifying a valid import transitivity.");
 				}
@@ -559,7 +559,7 @@ namespace EssenceSharp.Runtime {
 			public Object _valueInNamespaceIfAbsent_ (Object receiver, Object environment, Object importTransitivity, Object ifAbsentAction) {
 				ImportTransitivity transitivity;
 				try {
-					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), kernel.asESSymbol(importTransitivity));
+					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), objectSpace.asESSymbol(importTransitivity));
 				} catch {
 					throw new PrimInvalidOperandException("valueInNamespaceIfAbsent: <importTransitivity> must be a Symbol or String identifying a valid import transitivity.");
 				}
@@ -567,7 +567,7 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _asBindingReferenceKeyWithValue_ (Object receiver, Object value) {
-				return kernel.newBindingReference(asHostString(receiver), value);
+				return objectSpace.newBindingReference(asHostString(receiver), value);
 			}
 
 
@@ -588,7 +588,7 @@ namespace EssenceSharp.Runtime {
 
 			public override void publishCanonicalPrimitives() {
 
-				publishPrimitive("hash",						new FuncNs.Func<Object, Object>(_hash_));
+				publishPrimitive("hash",							new FuncNs.Func<Object, Object>(_hash_));
 				publishPrimitive("=",								new FuncNs.Func<Object, Object, Object>(_hasSameValueAs_));
 				publishPrimitive("compareTo:",							new FuncNs.Func<Object, Object, Object>(_compareTo_));
 
@@ -602,7 +602,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<char>));
 				publishPrimitive("identityIncludes:",						new FuncNs.Func<Object, Object, Object>(_identityIncludes_<char>));
 				publishPrimitive("add:",							new FuncNs.Func<Object, Object, Object>(_appendElement_<char>));
-				publishPrimitive("copyWith:",							new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<char>));
+				publishPrimitive("copyAdding:",	/* copyWith: */					new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<char>));
 				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<char>));	
 				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<char>));	
 				publishPrimitive("identityRemoveAll:",						new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<char>));	
@@ -636,7 +636,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("findtFirst:from:to:ifAbsent:",				new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
 				publishPrimitive("contains:",							new FuncNs.Func<Object, Object, Object>(_contains_));
 				publishPrimitive("addAll:",							new FuncNs.Func<Object, Object, Object>(_appendAll_));
-				publishPrimitive(",",								new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
+				publishPrimitive("copyAddingAll:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
 				publishPrimitive("copyFrom:to:",						new FuncNs.Func<Object, Object, Object, Object>(_copyFromTo_));
 				publishPrimitive("copyTo:",							new FuncNs.Func<Object, Object, Object>(_prefixTo_));
 				publishPrimitive("copyFrom:",							new FuncNs.Func<Object, Object, Object>(_suffixFrom_));
@@ -657,7 +657,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("copyAddingAll:beforeIndex:",					new FuncNs.Func<Object, Object, Object, Object>(_copyInsertingAllAt_));
 				publishPrimitive("moveFrom:to:by:",						new FuncNs.Func<Object, Object, Object, Object, Object>(_moveFromToBy_)); // Cut then paste range
 				publishPrimitive("copyMovingFrom:to:by:",					new FuncNs.Func<Object, Object, Object, Object, Object>(_copyMovingFromToBy_)); // Cut then paste range
-				publishPrimitive("replaceFrom:to:with:startingAt:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_replaceFromToWithStartingAt_)); 
+				publishPrimitive("replaceFrom:to:with:startingAt:",				new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_replaceFromToWithStartingAt_)); 
 				publishPrimitive("copyReplacingFrom:to:with:startingAt:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyReplacingFromToWithStartingAt_)); 
 				publishPrimitive("reverse",							new FuncNs.Func<Object, Object>(_reverse_)); 
 				publishPrimitive("copyReversed",						new FuncNs.Func<Object, Object>(_copyReversed_)); 
@@ -694,7 +694,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESArray asESArray() {
-			return Class.Kernel.newArray(Array.ConvertAll<ushort, Object>(IndexedSlots, value => (long)value));
+			return Class.ObjectSpace.newArray(Array.ConvertAll<ushort, Object>(IndexedSlots, value => (long)value));
 		}
 		
 		public override ESHalfWordArray asESHalfWordArray() {
@@ -705,7 +705,7 @@ namespace EssenceSharp.Runtime {
 			ushort[] primArray = comparand as ushort[];
 			if (primArray == null) {
 				IComparable comparable = comparand as IComparable;
-				if (comparable == null) Class.Kernel.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
+				if (comparable == null) Class.ObjectSpace.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
 				return -Math.Sign(comparable.CompareTo(IndexedSlots));
 			}
 			return ESIndexedComparableSlotsObject<ushort>.compare(IndexedSlots, primArray);
@@ -717,8 +717,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESIndexedSlotsObject<ushort>.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.HalfWordArrayClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.HalfWordArrayClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -787,7 +787,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<ushort>));
 				publishPrimitive("identityIncludes:",					new FuncNs.Func<Object, Object, Object>(_identityIncludes_<ushort>));
 				publishPrimitive("add:",						new FuncNs.Func<Object, Object, Object>(_appendElement_<ushort>));
-				publishPrimitive("copyWith:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<ushort>));
+				publishPrimitive("copyAdding:",	/* copyWith: */				new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<ushort>));
 				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<ushort>));	
 				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<ushort>));	
 				publishPrimitive("identityRemoveAll:",					new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<ushort>));	
@@ -812,7 +812,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("findtFirst:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
 				publishPrimitive("contains:",						new FuncNs.Func<Object, Object, Object>(_contains_));
 				publishPrimitive("addAll:",						new FuncNs.Func<Object, Object, Object>(_appendAll_));
-				publishPrimitive(",",							new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
+				publishPrimitive("copyAddingAll:",					new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
 				publishPrimitive("copyFrom:to:",					new FuncNs.Func<Object, Object, Object, Object>(_copyFromTo_));
 				publishPrimitive("copyTo:",						new FuncNs.Func<Object, Object, Object>(_prefixTo_));
 				publishPrimitive("copyFrom:",						new FuncNs.Func<Object, Object, Object>(_suffixFrom_));
@@ -870,7 +870,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESArray asESArray() {
-			return Class.Kernel.newArray(Array.ConvertAll<uint, Object>(IndexedSlots, value => (long)value));
+			return Class.ObjectSpace.newArray(Array.ConvertAll<uint, Object>(IndexedSlots, value => (long)value));
 		}
 		
 		public override ESWordArray asESWordArray() {
@@ -881,7 +881,7 @@ namespace EssenceSharp.Runtime {
 			uint[] primArray = comparand as uint[];
 			if (primArray == null) {
 				IComparable comparable = comparand as IComparable;
-				if (comparable == null) Class.Kernel.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
+				if (comparable == null) Class.ObjectSpace.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
 				return -Math.Sign(comparable.CompareTo(IndexedSlots));
 			}
 			return ESIndexedComparableSlotsObject<uint>.compare(IndexedSlots, primArray);
@@ -893,8 +893,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESIndexedSlotsObject<uint>.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.WordArrayClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.WordArrayClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -963,7 +963,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<uint>));
 				publishPrimitive("identityIncludes:",					new FuncNs.Func<Object, Object, Object>(_identityIncludes_<uint>));
 				publishPrimitive("add:",						new FuncNs.Func<Object, Object, Object>(_appendElement_<uint>));
-				publishPrimitive("copyWith:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<uint>));
+				publishPrimitive("copyAdding:",	/* copyWith: */				new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<uint>));
 				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<uint>));	
 				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<uint>));	
 				publishPrimitive("identityRemoveAll:",					new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<uint>));	
@@ -988,7 +988,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("findtFirst:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
 				publishPrimitive("contains:",						new FuncNs.Func<Object, Object, Object>(_contains_));
 				publishPrimitive("addAll:",						new FuncNs.Func<Object, Object, Object>(_appendAll_));
-				publishPrimitive(",",							new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
+				publishPrimitive("copyAddingAll:",					new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
 				publishPrimitive("copyFrom:to:",					new FuncNs.Func<Object, Object, Object, Object>(_copyFromTo_));
 				publishPrimitive("copyTo:",						new FuncNs.Func<Object, Object, Object>(_prefixTo_));
 				publishPrimitive("copyFrom:",						new FuncNs.Func<Object, Object, Object>(_suffixFrom_));
@@ -1046,7 +1046,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESArray asESArray() {
-			return Class.Kernel.newArray(Array.ConvertAll<ulong, Object>(IndexedSlots, value => (long)value));
+			return Class.ObjectSpace.newArray(Array.ConvertAll<ulong, Object>(IndexedSlots, value => (long)value));
 		}
 		
 		public override ESLongWordArray asESLongWordArray() {
@@ -1057,7 +1057,7 @@ namespace EssenceSharp.Runtime {
 			ulong[] primArray = comparand as ulong[];
 			if (primArray == null) {
 				IComparable comparable = comparand as IComparable;
-				if (comparable == null) Class.Kernel.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
+				if (comparable == null) Class.ObjectSpace.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
 				return -Math.Sign(comparable.CompareTo(IndexedSlots));
 			}
 			return ESIndexedComparableSlotsObject<ulong>.compare(IndexedSlots, primArray);
@@ -1069,8 +1069,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESIndexedSlotsObject<ulong>.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.LongWordArrayClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.LongWordArrayClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -1139,7 +1139,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<ulong>));
 				publishPrimitive("identityIncludes:",					new FuncNs.Func<Object, Object, Object>(_identityIncludes_<ulong>));
 				publishPrimitive("add:",						new FuncNs.Func<Object, Object, Object>(_appendElement_<ulong>));
-				publishPrimitive("copyWith:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<ulong>));
+				publishPrimitive("copyAdding:",	/* copyWith: */				new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<ulong>));
 				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<ulong>));	
 				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<ulong>));	
 				publishPrimitive("identityRemoveAll:",					new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<ulong>));	
@@ -1164,7 +1164,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("findtFirst:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
 				publishPrimitive("contains:",						new FuncNs.Func<Object, Object, Object>(_contains_));
 				publishPrimitive("addAll:",						new FuncNs.Func<Object, Object, Object>(_appendAll_));
-				publishPrimitive(",",							new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
+				publishPrimitive("copyAddingAll:",					new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
 				publishPrimitive("copyFrom:to:",					new FuncNs.Func<Object, Object, Object, Object>(_copyFromTo_));
 				publishPrimitive("copyTo:",						new FuncNs.Func<Object, Object, Object>(_prefixTo_));
 				publishPrimitive("copyFrom:",						new FuncNs.Func<Object, Object, Object>(_suffixFrom_));
@@ -1222,7 +1222,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESArray asESArray() {
-			return Class.Kernel.newArray(Array.ConvertAll<float, Object>(IndexedSlots, value => (float)value));
+			return Class.ObjectSpace.newArray(Array.ConvertAll<float, Object>(IndexedSlots, value => (float)value));
 		}
 		
 		public override ESFloatArray asESFloatArray() {
@@ -1233,7 +1233,7 @@ namespace EssenceSharp.Runtime {
 			float[] primArray = comparand as float[];
 			if (primArray == null) {
 				IComparable comparable = comparand as IComparable;
-				if (comparable == null) Class.Kernel.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
+				if (comparable == null) Class.ObjectSpace.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
 				return -Math.Sign(comparable.CompareTo(IndexedSlots));
 			}
 			return ESIndexedComparableSlotsObject<float>.compare(IndexedSlots, primArray);
@@ -1245,8 +1245,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESIndexedSlotsObject<float>.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.FloatArrayClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.FloatArrayClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -1315,7 +1315,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<float>));
 				publishPrimitive("identityIncludes:",					new FuncNs.Func<Object, Object, Object>(_identityIncludes_<float>));
 				publishPrimitive("add:",						new FuncNs.Func<Object, Object, Object>(_appendElement_<float>));
-				publishPrimitive("copyWith:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<float>));
+				publishPrimitive("copyAdding:",	/* copyWith: */				new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<float>));
 				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<float>));	
 				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<float>));	
 				publishPrimitive("identityRemoveAll:",					new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<float>));	
@@ -1340,7 +1340,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("findtFirst:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
 				publishPrimitive("contains:",						new FuncNs.Func<Object, Object, Object>(_contains_));
 				publishPrimitive("addAll:",						new FuncNs.Func<Object, Object, Object>(_appendAll_));
-				publishPrimitive(",",							new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
+				publishPrimitive("copyAddingAll:",					new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
 				publishPrimitive("copyFrom:to:",					new FuncNs.Func<Object, Object, Object, Object>(_copyFromTo_));
 				publishPrimitive("copyTo:",						new FuncNs.Func<Object, Object, Object>(_prefixTo_));
 				publishPrimitive("copyFrom:",						new FuncNs.Func<Object, Object, Object>(_suffixFrom_));
@@ -1398,7 +1398,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESArray asESArray() {
-			return Class.Kernel.newArray(Array.ConvertAll<double, Object>(IndexedSlots, value => (double)value));
+			return Class.ObjectSpace.newArray(Array.ConvertAll<double, Object>(IndexedSlots, value => (double)value));
 		}
 		
 		public override ESDoubleArray asESDoubleArray() {
@@ -1409,7 +1409,7 @@ namespace EssenceSharp.Runtime {
 			double[] primArray = comparand as double[];
 			if (primArray == null) {
 				IComparable comparable = comparand as IComparable;
-				if (comparable == null) Class.Kernel.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
+				if (comparable == null) Class.ObjectSpace.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
 				return -Math.Sign(comparable.CompareTo(IndexedSlots));
 			}
 			return ESIndexedComparableSlotsObject<double>.compare(IndexedSlots, primArray);
@@ -1421,8 +1421,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESIndexedSlotsObject<double>.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.DoubleArrayClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.DoubleArrayClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -1491,7 +1491,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<double>));
 				publishPrimitive("identityIncludes:",					new FuncNs.Func<Object, Object, Object>(_identityIncludes_<double>));
 				publishPrimitive("add:",						new FuncNs.Func<Object, Object, Object>(_appendElement_<double>));
-				publishPrimitive("copyWith:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<double>));
+				publishPrimitive("copyAdding:",	/* copyWith: */				new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<double>));
 				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<double>));	
 				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<double>));	
 				publishPrimitive("identityRemoveAll:",					new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<double>));	
@@ -1516,7 +1516,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("findtFirst:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
 				publishPrimitive("contains:",						new FuncNs.Func<Object, Object, Object>(_contains_));
 				publishPrimitive("addAll:",						new FuncNs.Func<Object, Object, Object>(_appendAll_));
-				publishPrimitive(",",							new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
+				publishPrimitive("copyAddingAll:",					new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
 				publishPrimitive("copyFrom:to:",					new FuncNs.Func<Object, Object, Object, Object>(_copyFromTo_));
 				publishPrimitive("copyTo:",						new FuncNs.Func<Object, Object, Object>(_prefixTo_));
 				publishPrimitive("copyFrom:",						new FuncNs.Func<Object, Object, Object>(_suffixFrom_));
@@ -1574,7 +1574,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESArray asESArray() {
-			return Class.Kernel.newArray(Array.ConvertAll<decimal, Object>(IndexedSlots, value => (double)value));
+			return Class.ObjectSpace.newArray(Array.ConvertAll<decimal, Object>(IndexedSlots, value => (double)value));
 		}
 		
 		public override ESQuadArray asESQuadArray() {
@@ -1585,7 +1585,7 @@ namespace EssenceSharp.Runtime {
 			decimal[] primArray = comparand as decimal[];
 			if (primArray == null) {
 				IComparable comparable = comparand as IComparable;
-				if (comparable == null) Class.Kernel.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
+				if (comparable == null) Class.ObjectSpace.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
 				return -Math.Sign(comparable.CompareTo(IndexedSlots));
 			}
 			return ESIndexedComparableSlotsObject<decimal>.compare(IndexedSlots, primArray);
@@ -1597,8 +1597,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESIndexedSlotsObject<decimal>.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.QuadArrayClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.QuadArrayClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -1667,7 +1667,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<decimal>));
 				publishPrimitive("identityIncludes:",					new FuncNs.Func<Object, Object, Object>(_identityIncludes_<decimal>));
 				publishPrimitive("add:",						new FuncNs.Func<Object, Object, Object>(_appendElement_<decimal>));
-				publishPrimitive("copyWith:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<decimal>));
+				publishPrimitive("copyAdding:",	/* copyWith: */				new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<decimal>));
 				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<decimal>));	
 				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<decimal>));	
 				publishPrimitive("identityRemoveAll:",					new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<decimal>));	
@@ -1692,7 +1692,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("findtFirst:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
 				publishPrimitive("contains:",						new FuncNs.Func<Object, Object, Object>(_contains_));
 				publishPrimitive("addAll:",						new FuncNs.Func<Object, Object, Object>(_appendAll_));
-				publishPrimitive(",",							new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
+				publishPrimitive("copyAddingAll:",					new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
 				publishPrimitive("copyFrom:to:",					new FuncNs.Func<Object, Object, Object, Object>(_copyFromTo_));
 				publishPrimitive("copyTo:",						new FuncNs.Func<Object, Object, Object>(_prefixTo_));
 				publishPrimitive("copyFrom:",						new FuncNs.Func<Object, Object, Object>(_suffixFrom_));
@@ -1792,8 +1792,8 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESArray asESArray() {
-			var kernel = Class.Kernel;
-			return kernel.newArray(Array.ConvertAll<String, Object>(IndexedSlots, each => kernel.newString(each.ToCharArray())));
+			var objectSpace = Class.ObjectSpace;
+			return objectSpace.newArray(Array.ConvertAll<String, Object>(IndexedSlots, each => objectSpace.newString(each.ToCharArray())));
 		}
 
 		public Object extensionUsingSeparatorIfNone(char extensionSeparator, FuncNs.Func<Object>  notFoundAction) {
@@ -1830,7 +1830,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ESPathname appendingExtension(char extensionSeparator, String extension) {
-			ESPathname copyAppendingExtension = (ESPathname)copy();
+			ESPathname copyAppendingExtension = (ESPathname)shallowCopy();
 			copyAppendingExtension.appendExtension(extensionSeparator, extension);
 			return copyAppendingExtension;
 		}
@@ -1851,7 +1851,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ESPathname withExtension(char extensionSeparator, String extension) {
-			ESPathname copyWithExtension = (ESPathname)copy();
+			ESPathname copyWithExtension = (ESPathname)shallowCopy();
 			copyWithExtension.replaceOrAppendExtension(extensionSeparator, extension);
 			return copyWithExtension;
 		}
@@ -1875,30 +1875,30 @@ namespace EssenceSharp.Runtime {
 			ESPathname copyWithoutExtension;
 			long mySize = slots.Length;
 			if (mySize < 1) {
-				copyWithoutExtension = (ESPathname)copy();
+				copyWithoutExtension = (ESPathname)shallowCopy();
 				if (IsImmutable) copyWithoutExtension.beImmutable();
 				return copyWithoutExtension;
 			}
 			String lastElement = slots[mySize - 1];
 			if (String.IsNullOrEmpty(lastElement)) {
-				copyWithoutExtension = (ESPathname)copy();
+				copyWithoutExtension = (ESPathname)shallowCopy();
 				if (IsImmutable) copyWithoutExtension.beImmutable();
 				return copyWithoutExtension;
 			}
 			int index = lastElement.LastIndexOf(extensionSeparator);
 			if (index < 0) {
-				copyWithoutExtension = (ESPathname)copy();
+				copyWithoutExtension = (ESPathname)shallowCopy();
 				if (IsImmutable) copyWithoutExtension.beImmutable();
 				return copyWithoutExtension;
 			}
 			if (index > 0) {
-				copyWithoutExtension = (ESPathname)copy();
+				copyWithoutExtension = (ESPathname)shallowCopy();
 				copyWithoutExtension.IndexedSlots[mySize - 1] = lastElement.Substring(0, index + 1);
 			} else if (index == 0) {
 				copyWithoutExtension = (ESPathname)copyWithSize(mySize - 1);
 				copyWithoutExtension.setSize(mySize - 1);
 			} else {
-				copyWithoutExtension = (ESPathname)copy();
+				copyWithoutExtension = (ESPathname)shallowCopy();
 			}
 			return copyWithoutExtension;
 		}
@@ -1929,10 +1929,10 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public override ESNamespace asESNamespace() {
-			var kernel = Class.Kernel;
-			return kernel.asESNamespace(
+			var objectSpace = Class.ObjectSpace;
+			return objectSpace.asESNamespace(
 				valueInNamespaceIfAbsent(
-					kernel.RootNamespace, 
+					objectSpace.RootNamespace, 
 					AccessPrivilegeLevel.Public, 
 					ImportTransitivity.Transitive, 
 					delegate() {throw new PrimitiveFailException("Specified namespace is not accessible");}));
@@ -1942,7 +1942,7 @@ namespace EssenceSharp.Runtime {
 			String[] primArray = comparand as String[];
 			if (primArray == null) {
 				IComparable comparable = comparand as IComparable;
-				if (comparable == null) Class.Kernel.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
+				if (comparable == null) Class.ObjectSpace.throwInvalidArgumentException(Class, "foreignCompareTo", "comparand", comparand);
 				return -Math.Sign(comparable.CompareTo(IndexedSlots));
 			}
 			return ESIndexedComparableSlotsObject<String>.compare(IndexedSlots, primArray);
@@ -2014,8 +2014,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESIndexedSlotsObject<String>.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.PathnameClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.PathnameClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -2054,26 +2054,26 @@ namespace EssenceSharp.Runtime {
 		
 			public Object _elementsDo_(Object receiver, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESPathname)receiver).elementsDo(value => f1(kernel.asESSymbol(value)));
+				((ESPathname)receiver).elementsDo(value => f1(objectSpace.asESSymbol(value)));
 				return receiver;
 			}
 
 			public Object _elementsFromToDo_(Object receiver, Object startIndex, Object endIndex, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESPathname)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1(kernel.asESSymbol(value)));
+				((ESPathname)receiver).elementsFromToDo((long)startIndex - 1, (long)endIndex - 1, value => f1(objectSpace.asESSymbol(value)));
 				return receiver;
 			}
 		
 			public Object _elementsFromToByDo_(Object receiver, Object startIndex, Object endIndex, Object step, Object enumerator) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator);
-				((ESPathname)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1(kernel.asESSymbol(value)));
+				((ESPathname)receiver).elementsFromToByDo((long)startIndex - 1, (long)endIndex - 1, asHostLong(step), value => f1(objectSpace.asESSymbol(value)));
 				return receiver;
 			}
 		
 			public Object _bindingInNamespaceIfAbsent_ (Object receiver, Object environment, Object importTransitivity, Object ifAbsentAction) {
 				ImportTransitivity transitivity;
 				try {
-					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), kernel.asESSymbol(importTransitivity));
+					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), objectSpace.asESSymbol(importTransitivity));
 				} catch {
 					throw new PrimInvalidOperandException("valueInNamespaceIfAbsent: <importTransitivity> must be a Symbol or String identifying a valid import transitivity.");
 				}
@@ -2086,7 +2086,7 @@ namespace EssenceSharp.Runtime {
 			public Object _valueInNamespaceIfAbsent_ (Object receiver, Object environment, Object importTransitivity, Object ifAbsentAction) {
 				ImportTransitivity transitivity;
 				try {
-					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), kernel.asESSymbol(importTransitivity));
+					transitivity = (ImportTransitivity)Enum.Parse(typeof(ImportTransitivity), objectSpace.asESSymbol(importTransitivity));
 				} catch {
 					throw new PrimInvalidOperandException("valueInNamespaceIfAbsent: <importTransitivity> must be a Symbol or String identifying a valid import transitivity.");
 				}
@@ -2111,7 +2111,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<String>));
 				publishPrimitive("identityIncludes:",					new FuncNs.Func<Object, Object, Object>(_identityIncludes_<String>));
 				publishPrimitive("add:",						new FuncNs.Func<Object, Object, Object>(_appendElement_<String>));
-				publishPrimitive("copyWith:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<String>));
+				publishPrimitive("copyAdding:",	/* copyWith: */				new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<String>));
 				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<String>));	
 				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<String>));	
 				publishPrimitive("identityRemoveAll:",					new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<String>));	
@@ -2136,7 +2136,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("findtFirst:from:to:ifAbsent:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIndexSuchThatIfAbsent_));
 				publishPrimitive("contains:",						new FuncNs.Func<Object, Object, Object>(_contains_));
 				publishPrimitive("addAll:",						new FuncNs.Func<Object, Object, Object>(_appendAll_));
-				publishPrimitive(",",							new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
+				publishPrimitive("copyAddingAll:",					new FuncNs.Func<Object, Object, Object>(_copyAppendingAll_));
 				publishPrimitive("copyFrom:to:",					new FuncNs.Func<Object, Object, Object, Object>(_copyFromTo_));
 				publishPrimitive("copyTo:",						new FuncNs.Func<Object, Object, Object>(_prefixTo_));
 				publishPrimitive("copyFrom:",						new FuncNs.Func<Object, Object, Object>(_suffixFrom_));

@@ -38,49 +38,50 @@ namespace EssenceSharp.Runtime {
 
 	public class ESLibraryLoader {
 
-		public static bool load(ESKernel kernel, DirectoryInfo baseDirectory, bool beVerbose, out List<ESNamespace> rootNamespaces) {
-			var libraryLoader = new ESLibraryLoader(kernel, baseDirectory);
+		public static bool load(ESObjectSpace objectSpace, DirectoryInfo baseDirectory, bool beVerbose, out List<NamespaceObject> rootNamespaces) {
+			var libraryLoader = new ESLibraryLoader(objectSpace, baseDirectory);
 			libraryLoader.IsVerbose = beVerbose;
 			return libraryLoader.load(out rootNamespaces);
 		}
 
-		public static bool load(ESKernel kernel, DirectoryInfo baseDirectory, bool beVerbose, bool recurseIntoNestedNamespaces, out List<ESNamespace> rootNamespaces) {
-			var libraryLoader = new ESLibraryLoader(kernel, baseDirectory, recurseIntoNestedNamespaces);
+		public static bool load(ESObjectSpace objectSpace, DirectoryInfo baseDirectory, bool beVerbose, bool recurseIntoNestedNamespaces, out List<NamespaceObject> rootNamespaces) {
+			var libraryLoader = new ESLibraryLoader(objectSpace, baseDirectory, recurseIntoNestedNamespaces);
 			libraryLoader.IsVerbose = beVerbose;
 			return libraryLoader.load(out rootNamespaces);
 		}
 
-		public static bool load(ESKernel kernel, ESNamespace baseEnvironment, DirectoryInfo baseDirectory, bool beVerbose, bool recurseIntoNestedNamespaces, out List<ESNamespace> rootNamespaces) {
-			var libraryLoader = new ESLibraryLoader(kernel, baseEnvironment, baseDirectory, recurseIntoNestedNamespaces);
+		public static bool load(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, DirectoryInfo baseDirectory, bool beVerbose, bool recurseIntoNestedNamespaces, out List<NamespaceObject> rootNamespaces) {
+			var libraryLoader = new ESLibraryLoader(objectSpace, baseEnvironment, baseDirectory, recurseIntoNestedNamespaces);
 			libraryLoader.IsVerbose = beVerbose;
 			return libraryLoader.load(out rootNamespaces);
 		}
 
 		protected bool						isVerbose			= false;
-		protected ESKernel					kernel				= null;
-		protected ESNamespace					baseEnvironment			= null;
+		protected ESObjectSpace					objectSpace			= null;
+		protected NamespaceObject				baseEnvironment			= null;
 		protected DirectoryInfo					baseDirectory			= null;
 		protected bool						recurseIntoNestedNamespaces	= false;
 		protected List<NamespaceFactory>			namespaceFactories		= null; 
-		protected List<BehaviorFactory>				behaviorFactories		= null; 
+		protected List<TraitFactory>				traitFactories			= null; 
+		protected List<ClassFactory>				classFactories			= null; 
 
 
-		public ESLibraryLoader(ESKernel kernel) {
-			this.kernel	= kernel;
-			baseEnvironment	= kernel.RootNamespace;
+		public ESLibraryLoader(ESObjectSpace objectSpace) {
+			this.objectSpace				= objectSpace;
+			baseEnvironment					= objectSpace.RootNamespace;
 		}
 
-		public ESLibraryLoader(ESKernel kernel, DirectoryInfo baseDirectory) : this(kernel) {
+		public ESLibraryLoader(ESObjectSpace objectSpace, DirectoryInfo baseDirectory) : this(objectSpace) {
 			this.baseDirectory				= baseDirectory;
 		}
 
-		public ESLibraryLoader(ESKernel kernel, DirectoryInfo baseDirectory, bool recurseIntoNestedNamespaces) : this(kernel, baseDirectory) {
+		public ESLibraryLoader(ESObjectSpace objectSpace, DirectoryInfo baseDirectory, bool recurseIntoNestedNamespaces) : this(objectSpace, baseDirectory) {
 			this.baseDirectory				= baseDirectory;
 			this.recurseIntoNestedNamespaces		= recurseIntoNestedNamespaces;
 		}
 
-		public ESLibraryLoader(ESKernel kernel, ESNamespace baseEnvironment, DirectoryInfo baseDirectory, bool recurseIntoNestedNamespaces) : this(kernel, baseDirectory, recurseIntoNestedNamespaces) {
-			this.baseEnvironment				= baseEnvironment ?? kernel.RootNamespace;
+		public ESLibraryLoader(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, DirectoryInfo baseDirectory, bool recurseIntoNestedNamespaces) : this(objectSpace, baseDirectory, recurseIntoNestedNamespaces) {
+			this.baseEnvironment				= baseEnvironment ?? objectSpace.RootNamespace;
 		}
 
 		#region Public protocol
@@ -90,13 +91,13 @@ namespace EssenceSharp.Runtime {
 			set { isVerbose = value;}
 		}
 
-		public ESKernel Kernel {
-			get {return kernel;}
+		public ESObjectSpace Kernel {
+			get {return objectSpace;}
 		}
 
-		public ESNamespace BaseEnvironment {
+		public NamespaceObject BaseEnvironment {
 			get {return baseEnvironment;}
-			set {baseEnvironment = value ?? kernel.RootNamespace;}
+			set {baseEnvironment = value ?? objectSpace.RootNamespace;}
 		}
 
 		public DirectoryInfo BaseDirectory {
@@ -109,7 +110,7 @@ namespace EssenceSharp.Runtime {
 			set {recurseIntoNestedNamespaces = value;}
 		}
 
-		public virtual bool load(out List<ESNamespace> rootNamespaces) {
+		public virtual bool load(out List<NamespaceObject> rootNamespaces) {
 
 			rootNamespaces = null;
 			if (baseDirectory == null || !baseDirectory.Exists) {
@@ -127,27 +128,37 @@ namespace EssenceSharp.Runtime {
 				}
 			}
 
-			rootNamespaces = new List<ESNamespace>();
+			rootNamespaces = new List<NamespaceObject>();
 			namespaceFactories = new List<NamespaceFactory>(); 
-			behaviorFactories = new List<BehaviorFactory>(); 
+			traitFactories = new List<TraitFactory>(); 
+			classFactories = new List<ClassFactory>(); 
 
 			foreach (var rootNamespaceDirectory in rootNamespaceDirectories) {
-				ESNamespace rootNamespace;
+				NamespaceObject rootNamespace;
 				if (!loadNamespace(baseEnvironment, rootNamespaceDirectory, out rootNamespace)) return false;
 				rootNamespaces.Add(rootNamespace);
 			}
 
-			foreach (var factory in behaviorFactories) 
+			foreach (var factory in traitFactories) 
+				if (!factory.declareAll()) return false;
+			foreach (var factory in classFactories) 
 				if (!factory.declareAll()) return false;
 			foreach (var factory in namespaceFactories) 
 				if (!factory.declareAll()) return false;
-			foreach (var factory in behaviorFactories) 
+
+			foreach (var factory in traitFactories) 
+				if (!factory.configureAll()) return false;
+			foreach (var factory in classFactories) 
 				if (!factory.configureAll()) return false;
 			foreach (var factory in namespaceFactories) 
 				if (!factory.configureAll()) return false;
-			foreach (var factory in behaviorFactories) 
+
+			foreach (var factory in traitFactories) 
 				if (!factory.compileAll()) return false;
-			foreach (var factory in behaviorFactories) 
+			foreach (var factory in classFactories) 
+				if (!factory.compileAll()) return false;
+
+			foreach (var factory in classFactories) 
 				if (!factory.initializeAll()) return false;
 			foreach (var factory in namespaceFactories) 
 				if (!factory.initializeAll()) return false;
@@ -159,7 +170,14 @@ namespace EssenceSharp.Runtime {
 
 		#region Internal operations
 
-		protected virtual bool loadNamespace(ESNamespace baseEnvironment, DirectoryInfo baseDirectory, out ESNamespace loadedNamespace) {
+		protected enum DeclarationType {
+			Namespace,
+			TraitOrClass,
+			Trait,
+			Class
+		}
+
+		protected virtual bool loadNamespace(NamespaceObject baseEnvironment, DirectoryInfo baseDirectory, out NamespaceObject loadedNamespace) {
 			loadedNamespace = null;
 			if (baseDirectory == null || !baseDirectory.Exists) {
 				Console.WriteLine("Namespace directory '" + baseDirectory.FullName + "' is not accessible.");
@@ -173,19 +191,20 @@ namespace EssenceSharp.Runtime {
 				name = namePrefix + "`" + genericArity.ToString();
 			}
 			FileSystemInfo[] files = baseDirectory.GetFileSystemInfos();
-			FileSystemInfo namespaceConfigurationFile = null;
-			FileSystemInfo classConfigurationFile = null;
-			FileSystemInfo metaclassConfigurationFile = null;
-			FileSystemInfo classInitializationFile = null;
-			FileSystemInfo metaclassInitializationFile = null;
-			FileSystemInfo instanceMethodsFile = null;
-			FileSystemInfo classMethodsFile = null;
-			var variables = new List<FileSystemInfo>();
-			var constants = new List<FileSystemInfo>();
-			var nestedNamespaces = recurseIntoNestedNamespaces ? new List<DirectoryInfo>() : null;
-			bool isClass = false;
-			NamespaceFactory namespaceFactory;
-			BehaviorFactory behaviorFactory;
+			FileSystemInfo namespaceConfigurationFile	= null;
+			FileSystemInfo classConfigurationFile		= null;
+			FileSystemInfo metaclassConfigurationFile	= null;
+			FileSystemInfo classInitializationFile		= null;
+			FileSystemInfo metaclassInitializationFile	= null;
+			FileSystemInfo instanceMethodsFile		= null;
+			FileSystemInfo classMethodsFile			= null;
+			var variables					= new List<FileSystemInfo>();
+			var constants					= new List<FileSystemInfo>();
+			var nestedNamespaces				= recurseIntoNestedNamespaces ? new List<DirectoryInfo>() : null;
+			DeclarationType type				= DeclarationType.Namespace;
+			NamespaceFactory namespaceFactory		= null;
+			TraitFactory traitFactory;
+			ClassFactory behaviorFactory;
 
 			foreach (var file in files) {
 				var fileName = file.Name;
@@ -193,33 +212,78 @@ namespace EssenceSharp.Runtime {
 					if (recurseIntoNestedNamespaces) nestedNamespaces.Add((DirectoryInfo)file);
 				} else {
 					switch (fileName) {
+
+						case "namespace.configure":
 						case "configure.namespace":
 							namespaceConfigurationFile = file;
 							break;
-						case "configure.class":
+
+						case "trait.configure":
+						case "configure.trait":
+							if (type == DeclarationType.Class) { 
+								Console.WriteLine(baseDirectory.FullName + " cannot be declared to be both a class and a trait.");
+								return false;
+							}
+							type = DeclarationType.Trait;
 							classConfigurationFile = file;
-							isClass = true;
 							break;
-						case "configure.metaclass":
+						case "classTrait.configure":
+						case "configure.classTrait":
+							if (type == DeclarationType.Class) { 
+								Console.WriteLine(baseDirectory.FullName + " cannot be declared to be both a class and a trait.");
+								return false;
+							}
+							type = DeclarationType.Trait;
 							metaclassConfigurationFile = file;
-							isClass = true;
 							break;
+
+						case "class.configure":
+						case "configure.class":
+							if (type == DeclarationType.Trait) { 
+								Console.WriteLine(baseDirectory.FullName + " cannot be declared to be both a class and a trait.");
+								return false;
+							}
+							type = DeclarationType.Class;
+							classConfigurationFile = file;
+							break;
+						case "metaclass.configure":
+						case "configure.metaclass":
+							if (type == DeclarationType.Trait) { 
+								Console.WriteLine(baseDirectory.FullName + " cannot be declared to be both a class and a trait.");
+								return false;
+							}
+							type = DeclarationType.Class;
+							metaclassConfigurationFile = file;
+							break;
+
+						case "class.initialize":
 						case "initialize.class":
+							if (type == DeclarationType.Trait) continue;
+							type = DeclarationType.Class;
 							classInitializationFile = file;
-							isClass = true;
 							break;
+						case "metaclass.initialize":
 						case "initialize.metaclass":
+							if (type == DeclarationType.Trait) continue;
+							type = DeclarationType.Class;
 							metaclassInitializationFile = file;
-							isClass = true;
 							break;
+
+						case "methods.instance":
 						case "instance.methods":
-							isClass = true;
+							if (type == DeclarationType.Namespace) { 
+								type = DeclarationType.TraitOrClass;
+							}
 							instanceMethodsFile = file;
 							break;
+						case "methods.class":
 						case "class.methods":
-							isClass = true;
+							if (type == DeclarationType.Namespace) { 
+								type = DeclarationType.TraitOrClass;
+							}
 							classMethodsFile = file;
 							break;
+
 						default:
 							var extension = file.Extension;
 							switch (extension) {
@@ -235,20 +299,35 @@ namespace EssenceSharp.Runtime {
 				}
 			}
 
+			if (type == DeclarationType.TraitOrClass) type = DeclarationType.Class;
+
 			bool success = true;
-			var nameSymbol = kernel.SymbolRegistry.symbolFor(name);
-			if (isClass) {
-				namespaceFactory = behaviorFactory = new BehaviorFactory(kernel, baseEnvironment, nameSymbol);
-				behaviorFactories.Add(behaviorFactory);
-				behaviorFactory.ClassConfigurationFile = (FileInfo)classConfigurationFile;
-				behaviorFactory.MetaclassConfigurationFile = (FileInfo)metaclassConfigurationFile;
-				behaviorFactory.ClassInitializationFile = (FileInfo)classInitializationFile;
-				behaviorFactory.MetaclassInitializationFile = (FileInfo)metaclassInitializationFile;
-				behaviorFactory.InstanceMethodsFile = (FileInfo)instanceMethodsFile;
-				behaviorFactory.ClassMethodsFile = (FileInfo)classMethodsFile;
-			} else {
-				namespaceFactory = new NamespaceFactory(kernel, baseEnvironment, nameSymbol);
-				namespaceFactories.Add(namespaceFactory);
+			var nameSymbol = objectSpace.SymbolRegistry.symbolFor(name);
+			switch (type) {
+				case DeclarationType.Trait:
+					namespaceFactory = traitFactory = new TraitFactory(objectSpace, baseEnvironment, nameSymbol);
+					traitFactories.Add(traitFactory);
+					traitFactory.ClassConfigurationFile = (FileInfo)classConfigurationFile;
+					traitFactory.MetaclassConfigurationFile = (FileInfo)metaclassConfigurationFile;
+					traitFactory.InstanceMethodsFile = (FileInfo)instanceMethodsFile;
+					traitFactory.ClassMethodsFile = (FileInfo)classMethodsFile;
+					break;
+				case DeclarationType.Class:
+					namespaceFactory = behaviorFactory = new ClassFactory(objectSpace, baseEnvironment, nameSymbol);
+					classFactories.Add(behaviorFactory);
+					behaviorFactory.ClassConfigurationFile = (FileInfo)classConfigurationFile;
+					behaviorFactory.MetaclassConfigurationFile = (FileInfo)metaclassConfigurationFile;
+					behaviorFactory.ClassInitializationFile = (FileInfo)classInitializationFile;
+					behaviorFactory.MetaclassInitializationFile = (FileInfo)metaclassInitializationFile;
+					behaviorFactory.InstanceMethodsFile = (FileInfo)instanceMethodsFile;
+					behaviorFactory.ClassMethodsFile = (FileInfo)classMethodsFile;
+					break;
+				default:
+				case DeclarationType.Namespace:
+					namespaceFactory = new NamespaceFactory(objectSpace, baseEnvironment, nameSymbol);
+					namespaceFactories.Add(namespaceFactory);
+					break;
+
 			}
 			namespaceFactory.IsVerbose = IsVerbose;
 			if (!namespaceFactory.declareNamespace()) return false;
@@ -261,7 +340,7 @@ namespace EssenceSharp.Runtime {
 				namespaceFactory.addVariableInitializerFile((FileInfo)varFile);
 			}
 			if (recurseIntoNestedNamespaces) {
-				ESNamespace childNamespace;
+				NamespaceObject childNamespace;
 				foreach (var nsFile in nestedNamespaces) {
 					if (!loadNamespace(loadedNamespace, nsFile, out childNamespace)) return false;
 				}
@@ -305,8 +384,8 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected bool							isVerbose			= false;
-		protected ESKernel						kernel				= null;
-		protected ESNamespace						baseEnvironment;
+		protected ESObjectSpace						objectSpace			= null;
+		protected NamespaceObject					baseEnvironment;
 		protected ESSymbol						name;
 		protected FileInfo						namespaceConfigurationFile;
 		protected ESNamespace						thisNamespace;
@@ -314,8 +393,8 @@ namespace EssenceSharp.Runtime {
 		protected List<Association<ESBindingReference, FileInfo>>	variables			= new List<Association<ESBindingReference, FileInfo>>();
 
 
-		public NamespaceFactory(ESKernel kernel, ESNamespace baseEnvironment, ESSymbol name) {
-			this.kernel		= kernel;
+		public NamespaceFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) {
+			this.objectSpace	= objectSpace;
 			this.baseEnvironment	= baseEnvironment;
 			this.name		= name;
 		}
@@ -325,11 +404,11 @@ namespace EssenceSharp.Runtime {
 			set { isVerbose = value;}
 		}
 
-		public ESKernel Kernel {
-			get {return kernel;}
+		public ESObjectSpace ObjectSpace {
+			get {return objectSpace;}
 		}
 
-		public ESNamespace BaseEnvironment {
+		public NamespaceObject BaseEnvironment {
 			get {return baseEnvironment;}
 		}
 
@@ -337,7 +416,7 @@ namespace EssenceSharp.Runtime {
 			get {return name;}
 		}
 
-		public ESNamespace ThisNamespace {
+		public NamespaceObject ThisNamespace {
 			get {return thisNamespace;}
 		}
 
@@ -357,7 +436,7 @@ namespace EssenceSharp.Runtime {
 		public virtual bool declareNamespace() {
 			if (IsVerbose) Console.WriteLine("Declaring namespace: #" + Name);
 			if (baseEnvironment == null) {
-				thisNamespace = kernel.newNamespace();
+				thisNamespace = objectSpace.newNamespace();
 				thisNamespace.setName(Name);
 			} else {
 				thisNamespace = baseEnvironment.defineNamespace(Name, AccessPrivilegeLevel.Public, null);
@@ -467,34 +546,23 @@ namespace EssenceSharp.Runtime {
 			return success;
 		}
 
-		protected virtual bool evaluateAsSelfExpression(ESNamespace environment, Object selfValue, FileInfo file) {
+		protected virtual bool evaluateAsSelfExpression(NamespaceObject environment, Object selfValue, FileInfo file) {
 			Object value;
-			return kernel.evaluateAsSelfExpression(file, environment, selfValue, out value);
+			return objectSpace.evaluateAsSelfExpression(file, environment, selfValue, out value);
 		}
 
 	}
 
-	public class BehaviorFactory : NamespaceFactory {
-		protected ESClass thisClass;
-		protected ESMetaclass thisMetaclass;
+	public abstract class BehavioralObjectFactory : NamespaceFactory {
+
 		protected FileInfo classConfigurationFile;
 		protected FileInfo metaclassConfigurationFile;
 		protected FileInfo instanceMethodsFile;
 		protected FileInfo classMethodsFile;
-		protected FileInfo classInitializationFile;
-		protected FileInfo metaclassInitializationFile;
 
-		public BehaviorFactory(ESKernel kernel, ESNamespace baseEnvironment, ESSymbol name) : base(kernel, baseEnvironment, name) {
-			this.baseEnvironment = baseEnvironment;
+		protected BehavioralObjectFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) : base(objectSpace, baseEnvironment, name) {
 		}
 
-		public ESClass ThisClass {
-			get {return thisClass;}
-		}
-
-		public ESMetaclass ThisMetaclass {
-			get {return thisMetaclass;}
-		}
 		public FileInfo ClassConfigurationFile {
 			get {return classConfigurationFile;}
 			set {classConfigurationFile = value;}
@@ -515,6 +583,59 @@ namespace EssenceSharp.Runtime {
 			set {classMethodsFile = value;}
 		}
 
+		protected override AccessPrivilegeLevel DefaultConstantAccessPrivilege {
+			get {return AccessPrivilegeLevel.InHierarchy;}
+		}
+
+		protected override AccessPrivilegeLevel DefaultVariableAccessPrivilege {
+			get {return AccessPrivilegeLevel.InHierarchy;}
+		}
+
+		public abstract bool declareClassAndMetaclass();
+
+		public override bool configureAll() {
+			if (!base.configureAll()) return false;
+			if (!configureMetaclass()) return false;
+			return configureClass();
+		}
+
+		protected abstract bool configureClass();
+		protected abstract bool configureMetaclass();
+
+		public virtual bool compileAll() {
+			if (!compileClassMethods()) return false;
+			if (!compileInstanceMethods()) return false;
+			return true;
+		}
+
+		public abstract bool compileInstanceMethods();
+		public abstract bool compileClassMethods();
+
+		protected virtual bool compileMethodsFor(BehavioralObject methodClass, FileInfo methodDeclarationFile) {
+			if (methodDeclarationFile == null) return true;
+			if (IsVerbose) Console.WriteLine("Compiling methods for: " + methodClass.PathnameString);
+			return evaluateAsSelfExpression(methodClass, methodClass, methodDeclarationFile);
+		}
+
+	}
+
+	public class ClassFactory : BehavioralObjectFactory {
+		protected ESClass thisClass;
+		protected ESMetaclass thisMetaclass;
+		protected FileInfo classInitializationFile;
+		protected FileInfo metaclassInitializationFile;
+
+		public ClassFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) : base(objectSpace, baseEnvironment, name) {
+		}
+
+		public ESClass ThisClass {
+			get {return thisClass;}
+		}
+
+		public ESMetaclass ThisMetaclass {
+			get {return thisMetaclass;}
+		}
+
 		public FileInfo ClassInitializationFile {
 			get {return classInitializationFile;}
 			set {classInitializationFile = value;}
@@ -525,26 +646,17 @@ namespace EssenceSharp.Runtime {
 			set {metaclassInitializationFile = value;}
 		}
 
-
-		protected override AccessPrivilegeLevel DefaultConstantAccessPrivilege {
-			get {return AccessPrivilegeLevel.InHierarchy;}
-		}
-
-		protected override AccessPrivilegeLevel DefaultVariableAccessPrivilege {
-			get {return AccessPrivilegeLevel.InHierarchy;}
-		}
-
 		public override bool declareNamespace() {
 			if (!declareClassAndMetaclass()) return false;
 			thisNamespace = ThisClass;
 			return true;
 		}
 
-		public virtual bool declareClassAndMetaclass() {
+		public override bool declareClassAndMetaclass() {
 			if (IsVerbose) Console.WriteLine("Declaring class: #" + Name);
 			thisClass = null; 
 			if (baseEnvironment == null) {
-				thisClass = kernel.newClass(Name, ObjectStateArchitecture.Stateless);
+				thisClass = objectSpace.newClass(Name, ObjectStateArchitecture.Stateless);
 			} else {
 				thisClass = baseEnvironment.defineClass(Name, AccessPrivilegeLevel.Public, null);
 			}
@@ -552,34 +664,24 @@ namespace EssenceSharp.Runtime {
 			return true;
 		}
 
-		public virtual bool compileAll() {
-			if (!compileMethodsFor(ThisMetaclass, ClassMethodsFile)) return false;
-			if (!compileMethodsFor(ThisClass, InstanceMethodsFile)) return false;
-			return true;
-		}
-
-		public override bool configureAll() {
-			if (!base.configureAll()) return false;
-			if (!configureMetaclass()) return false;
-			return configureClass();
-		}
-
-		protected virtual bool configureClass() {
+		protected override bool configureClass() {
 			if (ClassConfigurationFile == null) return true;
 			if (IsVerbose) Console.WriteLine("Configuring class : " + ThisClass.PathnameString);
 			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile);
 		}
 
-		protected virtual bool configureMetaclass() {
+		protected override bool configureMetaclass() {
 			if (MetaclassConfigurationFile == null) return true;
 			if (IsVerbose) Console.WriteLine("Configuring metaclass: " + ThisMetaclass.PathnameString);
 			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassConfigurationFile);
 		}
 
-		protected virtual bool compileMethodsFor(ESBehavior methodClass, FileInfo methodDeclarationFile) {
-			if (methodDeclarationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Compiling methods for: " + methodClass.PathnameString);
-			return evaluateAsSelfExpression(methodClass, methodClass, methodDeclarationFile);
+		public override bool compileInstanceMethods() {
+			return compileMethodsFor(ThisClass, InstanceMethodsFile);
+		}
+
+		public override bool compileClassMethods() {
+			return compileMethodsFor(ThisMetaclass, ClassMethodsFile);
 		}
 
 		public override bool initializeAll() {
@@ -602,6 +704,61 @@ namespace EssenceSharp.Runtime {
 			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassInitializationFile);
 		}
 
+
+	}
+
+	public class TraitFactory : BehavioralObjectFactory {
+		protected ESInstanceTrait thisClass;
+		protected ESClassTrait thisMetaclass;
+
+		public TraitFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) : base(objectSpace, baseEnvironment, name) {
+		}
+
+		public ESInstanceTrait ThisClass {
+			get {return thisClass;}
+		}
+
+		public ESClassTrait ThisMetaclass {
+			get {return thisMetaclass;}
+		}
+
+		public override bool declareNamespace() {
+			if (!declareClassAndMetaclass()) return false;
+			thisNamespace = ThisClass;
+			return true;
+		}
+
+		public override bool declareClassAndMetaclass() {
+			if (IsVerbose) Console.WriteLine("Declaring trait: #" + Name);
+			thisClass = null; 
+			if (baseEnvironment == null) {
+				thisClass = objectSpace.newTrait(Name);
+			} else {
+				thisClass = baseEnvironment.defineTrait(Name, AccessPrivilegeLevel.Public, null);
+			}
+			thisMetaclass = thisClass.ClassTrait;
+			return true;
+		}
+
+		protected override bool configureClass() {
+			if (ClassConfigurationFile == null) return true;
+			if (IsVerbose) Console.WriteLine("Configuring instance trait : " + ThisClass.PathnameString);
+			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile);
+		}
+
+		protected override bool configureMetaclass() {
+			if (MetaclassConfigurationFile == null) return true;
+			if (IsVerbose) Console.WriteLine("Configuring class trait: " + ThisMetaclass.PathnameString);
+			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassConfigurationFile);
+		}
+
+		public override bool compileInstanceMethods() {
+			return compileMethodsFor(ThisClass, InstanceMethodsFile);
+		}
+
+		public override bool compileClassMethods() {
+			return compileMethodsFor(ThisMetaclass, ClassMethodsFile);
+		}
 
 	}
 

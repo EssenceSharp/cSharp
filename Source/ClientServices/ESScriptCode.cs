@@ -78,7 +78,7 @@ namespace EssenceSharp.ClientServices {
 				if (storage !=null) {
 					var variableNames = storage.GetMemberNames();
 					foreach (var name in variableNames) {
-						bindingNamespace.importVariableFrom(scope, name, AccessPrivilegeLevel.Public, null);
+						bindingNamespace.importScopeVariableFrom(scope, name, AccessPrivilegeLevel.Public, null);
 					}
 				}
 			}

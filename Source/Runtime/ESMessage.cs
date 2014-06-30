@@ -110,8 +110,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : PrimitiveDomain {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.MessageClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.MessageClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -125,12 +125,12 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _setSelector_(Object receiver, Object selector) {
-				((ESMessage)receiver).Selector = kernel.asESSymbol(selector);
+				((ESMessage)receiver).Selector = objectSpace.asESSymbol(selector);
 				return receiver;
 			}
 		
 			public Object _arguments_(Object receiver) {
-				return kernel.newArray(((ESMessage)receiver).Arguments);
+				return objectSpace.newArray(((ESMessage)receiver).Arguments);
 			}
 		
 			public Object _setArguments_(Object receiver, Object arguments) {

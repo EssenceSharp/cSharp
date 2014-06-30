@@ -33,7 +33,7 @@ using System;
 
 namespace EssenceSharp.Exceptions.System.PrimitiveFailures {
 
-	public class PrimNonDeletableKeyException : PrimIllegalOperationException {
+	public class PrimNonDeletableKeyException : PrimInvalidOperationException {
 		
 		public PrimNonDeletableKeyException() : base() {
 		}

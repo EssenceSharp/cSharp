@@ -51,13 +51,13 @@ using EssenceSharp.Runtime.Binding;
 
 namespace EssenceSharp.Runtime {
 
-	public class ESKernel {
+	public class ESObjectSpace {
 		
 		#region Instance variables
 
-		protected ObjectIdentityComparator						objectIdentityComparator	= new ObjectIdentityComparator();
-		protected ObjectEqualityComparator						defaultObjectEqualityComparator	= null;
-		protected bool									beVerbose			= false;
+		protected ObjectIdentityComparator	objectIdentityComparator	= new ObjectIdentityComparator();
+		protected ObjectEqualityComparator	defaultObjectEqualityComparator	= null;
+		protected bool				beVerbose			= false;
 
 		#region Canonical Classes
 
@@ -68,6 +68,11 @@ namespace EssenceSharp.Runtime {
 		protected ESClass			canonicalBehaviorClass			= new ESClass(ObjectStateArchitecture.Behavior);
 		protected ESClass			canonicalClassClass			= new ESClass(ObjectStateArchitecture.Class);
 		protected ESClass			canonicalMetaclassClass			= new ESClass(ObjectStateArchitecture.Metaclass);
+		protected ESClass			canonicalTraitBehaviorClass		= new ESClass(ObjectStateArchitecture.BehavioralTrait);
+		protected ESClass			canonicalTraitClass			= new ESClass(ObjectStateArchitecture.InstanceTrait);
+		protected ESClass			canonicalClassTraitClass		= new ESClass(ObjectStateArchitecture.ClassTrait);
+		protected ESClass			canonicalTraitTransformationClass	= new ESClass(ObjectStateArchitecture.TraitTransformation);
+		protected ESClass			canonicalTraitCompositionClass		= new ESClass(ObjectStateArchitecture.TraitComposition);
 		protected ESClass			canonicalCompiledCodeClass		= new ESClass(ObjectStateArchitecture.Abstract);
 		protected ESClass			canonicalBlockClass			= new ESClass(ObjectStateArchitecture.Block);
 		protected ESClass			canonicalMethodClass			= new ESClass(ObjectStateArchitecture.Method);
@@ -159,7 +164,7 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		public ESKernel() {
+		public ESObjectSpace() {
 			symbolRegistry								= new SymbolRegistry(canonicalSymbolClass);
 			intialize();
 		}
@@ -186,6 +191,26 @@ namespace EssenceSharp.Runtime {
 
 		public ESClass MetaclassClass {
 			get {return canonicalMetaclassClass;}
+		}
+
+		public ESClass TraitBehaviorClass {
+			get {return canonicalTraitBehaviorClass;}
+		}
+
+		public ESClass TraitClass {
+			get {return canonicalTraitClass;}
+		}
+
+		public ESClass ClassTraitClass {
+			get {return canonicalClassTraitClass;}
+		}
+
+		public ESClass TraitTransformationClass {
+			get {return canonicalTraitTransformationClass;}
+		}
+
+		public ESClass TraitCompositionClass {
+			get {return canonicalTraitCompositionClass;}
 		}
 
 		public ESClass CompiledCodeClass {
@@ -501,6 +526,34 @@ namespace EssenceSharp.Runtime {
 
 		public ESMetaclass newMetaclass(ESSymbol[] instanceVarnames, ESBehavior superclass) {
 			return new ESMetaclass(canonicalMetaclassClass, this, instanceVarnames, superclass);
+		}
+
+		#endregion
+
+		#region Traits
+
+		public ESBehavioralTrait newTraitBehavior() {
+			return new ESBehavioralTrait(canonicalTraitBehaviorClass);
+		}
+
+		public ESInstanceTrait newTrait() {
+			return new ESInstanceTrait(canonicalTraitClass);
+		}
+
+		public ESInstanceTrait newTrait(ESSymbol name) {
+			return new ESInstanceTrait(canonicalTraitClass, name);
+		}
+
+		public ESClassTrait newClassTrait() {
+			return new ESClassTrait(canonicalClassTraitClass);
+		}
+
+		public ESTraitTransformation newTraitTransformation(Trait subject) {
+			return new ESTraitTransformation(canonicalTraitTransformationClass, subject);
+		}
+
+		public ESTraitComposition newTraitComposition() {
+			return new ESTraitComposition(canonicalTraitCompositionClass);
 		}
 
 		#endregion
@@ -910,132 +963,6 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Primitive Methods & Domains
-
-		public void addPrimitiveDomain(PrimitiveDomain primitiveDomain) {
-			primitiveDomain.Kernel = this;
-			primitiveDomainRegistry[primitiveDomain.Type] = primitiveDomain;
-		}
-
-		public bool getPrimitiveDomain(PrimitiveDomainType primitiveAffinity, out PrimitiveDomain primitiveDomain) {
-			return primitiveDomainRegistry.TryGetValue(primitiveAffinity, out primitiveDomain);
-		}
-
-		public void primitiveDomainsDo(System.Action<PrimitiveDomain> enumerator1) {
-			foreach (var kvp in primitiveDomainRegistry) enumerator1(kvp.Value);
-		}
-
-		public void publishedPrimitivesDo(System.Action<PrimitiveDomainType, String, Delegate> enumerator3) {
-			foreach (var kvp in primitiveDomainRegistry) kvp.Value.publishedPrimitivesDo(enumerator3);
-		}
-
-		public bool getPrimitiveFunction(PrimitiveDomainType affinityDomain, String primitiveName, out Delegate function) {
-			PrimitiveDomain primitiveDomain;
-			function = null;
-			if (!getPrimitiveDomain(affinityDomain, out primitiveDomain)) return false;
-			return primitiveDomain.getPrimitiveFunction(primitiveName, out function);
-		}
-
-		public ESMethod getPrimitiveMethod(PrimitiveDomainType affinityDomain, String primitiveName, ESSymbol selector) {
-			PrimitiveDomain primitiveDomain;
-			if (!getPrimitiveDomain(affinityDomain, out primitiveDomain)) return null;
-			return primitiveDomain.getPrimitiveMethod(primitiveName, selector);
-		}
-
-		public void publishCanonicalPrimitives() {
-			primitiveDomainsDo(domain => domain.publishCanonicalPrimitives());
-		}
-
-		public virtual void installCanonicalPrimitivesInCanonicalClasses(ESSymbol protocol) {
-
-			primitiveDomainsDo((PrimitiveDomain domain) => {
-				switch (domain.Type) {
-
-					default:
-						domain.installPublishedPrimitivesInDomainClass(protocol);
-						break;
-
-					case PrimitiveDomainType.Nil:		 
-					case PrimitiveDomainType.True:
-					case PrimitiveDomainType.False:
-					case PrimitiveDomainType.Char:
-					case PrimitiveDomainType.SmallInteger:					
-					case PrimitiveDomainType.LargeInteger:
-					case PrimitiveDomainType.SinglePrecision:				
-					case PrimitiveDomainType.DoublePrecision:				
-					case PrimitiveDomainType.QuadPrecision:	
-						break;
-
-				}
-			});
-
-		}
-
-		public virtual void generateDefaultPrimitiveMethodSource(DirectoryInfo basePath) {
-
-			primitiveDomainsDo((PrimitiveDomain domain) => {
-				domain.generateDefaultPrimitiveMethodSource(basePath);
-			});
-	
-		}
-
-		public virtual void generateDefaultPrimitiveMethodSource() {
-			generateDefaultPrimitiveMethodSource(StandardLibraryPath);
-		}
-
-		#endregion
-
-		#region File paths
-
-		protected virtual void setEssenceSharpPath(DirectoryInfo newDefaultEssenceSharpPath) {
-
-			if (Equals(essenceSharpPath, newDefaultEssenceSharpPath)) return;
-			essenceSharpPath = newDefaultEssenceSharpPath;
-
-			sharedSourcePath = new DirectoryInfo(Path.Combine(essenceSharpPath.FullName,		"Source"));
-			sharedScriptsPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Scripts"));
-			sharedLibrariesPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Libraries"));
-
-			libraryPathBinder = new ESPathnameBinder(SharedLibrariesPath, ".lib");
-			sciptPathBinder = new ESPathnameBinder(SharedScriptsPath, ".es");
-
-			if (!pathForSharedLibrary(standardLibraryName, out standardLibraryPath)) standardLibraryPath = new DirectoryInfo(Path.Combine(sharedLibrariesPath.FullName, standardLibraryName));
-
-		}
-
-		public DirectoryInfo EssenceSharpPath {
-			get {return essenceSharpPath;}
-			set {	var newDefaultEssenceSharpPath = value ?? ESFileUtility.defaultEssenceSharpPath();
-				setEssenceSharpPath(newDefaultEssenceSharpPath);}
-		}
-
-		public DirectoryInfo SharedSourcePath {
-			get {return sharedSourcePath;}
-		}
-
-		public DirectoryInfo SharedScriptsPath {
-			get {return sharedScriptsPath;}
-		}
-
-		public DirectoryInfo SharedLibrariesPath {
-			get {return sharedLibrariesPath;}
-		}
-
-		public DirectoryInfo StandardLibraryPath {
-			get {return standardLibraryPath;}
-		}
-
-		public bool pathForSharedLibrary(String userLibraryName, out DirectoryInfo libraryPath) {
-			var libraryName = new StringReader(userLibraryName).nextQualifiedIdentifier();
-			return libraryPathBinder.pathFor(libraryName, out libraryPath);
-		}
-		
-		public bool pathForScript(String scriptPathameSuffix, out FileInfo scriptPath) {
-			return sciptPathBinder.pathFor(scriptPathameSuffix, out scriptPath);
-		}
-
-		#endregion
-
 		#region Conversions to Essence Sharp objects
 
 		public ESByteArray asESByteArray(Object value) {
@@ -1342,6 +1269,81 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
+		#region Primitive Methods & Domains
+
+		public void addPrimitiveDomain(PrimitiveDomain primitiveDomain) {
+			primitiveDomain.ObjectSpace = this;
+			primitiveDomainRegistry[primitiveDomain.Type] = primitiveDomain;
+		}
+
+		public bool getPrimitiveDomain(PrimitiveDomainType primitiveAffinity, out PrimitiveDomain primitiveDomain) {
+			return primitiveDomainRegistry.TryGetValue(primitiveAffinity, out primitiveDomain);
+		}
+
+		public void primitiveDomainsDo(System.Action<PrimitiveDomain> enumerator1) {
+			foreach (var kvp in primitiveDomainRegistry) enumerator1(kvp.Value);
+		}
+
+		public void publishedPrimitivesDo(System.Action<PrimitiveDomainType, String, Delegate> enumerator3) {
+			foreach (var kvp in primitiveDomainRegistry) kvp.Value.publishedPrimitivesDo(enumerator3);
+		}
+
+		public bool getPrimitiveFunction(PrimitiveDomainType affinityDomain, String primitiveName, out Delegate function) {
+			PrimitiveDomain primitiveDomain;
+			function = null;
+			if (!getPrimitiveDomain(affinityDomain, out primitiveDomain)) return false;
+			return primitiveDomain.getPrimitiveFunction(primitiveName, out function);
+		}
+
+		public ESMethod getPrimitiveMethod(PrimitiveDomainType affinityDomain, String primitiveName, ESSymbol selector) {
+			PrimitiveDomain primitiveDomain;
+			if (!getPrimitiveDomain(affinityDomain, out primitiveDomain)) return null;
+			return primitiveDomain.getPrimitiveMethod(primitiveName, selector);
+		}
+
+		public void publishCanonicalPrimitives() {
+			primitiveDomainsDo(domain => domain.publishCanonicalPrimitives());
+		}
+
+		public virtual void installCanonicalPrimitivesInCanonicalClasses(ESSymbol protocol) {
+
+			primitiveDomainsDo((PrimitiveDomain domain) => {
+				switch (domain.Type) {
+
+					default:
+						domain.installPublishedPrimitivesInDomainClass(protocol);
+						break;
+
+					case PrimitiveDomainType.Nil:		 
+					case PrimitiveDomainType.True:
+					case PrimitiveDomainType.False:
+					case PrimitiveDomainType.Char:
+					case PrimitiveDomainType.SmallInteger:					
+					case PrimitiveDomainType.LargeInteger:
+					case PrimitiveDomainType.SinglePrecision:				
+					case PrimitiveDomainType.DoublePrecision:				
+					case PrimitiveDomainType.QuadPrecision:	
+						break;
+
+				}
+			});
+
+		}
+
+		public virtual void generateDefaultPrimitiveMethodSource(DirectoryInfo basePath) {
+
+			primitiveDomainsDo((PrimitiveDomain domain) => {
+				domain.generateDefaultPrimitiveMethodSource(basePath);
+			});
+	
+		}
+
+		public virtual void generateDefaultPrimitiveMethodSource() {
+			generateDefaultPrimitiveMethodSource(StandardLibraryPath);
+		}
+
+		#endregion
+
 		#region Binding Essence# Namespaces To CLR Namespace / Assembly
 
 		public void bindNamespaceToAssemblyNamed(String qualifiedNamespaceName, AssemblyName assemblyName) {
@@ -1595,6 +1597,57 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
+		#region File paths
+
+		protected virtual void setEssenceSharpPath(DirectoryInfo newDefaultEssenceSharpPath) {
+
+			if (Equals(essenceSharpPath, newDefaultEssenceSharpPath)) return;
+			essenceSharpPath = newDefaultEssenceSharpPath;
+
+			sharedSourcePath = new DirectoryInfo(Path.Combine(essenceSharpPath.FullName,		"Source"));
+			sharedScriptsPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Scripts"));
+			sharedLibrariesPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Libraries"));
+
+			libraryPathBinder = new ESPathnameBinder(SharedLibrariesPath, ".lib");
+			sciptPathBinder = new ESPathnameBinder(SharedScriptsPath, ".es");
+
+			if (!pathForSharedLibrary(standardLibraryName, out standardLibraryPath)) standardLibraryPath = new DirectoryInfo(Path.Combine(sharedLibrariesPath.FullName, standardLibraryName));
+
+		}
+
+		public DirectoryInfo EssenceSharpPath {
+			get {return essenceSharpPath;}
+			set {	var newDefaultEssenceSharpPath = value ?? ESFileUtility.defaultEssenceSharpPath();
+				setEssenceSharpPath(newDefaultEssenceSharpPath);}
+		}
+
+		public DirectoryInfo SharedSourcePath {
+			get {return sharedSourcePath;}
+		}
+
+		public DirectoryInfo SharedScriptsPath {
+			get {return sharedScriptsPath;}
+		}
+
+		public DirectoryInfo SharedLibrariesPath {
+			get {return sharedLibrariesPath;}
+		}
+
+		public DirectoryInfo StandardLibraryPath {
+			get {return standardLibraryPath;}
+		}
+
+		public bool pathForSharedLibrary(String userLibraryName, out DirectoryInfo libraryPath) {
+			var libraryName = new StringReader(userLibraryName).nextQualifiedIdentifier();
+			return libraryPathBinder.pathFor(libraryName, out libraryPath);
+		}
+		
+		public bool pathForScript(String scriptPathameSuffix, out FileInfo scriptPath) {
+			return sciptPathBinder.pathFor(scriptPathameSuffix, out scriptPath);
+		}
+
+		#endregion
+
 		#region Compilation/Evaluation Services
 
 		public virtual ESCompiler newCompiler(TextReader sourceStream) {
@@ -1844,7 +1897,7 @@ namespace EssenceSharp.Runtime {
 			return method.value1(receiver, a1);
 		}
 
-		public static Object throwInvalidFunctionCallException(
+		public static void throwInvalidFunctionCallException(
 					String messageText, 
 					long expectedArgCount, 
 					long actualArgCount, 
@@ -1862,7 +1915,7 @@ namespace EssenceSharp.Runtime {
 
 		}
 
-		public Object throwInvalidArgumentException(BehavioralObject esClass, String opName, String parameterName, Object argValue) {
+		public void throwInvalidArgumentException(BehavioralObject esClass, String opName, String parameterName, Object argValue) {
 			var sb = new StringBuilder();
 			sb.AppendLine("Invalid argument value: ");
 			sb.Append("\tContext = ");
@@ -1876,16 +1929,37 @@ namespace EssenceSharp.Runtime {
 			throw new PrimInvalidOperandException(sb.ToString());
 		}
 		
-		public Object throwInvalidInstanceVariableAccess(ESBehavior esClass, long slotIndex) {
-			return throwInvalidInstanceVariableAccess(esClass.Name, esClass.instVarNameAt(slotIndex), slotIndex);
+		public void throwInvalidInstanceVariableAccess(ESBehavior esClass, long slotIndex) {
+			throwInvalidInstanceVariableAccess(esClass.Name, esClass.instVarNameAt(slotIndex), slotIndex);
 		}
 
-		public Object throwInvalidInstanceVariableAccess(ESSymbol className, ESSymbol fieldName, long slotIndex) {
+		public void throwInvalidInstanceVariableAccess(ESSymbol className, ESSymbol fieldName, long slotIndex) {
 			throw new PrimInvalidOperandException((className == null ? SymbolRegistry.symbolFor("An anonymous Smalltalk class") : className) + "." + (fieldName == null ? slotIndex.ToString() : fieldName.PrimitiveValue));
 		}
 		
-		public Object throwIndexOutOfRangeException(long index, long minIndex, long maxIndex) {
+		public void throwIndexOutOfRangeException(long index, long minIndex, long maxIndex) {
 			throw new PrimIndexBoundsExcessionException("Index = " + index.ToString() + " minValidIndex = " + minIndex + " maxValidIndex = " + maxIndex.ToString(), index, minIndex, maxIndex);
+		}
+
+		public void throwSelectorAliasingArityMismatchException(ESSymbol sourceSelector, ESSymbol selectorAlias) {
+			var message = new StringBuilder();
+			message.Append("Trait method selector aliasing arity mismatch: #");
+			message.Append(sourceSelector.PrimitiveValue);
+			message.Append(" cannot be renamed to #");
+			message.Append(selectorAlias.PrimitiveValue);
+			message.Append(" because the arity (number of message arguments required) is different.");
+			throw new PrimInvalidOperationException(message.ToString());
+		}
+
+		public void throwSelectorAliasingCollisionException(ESSymbol sourceSelector, ESSymbol previousAlias, ESSymbol newAlias) {
+			var message = new StringBuilder();
+			message.Append("Trait method selector aliasing collision: #");
+			message.Append(sourceSelector.PrimitiveValue);
+			message.Append(" cannot be renamed to both #");
+			message.Append(newAlias.PrimitiveValue);
+			message.Append(" and #");
+			message.Append(previousAlias.PrimitiveValue);
+			throw new PrimInvalidOperationException(message.ToString());
 		}
 		
 		#endregion
@@ -1914,6 +1988,13 @@ namespace EssenceSharp.Runtime {
 			canonicalBehaviorClass.setClass(newMetaclass());
 			canonicalClassClass.setClass(newMetaclass());
 			canonicalMetaclassClass.setClass(newMetaclass());
+
+			canonicalTraitBehaviorClass.setClass(newMetaclass());
+			canonicalTraitClass.setClass(newMetaclass());
+			canonicalClassTraitClass.setClass(newMetaclass());
+			canonicalTraitTransformationClass.setClass(newMetaclass());
+			canonicalTraitCompositionClass.setClass(newMetaclass());
+
 			canonicalCompiledCodeClass.setClass(newMetaclass());
 			canonicalBlockClass.setClass(newMetaclass());
 			canonicalMethodClass.setClass(newMetaclass());
@@ -1959,23 +2040,6 @@ namespace EssenceSharp.Runtime {
 
 		}
 
-		protected virtual void createCanonicalNamespaces() {
-			rootNamespace		= newNamespace(null, SymbolRegistry.symbolFor("Root"));
-			smalltalkNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Smalltalk"));
-			undeclaredNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Undeclared"));
-			clrNamespace		= newNamespace(rootNamespace, SymbolRegistry.symbolFor("CLR"), true);
-			clrNamespace.Assembly	= TypeGuru.objectType.Assembly;
-		}
-
-		public virtual void establishCanonicalNamespaceStructure() {
-			rootNamespace.declareInSelf(true);
-			rootNamespace.declareInSelfAs(SymbolRegistry.symbolFor("EssenceSharp"), true);
-			clrNamespace.declareInSelfAs(SymbolRegistry.symbolFor("HostSystem"), true);
-			rootNamespace.addImport(new ESImportSpec(smalltalkNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
-			rootNamespace.addImport(new ESImportSpec(undeclaredNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
-			rootNamespace.addImport(new ESImportSpec(clrNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
-		}
-
 		protected virtual void assignCanonicalNamesToCanonicalClasses() {
 
 			canonicalObjectClass.setName(SymbolRegistry.symbolFor("Object"));
@@ -1983,6 +2047,13 @@ namespace EssenceSharp.Runtime {
 			canonicalBehaviorClass.setName(SymbolRegistry.symbolFor("Behavior"));
 			canonicalClassClass.setName(SymbolRegistry.symbolFor("Class"));
 			canonicalMetaclassClass.setName(SymbolRegistry.symbolFor("Metaclass"));
+
+			canonicalTraitBehaviorClass.setName(SymbolRegistry.symbolFor("TraitBehavior"));
+			canonicalTraitClass.setName(SymbolRegistry.symbolFor("Trait"));
+			canonicalClassTraitClass.setName(SymbolRegistry.symbolFor("ClassTrait"));
+			canonicalTraitTransformationClass.setName(SymbolRegistry.symbolFor("TraitTransformation"));
+			canonicalTraitCompositionClass.setName(SymbolRegistry.symbolFor("TraitComposition"));
+
 			canonicalCompiledCodeClass.setName(SymbolRegistry.symbolFor("CompiledCode"));
 			canonicalBlockClass.setName(SymbolRegistry.symbolFor("Block"));
 			canonicalMethodClass.setName(SymbolRegistry.symbolFor("Method"));
@@ -2035,6 +2106,13 @@ namespace EssenceSharp.Runtime {
 			canonicalBehaviorClass.setSuperclass(canonicalNamespaceClass);
 			canonicalClassClass.setSuperclass(canonicalBehaviorClass);
 			canonicalMetaclassClass.setSuperclass(canonicalBehaviorClass);
+
+			canonicalTraitBehaviorClass.setSuperclass(canonicalNamespaceClass);
+			canonicalTraitClass.setSuperclass(canonicalTraitBehaviorClass);
+			canonicalClassTraitClass.setSuperclass(canonicalTraitBehaviorClass);
+			canonicalTraitTransformationClass.setSuperclass(canonicalObjectClass);
+			canonicalTraitCompositionClass.setSuperclass(canonicalObjectClass);
+
 			canonicalCompiledCodeClass.setSuperclass(canonicalObjectClass);
 			canonicalBlockClass.setSuperclass(canonicalCompiledCodeClass);
 			canonicalMethodClass.setSuperclass(canonicalCompiledCodeClass);
@@ -2080,6 +2158,23 @@ namespace EssenceSharp.Runtime {
 
 		}
 
+		protected virtual void createCanonicalNamespaces() {
+			rootNamespace		= newNamespace(null, SymbolRegistry.symbolFor("Root"));
+			smalltalkNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Smalltalk"));
+			undeclaredNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Undeclared"));
+			clrNamespace		= newNamespace(rootNamespace, SymbolRegistry.symbolFor("CLR"), true);
+			clrNamespace.Assembly	= TypeGuru.objectType.Assembly;
+		}
+
+		public virtual void establishCanonicalNamespaceStructure() {
+			rootNamespace.declareInSelf(true);
+			rootNamespace.declareInSelfAs(SymbolRegistry.symbolFor("EssenceSharp"), true);
+			clrNamespace.declareInSelfAs(SymbolRegistry.symbolFor("HostSystem"), true);
+			rootNamespace.addImport(new ESImportSpec(smalltalkNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
+			rootNamespace.addImport(new ESImportSpec(undeclaredNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
+			rootNamespace.addImport(new ESImportSpec(clrNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
+		}
+
 		protected virtual void assignCanonicalClassesToCanonicalNamspaces() {
 
 			canonicalObjectClass.setEnvironment(SmalltalkNamespace);
@@ -2087,6 +2182,13 @@ namespace EssenceSharp.Runtime {
 			canonicalBehaviorClass.setEnvironment(SmalltalkNamespace);
 			canonicalClassClass.setEnvironment(SmalltalkNamespace);
 			canonicalMetaclassClass.setEnvironment(SmalltalkNamespace);
+
+			canonicalTraitBehaviorClass.setEnvironment(SmalltalkNamespace);
+			canonicalTraitClass.setEnvironment(SmalltalkNamespace);
+			canonicalClassTraitClass.setEnvironment(SmalltalkNamespace);
+			canonicalTraitTransformationClass.setEnvironment(SmalltalkNamespace);
+			canonicalTraitCompositionClass.setEnvironment(SmalltalkNamespace);
+
 			canonicalCompiledCodeClass.setEnvironment(SmalltalkNamespace);
 			canonicalBlockClass.setEnvironment(SmalltalkNamespace);
 			canonicalMethodClass.setEnvironment(SmalltalkNamespace);
@@ -2139,6 +2241,13 @@ namespace EssenceSharp.Runtime {
 			addPrimitiveDomain(new ESBehavior.Primitives());
 			addPrimitiveDomain(new ESClass.Primitives());
 			addPrimitiveDomain(new ESMetaclass.Primitives());
+
+			addPrimitiveDomain(new ESBehavioralTrait.Primitives());
+			addPrimitiveDomain(new ESInstanceTrait.Primitives());
+			addPrimitiveDomain(new ESClassTrait.Primitives());
+			addPrimitiveDomain(new ESTraitTransformation.Primitives());
+			addPrimitiveDomain(new ESTraitComposition.Primitives());
+
 			addPrimitiveDomain(new ESCompiledCode.Primitives());
 			addPrimitiveDomain(new ESBlock.Primitives());
 			addPrimitiveDomain(new ESMethod.Primitives());
@@ -2220,7 +2329,7 @@ namespace EssenceSharp.Runtime {
 			var stopwatch = new Stopwatch();
 			stopwatch.Start();
 
-			List<ESNamespace> initialRootNamespaces;
+			List<NamespaceObject> initialRootNamespaces;
 			if (!isStandardLibraryLoaded) {
 				if (beVerbose) Console.WriteLine("Loading standard library...");
 				if (!ESLibraryLoader.load(this, rootNamespace, StandardLibraryPath, startupVerbosely, true, out initialRootNamespaces)) {

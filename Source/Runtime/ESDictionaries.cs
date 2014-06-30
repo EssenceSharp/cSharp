@@ -121,7 +121,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ESAbstractAssociation<KeyType, ValueType> withKey(KeyType newKey) {
-			ESAbstractAssociation<KeyType, ValueType> mutableCopy = (ESAbstractAssociation<KeyType, ValueType>)base.copy();
+			ESAbstractAssociation<KeyType, ValueType> mutableCopy = (ESAbstractAssociation<KeyType, ValueType>)base.shallowCopy();
 			mutableCopy.Key = newKey;
 			if (IsImmutable) {
 				mutableCopy.beImmutable();
@@ -132,7 +132,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual ESAbstractAssociation<KeyType, ValueType> withValue(ValueType newValue) {
-			ESAbstractAssociation<KeyType, ValueType> mutableCopy = (ESAbstractAssociation<KeyType, ValueType>)base.copy();
+			ESAbstractAssociation<KeyType, ValueType> mutableCopy = (ESAbstractAssociation<KeyType, ValueType>)base.shallowCopy();
 			mutableCopy.Value = newValue;
 			if (IsImmutable) {
 				mutableCopy.beImmutable();
@@ -143,7 +143,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual ESAbstractAssociation<KeyType, ValueType> withKeyAndValue(KeyType newKey, ValueType newValue) {
-			ESAbstractAssociation<KeyType, ValueType> mutableCopy = (ESAbstractAssociation<KeyType, ValueType>)base.copy();
+			ESAbstractAssociation<KeyType, ValueType> mutableCopy = (ESAbstractAssociation<KeyType, ValueType>)base.shallowCopy();
 			mutableCopy.setKeyAndValue(newKey, newValue);
 			if (IsImmutable) {
 				mutableCopy.beImmutable();
@@ -153,8 +153,8 @@ namespace EssenceSharp.Runtime {
 			return mutableCopy;
 		}
 
-		public override void postCopy() {
-			base. postCopy();
+		public override void postShallowCopy() {
+			base. postShallowCopy();
 			statusFlags |= keyMutabilityFlagBit;
 		}
 
@@ -204,8 +204,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : PrimitiveDomain {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.AssociationClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.AssociationClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -328,7 +328,7 @@ namespace EssenceSharp.Runtime {
 		where KeyType : class
 		where ValueType : class {
 
-		protected IDictionary<KeyType, AssociationType>							bindings				= null;
+		protected Dictionary<KeyType, AssociationType>							bindings				= null;
  
 		protected ESAbstractDictionary(ESBehavior esClass) : base(esClass) {
 			bindings = newBindings(3, null);
@@ -342,9 +342,15 @@ namespace EssenceSharp.Runtime {
 			if (associations != null) foreach (var a in associations) add(a);
 		}
 
-		protected abstract IDictionary<KeyType, AssociationType> newBindings(long capacity, IEqualityComparer<KeyType> keyComparator);
+		protected abstract Dictionary<KeyType, AssociationType> newBindings(long capacity, IEqualityComparer<KeyType> keyComparator);
 
 		protected abstract AssociationType newAssociation(KeyType key, ValueType value);
+
+		public override void postCopy() {
+			var oldBindings = bindings;
+			bindings = newBindings(bindings.Count * 2, bindings.Comparer);
+			foreach (var kvp in oldBindings) bindings[kvp.Key] = kvp.Value;
+		}
 
 		#region ES Dictionary protocol
 
@@ -615,10 +621,10 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected virtual IEqualityComparer<Object> defaultKeyComparator() {
-			return Class.Kernel.ObjectIdentityComparator;
+			return Class.ObjectSpace.ObjectIdentityComparator;
 		}
 
-		protected override IDictionary<Object, ESAssociation> newBindings(long capacity, IEqualityComparer<Object> keyComparator) {
+		protected override Dictionary<Object, ESAssociation> newBindings(long capacity, IEqualityComparer<Object> keyComparator) {
 			return new Dictionary<Object, ESAssociation>((int)capacity, keyComparator ?? defaultKeyComparator());
 		}
 
@@ -627,7 +633,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected override ESAssociation newAssociation(Object key, Object value) {
-			return Class.Kernel.newAssociation(key, value);
+			return Class.ObjectSpace.newAssociation(key, value);
 		}
 
 		public override T valueBy<T>(Operation<T> operation) {
@@ -636,8 +642,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : PrimitiveDomain {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.IdentityDictionaryClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.IdentityDictionaryClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -764,7 +770,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected override IEqualityComparer<Object> defaultKeyComparator() {
-			return Class.Kernel.newObjectEqualityComparator();
+			return Class.ObjectSpace.newObjectEqualityComparator();
 		}
 
 		public override ObjectStateArchitecture Architecture {

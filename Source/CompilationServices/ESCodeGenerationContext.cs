@@ -100,7 +100,7 @@ namespace EssenceSharp.CompilationServices {
 
 		protected long				identity			= identityGenerator++;
 		protected ConstantExpression		identityExpression;
-		protected ESKernel			kernel;
+		protected ESObjectSpace			objectSpace;
 		protected SymbolRegistry		symbolRegistry;
 		protected MessageSendBinder.Registry	messageSendBinderRegistry;
 		protected ParameterExpression		selfParameter			= Expression.Parameter(TypeGuru.objectType, selfName);
@@ -125,7 +125,7 @@ namespace EssenceSharp.CompilationServices {
 
 		public CodeGenerationContext(ESCompiler compiler) {
 			identityExpression		= Expression.Constant(identity);
-			kernel				= compiler.Kernel;
+			objectSpace				= compiler.ObjectSpace;
 			bindToKernel();
 		}
 
@@ -135,11 +135,11 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		protected void bindToKernel() {
-			messageSendBinderRegistry	= kernel.MessageSendBinderRegistry;
-			symbolRegistry			= kernel.SymbolRegistry;
-			selfSymbol			= kernel.SymbolRegistry.symbolFor(selfName);
-			superSymbol			= kernel.SymbolRegistry.symbolFor(superName);
-			thisContextSymbol		= kernel.SymbolRegistry.symbolFor(thisContextName);
+			messageSendBinderRegistry	= objectSpace.MessageSendBinderRegistry;
+			symbolRegistry			= objectSpace.SymbolRegistry;
+			selfSymbol			= objectSpace.SymbolRegistry.symbolFor(selfName);
+			superSymbol			= objectSpace.SymbolRegistry.symbolFor(superName);
+			thisContextSymbol		= objectSpace.SymbolRegistry.symbolFor(thisContextName);
 		}
 
 		public long Identity {
@@ -150,8 +150,8 @@ namespace EssenceSharp.CompilationServices {
 			get {return identityExpression;}
 		}
 
-		public ESKernel Kernel {
-			get {return kernel;}
+		public ESObjectSpace ObjectSpace {
+			get {return objectSpace;}
 		}
 
 		public ESSymbol symbolFor(String value) {
@@ -263,23 +263,23 @@ namespace EssenceSharp.CompilationServices {
 		#region Messages Sent
 
 		protected HashSet<ESSymbol> newMessagesSentSet() {
-			return new HashSet<ESSymbol>(new ESSymbolIdentityComparator());
+			return new HashSet<ESSymbol>(new SymbolIdentityComparator());
 		}
 
 		public HashSet<ESSymbol> MessagesSent {
-			get {return messagesSent == null ? newMessagesSentSet() : messagesSent;}
+			get {return messagesSent == null ? null : messagesSent;}
 		}
 
 		public HashSet<ESSymbol> MessagesSentToSelf {
-			get {return messagesSentToSelf == null ? newMessagesSentSet() : messagesSentToSelf;}
+			get {return messagesSentToSelf == null ? null : messagesSentToSelf;}
 		}
 
 		public HashSet<ESSymbol> MessagesSentToSuper {
-			get {return messagesSentToSuper == null ? newMessagesSentSet() : messagesSentToSuper;}
+			get {return messagesSentToSuper == null ? null : messagesSentToSuper;}
 		}
 
 		public HashSet<ESSymbol> MessagesSentToThisContext {
-			get {return messagesSentToThisContext == null ? newMessagesSentSet() : messagesSentToThisContext;}
+			get {return messagesSentToThisContext == null ? null : messagesSentToThisContext;}
 		}
 
 		protected void logMessageSent(ESSymbol messageSelector) {
@@ -408,11 +408,11 @@ namespace EssenceSharp.CompilationServices {
 		#region Dynamic Binding
 
 		public GetVariableValueBinder canonicalGetVariableBinderFor(NamespaceObject environment, ESSymbol name) {
-			return kernel.GetVariableValueBinderRegistry.canonicalBinderFor(name, environment);
+			return objectSpace.GetVariableValueBinderRegistry.canonicalBinderFor(name, environment);
 		}
 
 		public SetVariableValueBinder canonicalSetVariableBinderFor(NamespaceObject environment, ESSymbol name) {
-			return kernel.SetVariableValueBinderRegistry.canonicalBinderFor(name, environment);;
+			return objectSpace.SetVariableValueBinderRegistry.canonicalBinderFor(name, environment);;
 		}
 
 		public ConstantExpression getVariableValueCallSiteConstantFor(NamespaceObject environment, ESSymbol variableName) {
@@ -427,7 +427,7 @@ namespace EssenceSharp.CompilationServices {
 			get {return messageSendBinderRegistry;}
 		}
 
-		public ConstantExpression messageSendCallSiteConstantFor(MessageReceiverKind receiverKind, ESSymbol messageSelector) {
+		public ConstantExpression messageSendCallSiteConstantFor(MessageReceiverKind receiverKind, BehavioralObject selfReceiverClass, ESSymbol messageSelector) {
 			switch (receiverKind) {
 				case MessageReceiverKind.General:
 					logMessageSent(messageSelector);
@@ -442,7 +442,7 @@ namespace EssenceSharp.CompilationServices {
 					logMessageSentToThisContext(messageSelector);
 					break;
 			}
-			var binder = MessageSendBinderRegistry.canonicalBinderFor(receiverKind, messageSelector);
+			var binder = MessageSendBinderRegistry.canonicalBinderFor(receiverKind, selfReceiverClass, messageSelector);
 			switch (messageSelector.NumArgs) {
   				case 0:
 					return Expression.Constant(CallSite<Functor2<Object, CallSite, Object>>.Create(binder));

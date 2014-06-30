@@ -64,10 +64,8 @@ namespace EssenceSharp.Runtime {
 			statusFlags ^= mutabilityFlagBit;
 		}
 		
-		public override ESObject shallowCopy() {
-			var copy = (ESInitiallyMutableObject)base.shallowCopy();
-			copy.beMutable();
-			return copy;
+		public override void postShallowCopy() {
+			beMutable();
 		}
 		
 	}
@@ -126,8 +124,8 @@ namespace EssenceSharp.Runtime {
 			get {return namedSlots;}
 		}
 		
-		public override void postCopy() {
-			base.postCopy();
+		public override void postShallowCopy() {
+			base.postShallowCopy();
 			long instSize = namedSlots.Length;
 			if (instSize > 0) {
 				Object[] newSlots = instSize > 0 ? new Object[instSize] : emptyNamedSlots;
@@ -176,7 +174,7 @@ namespace EssenceSharp.Runtime {
 				}
 				append(": ");
 				if (value == null) {
-					append("<null>");
+					append("nil");
 				} else {
 					ESObject esValue = value as ESObject;
 					if (esValue == null) {
@@ -306,24 +304,16 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual ESIndexedSlotsObject<ElementType> newWithSize(long size) {
-			ESIndexedSlotsObject<ElementType> copy = (ESIndexedSlotsObject<ElementType>)shallowCopy();
-			copy.setSize(0);
-			copy.postCopy();
-			copy.setSize(size);
-			return copy;
+			return (ESIndexedSlotsObject<ElementType>)Class.newWithSize(size);
 		}
 		
 		public virtual ESIndexedSlotsObject<ElementType> newWith(ElementType[] slots) {
-			ESIndexedSlotsObject<ElementType> copy = (ESIndexedSlotsObject<ElementType>)shallowCopy();
-			copy.setSize(0);
-			copy.postCopy();
-			copy.IndexedSlots = slots;
-			return copy;
+			return (ESIndexedSlotsObject<ElementType>)Class.newWithValue(slots);
 		}
 		
-		public override void postCopy() {
-			base.postCopy();
-			long mySize = size();
+		public override void postShallowCopy() {
+			base.postShallowCopy();
+			long mySize = slots.Length;
 			if (mySize > 0) {
 				ElementType[] newSlots = mySize > 0 ? new ElementType[mySize] : empty;
 				Array.Copy(slots, newSlots, mySize);
@@ -331,12 +321,8 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 		
-		public virtual ESObject emptyCopy() {
-			// May or may NOT have the same semantics as sending the message #copy to an ESObject!!!.
-			ESIndexedSlotsObject<ElementType> copy = (ESIndexedSlotsObject<ElementType>)shallowCopy();
-			copy.setSize(0);
-			copy.postCopy();
-			return copy;
+		public virtual ESIndexedSlotsObject<ElementType> emptyCopy() {
+			return (ESIndexedSlotsObject<ElementType>)Class.newWithSize(0);
 		}
 			
 		public bool elementsAreIdentical(ElementType[] left, ElementType[] right) {
@@ -355,7 +341,7 @@ namespace EssenceSharp.Runtime {
 
 		protected abstract bool eachHasSameValue(ElementType left, ElementType right);
 		
-		#region Smalltalk API
+		#region Essence# API
 
 		public override long size() {
 			return slots.Length;
@@ -771,23 +757,23 @@ namespace EssenceSharp.Runtime {
 
 		public ESIndexedSlotsObject<ElementType> withAllButFirst() {
 			long mySize = slots.Length;
-			return mySize > 1 ? copyFromTo(1,  mySize - 1) : (ESIndexedSlotsObject<ElementType>)copy();
+			return mySize > 1 ? copyFromTo(1,  mySize - 1) : (ESIndexedSlotsObject<ElementType>)shallowCopy();
 		}
 
 		public ESIndexedSlotsObject<ElementType> withAllButLast() {
 			long mySize = slots.Length;
-			return mySize > 1 ? copyFromTo(0,  mySize - 2) : (ESIndexedSlotsObject<ElementType>)copy();
+			return mySize > 1 ? copyFromTo(0,  mySize - 2) : (ESIndexedSlotsObject<ElementType>)shallowCopy();
 		}
 
 		public ESIndexedSlotsObject<ElementType> withFirst() {
 			long mySize = slots.Length;
-			return mySize > 1 ? copyFromTo(0,  0) : (ESIndexedSlotsObject<ElementType>)copy();
+			return mySize > 1 ? copyFromTo(0,  0) : (ESIndexedSlotsObject<ElementType>)shallowCopy();
 		}
 
 		public ESIndexedSlotsObject<ElementType> withLast() {
 			long mySize = slots.Length;
 			long lastIndex = mySize - 1;
-			return mySize > 1 ? copyFromTo(lastIndex,  lastIndex) : (ESIndexedSlotsObject<ElementType>)copy();
+			return mySize > 1 ? copyFromTo(lastIndex,  lastIndex) : (ESIndexedSlotsObject<ElementType>)shallowCopy();
 		}
 		
 		public ESIndexedSlotsObject<ElementType> copyAndRemoveFromTo(long startIndex, long endIndex) {
@@ -1090,7 +1076,7 @@ namespace EssenceSharp.Runtime {
 			if (removalCount > 0) {
 				return newWith(elementsRemaining.ToArray());
 			} else {
-				return (ESIndexedSlotsObject<ElementType>)copy();
+				return (ESIndexedSlotsObject<ElementType>)shallowCopy();
 			}
 		}
 
@@ -1211,7 +1197,7 @@ namespace EssenceSharp.Runtime {
 			if (removalCount > 0) {
 				return newWith(elementsRemaining.ToArray());
 			} else {
-				return (ESIndexedSlotsObject<ElementType>)copy();
+				return (ESIndexedSlotsObject<ElementType>)shallowCopy();
 			}
 		}
 
@@ -1332,7 +1318,7 @@ namespace EssenceSharp.Runtime {
 			if (removalCount > 0) {
 				return newWith(elementsRemaining.ToArray());
 			} else {
-				return (ESIndexedSlotsObject<ElementType>)copy();
+				return (ESIndexedSlotsObject<ElementType>)shallowCopy();
 			}
 		}
 
@@ -1627,11 +1613,11 @@ namespace EssenceSharp.Runtime {
 			#region Non-generic primitives
 
 			public Object _setSize_(Object receiver, Object newSize) {
-				return ((ESIndexedSlotsObject<ElementType>)receiver).setSize(asHostLong(newSize));
+				return ((ESIndexedSlotsObject<ElementType>)receiver).setSize((long)newSize);
 			}
 		
 			public Object _copyWithSize_(Object receiver, Object newSize) {
-				return ((ESIndexedSlotsObject<ElementType>)receiver).copyWithSize(asHostLong(newSize));
+				return ((ESIndexedSlotsObject<ElementType>)receiver).copyWithSize((long)newSize);
 			}
 		
 			public Object _firstIfNone_(Object receiver, Object noSuchElementAction) {
@@ -1951,8 +1937,8 @@ namespace EssenceSharp.Runtime {
 			base.initialize(slots);
 
 			ESBlock equalsBlock;
-			var kernel = Class.Kernel;
-			kernel.compile(new StringReader(":left :right | left = right"), kernel.SmalltalkNamespace, null, out equalsBlock);
+			var objectSpace = Class.ObjectSpace;
+			objectSpace.compile(new StringReader(":left :right | left = right"), objectSpace.SmalltalkNamespace, null, out equalsBlock);
 			areEqual = equalsBlock.F2;
 
 		}
@@ -2058,8 +2044,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESIndexedSlotsObject<Object>.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.ArrayClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.ArrayClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -2126,7 +2112,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("nextIdentityIndexOf:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_nextIdentityIndexOfIfAbsent_<Object>));
 				publishPrimitive("identityIncludes:",					new FuncNs.Func<Object, Object, Object>(_identityIncludes_<Object>));
 				publishPrimitive("add:",						new FuncNs.Func<Object, Object, Object>(_appendElement_<Object>));
-				publishPrimitive("copyWith:",						new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<Object>));
+				publishPrimitive("copyAdding:",	/* copyWith: */				new FuncNs.Func<Object, Object, Object>(_copyAppendingElement_<Object>));
 				publishPrimitive("identityRemoveNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_identityRemoveNextIfAbsent_<Object>));	
 				publishPrimitive("copyIdentityRemovingNext:from:to:ifAbsent:",		new FuncNs.Func<Object, Object, Object, Object, Object, Object>(_copyIdentityRemovingNextIfAbsent_<Object>));	
 				publishPrimitive("identityRemoveAll:",					new FuncNs.Func<Object, Object, Object>(_identityRemoveAllOccurrencesOf_<Object>));	

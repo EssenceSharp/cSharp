@@ -123,15 +123,11 @@ namespace EssenceSharp.Runtime {
 			get {return pathElementCount;}
 		}
 		
-		public override sealed ESObject copy() {
-			return this;
-		}
-		
 		public override sealed ESObject shallowCopy() {
 			return this;
 		}
 		
-		public override sealed void postCopy() {
+		public override sealed void postShallowCopy() {
 		}
 
 		public override ESSymbol asESSymbol() {
@@ -139,11 +135,11 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public override ESString asESString() {
-			return Class.Kernel.newString(IndexedSlots);
+			return Class.ObjectSpace.newString(IndexedSlots);
 		}
 		
 		public override ESPathname asESPathname() {
-			return Class.Kernel.pathnameFromString(PrimitiveValue, QualifiedNameSeparatorChar, null);
+			return Class.ObjectSpace.pathnameFromString(PrimitiveValue, QualifiedNameSeparatorChar, null);
 		}
 
 		public override ESObject asMutable() {
@@ -213,11 +209,15 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public override ESIndexedSlotsObject<char> newWithSize(long size) {
-			return Class.Kernel.newString(size);
+			return Class.ObjectSpace.newString(size);
 		}
 		
 		public override ESIndexedSlotsObject<char> newWith(char[] slots) {
-			return Class.Kernel.newString(slots);
+			return Class.ObjectSpace.newString(slots);
+		}
+		
+		public override ESIndexedSlotsObject<char> emptyCopy() {
+			return Class.ObjectSpace.newString(0);
 		}
 		
 		public override ESBindingReference bindingInNamespaceIfAbsent(NamespaceObject environment, AccessPrivilegeLevel requestorRights, ImportTransitivity importTransitivity, Functor0<ESBindingReference> ifAbsentAction) {
@@ -270,8 +270,8 @@ namespace EssenceSharp.Runtime {
 
 		public new class Primitives : ESString.Primitives {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.SymbolClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.SymbolClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -301,7 +301,7 @@ namespace EssenceSharp.Runtime {
 		
 	}
 
-	public class ESSymbolIdentityComparator : IdentityComparator<ESSymbol> {
+	public class SymbolIdentityComparator : IdentityComparator<ESSymbol> {
 
 	}
 

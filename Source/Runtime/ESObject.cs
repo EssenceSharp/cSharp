@@ -59,23 +59,21 @@ namespace EssenceSharp.Runtime {
 
 	}
 
-	public class ObjectIdentityComparator : IdentityComparator<Object> {
-
-	}
+	public class ObjectIdentityComparator : IdentityComparator<Object> {}
 
 	public class ObjectEqualityComparator : IEqualityComparer<Object> {
 
 		protected FuncNs.Func<Object, Object, Object> areEqual;
 		protected FuncNs.Func<Object, Object> hashCodeOf;
 
-		public ObjectEqualityComparator(ESKernel kernel) {
+		public ObjectEqualityComparator(ESObjectSpace objectSpace) {
 
 			ESBlock equalsBlock;
-			kernel.compile(new StringReader(":left :right | left = right"), kernel.SmalltalkNamespace, null, out equalsBlock);
+			objectSpace.compile(new StringReader(":left :right | left = right"), objectSpace.SmalltalkNamespace, null, out equalsBlock);
 			areEqual = equalsBlock.F2;
 
 			ESBlock hashBlock;
-			kernel.compile(new StringReader(":anObject | anObject hash"), kernel.SmalltalkNamespace, null, out hashBlock);
+			objectSpace.compile(new StringReader(":anObject | anObject hash"), objectSpace.SmalltalkNamespace, null, out hashBlock);
 			hashCodeOf = hashBlock.F1;
 
 		}
@@ -99,109 +97,39 @@ namespace EssenceSharp.Runtime {
 	}
 
 	public interface ESObjectType : IDynamicMetaObjectProvider, IEquatable<ESObject>, ICloneable {
-		
-		ObjectStateArchitecture Architecture {
-			get;
-		}
-		
-		Object HostSystemValue {
-			get;
-		}
-
-		String ClassName {
-			get;
-		}
-
-		String QualifiedClassName {
-			get;
-		}
-		
-		BindingHandle asBindingHandle();
 
 		#region Essence# API
+		
+		ObjectStateArchitecture Architecture {get;}
+		Object HostSystemValue {get;}
+		String ClassName {get;}
+		String QualifiedClassName {get;}
 
 		#region Core
 
-		ESBehavior Class {
-			get;
-		}
-
-		bool IsNil {
-			get;
-		}
-		
-		bool NotNil {
-			get;
-		}
-		
-		bool IsTrue {
-			get;
-		}
-		
-		bool IsFalse {
-			get;
-		}
-		
-		bool IsNamespace {
-			get;
-		}
-		
-		bool IsBehavior {
-			get;
-		}
-		
-		bool IsClass {
-			get;
-		}
-		
-		bool IsMetaclass {
-			get;
-		}
-		
-		bool HasIndexedSlots {
-			get;
-		}
-		
-		bool IsString {
-			get;
-		}
-		
-		bool IsSymbol {
-			get;
-		}
-		
-		bool IsBlock {
-			get;
-		}
-		
-		bool IsMethod {
-			get;
-		}
-
-		bool IsImmutable {
-			get;
-		}
-		
+		ESBehavior Class {get;}
+		bool IsNamespace {get;}
+		bool IsBehavior {get;}
+		bool IsClass {get;}
+		bool IsMetaclass {get;}
+		bool HasIndexedSlots {get;}
+		bool IsString {get;}
+		bool IsSymbol {get;}
+		bool IsBlock {get;}
+		bool IsMethod {get;}
+		bool IsImmutable {get;}
 		void beImmutable();
-
 		bool isMemberOf(ESBehavior aBehavior);
-		
 		bool isKindOf(ESBehavior aBehavior);
-
 		bool hasSameValueAs(ESObject other);
-		
 		ESObject shallowCopy();
-		
+		void postShallowCopy();
 		ESObject copy();
-		
 		void postCopy();
-		
 		ESObject asMutable();
-		
 		ESObject asImmutable();
-
+		BindingHandle asBindingHandle();
 		BindingHandle asImmutableBindingHandle();
-	
 		BindingHandle asMutableBindingHandle();
 
 		#endregion
@@ -209,13 +137,9 @@ namespace EssenceSharp.Runtime {
 		#region Instance variable accessing
 
 		long size();
-		
 		Object instVarValueAt(long slotIndex);
-		
 		Object instVarValueAtPut(long slotIndex, Object newValue);
-		
 		Object instVarValueAtName(ESSymbol name);
-		
 		Object instVarValueAtNamePut(ESSymbol name, Object newValue);
 		
 		#endregion
@@ -223,19 +147,12 @@ namespace EssenceSharp.Runtime {
 		#region Sending messages
 		
 		bool respondsTo(ESSymbol selector);
-		
 		Object respondTo(ESMessage message);
-		
 		Object perform(ESSymbol unaryMessageSelector);
-		
 		Object performWith1(ESSymbol binaryOrKeywordMessageSelector, Object a1);
-		
 		Object performWith2(ESSymbol keywordMessageSelector, Object a1, Object a2);
-		
 		Object performWith3(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3);
-		
 		Object performWith4(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3, Object a4);
-		
 		Object performWithArguments(ESSymbol selector, Object[] arguments);
 		
 		#endregion
@@ -243,11 +160,8 @@ namespace EssenceSharp.Runtime {
 		#region Debugging
 
 		void halt();
-
 		void show();
-
 		void crShow();
-
 		void showCr();
 
 		#endregion
@@ -257,33 +171,19 @@ namespace EssenceSharp.Runtime {
 		#region Conversions to Essence Sharp objects
 		
 		ESByteArray asESByteArray();
-		
 		ESString asESString();
-		
 		ESHalfWordArray asESHalfWordArray();
-		
 		ESWordArray asESWordArray();
-		
 		ESLongWordArray asESLongWordArray();
-		
 		ESFloatArray asESFloatArray();
-		
 		ESDoubleArray asESDoubleArray();
-		
 		ESQuadArray asESQuadArray();
-		
 		ESArray asESArray();
-		
 		ESSymbol asESSymbol();
-		
 		ESPathname asESPathname();
-		
 		ESMethod asESMethod();
-		
 		ESBehavior asESBehavior();
-		
 		ESNamespace asESNamespace();
-
 		ESBlock asBlock();
 
 		#endregion
@@ -291,7 +191,6 @@ namespace EssenceSharp.Runtime {
 		#region Printing
 		
 		void printTypeUsing(Action<String> append);
-		
 		void printUsing(uint depth, Action<String> append, Action<uint> newLine);
 		
 		#endregion
@@ -389,11 +288,13 @@ namespace EssenceSharp.Runtime {
 		
 		#endregion;
 		
-		private ESBehavior 									_class;
+		private ESBehavior 									@class;
 		
 		public ESObject(ESBehavior esClass) {
 			setClass(esClass);
 		}
+
+		#region Essence# API
 		
 		public virtual ObjectStateArchitecture Architecture {
 			get {return ObjectStateArchitecture.Stateless;}
@@ -404,20 +305,245 @@ namespace EssenceSharp.Runtime {
 		}
 
 		internal virtual void setClass(ESBehavior esClass) {
-			_class = esClass;
+			@class = esClass;
 		}
 
 		public String ClassName {
-			get {return _class == null ? GetType().Name : _class.Name.PrimitiveValue;}
+			get {return @class == null ? GetType().Name : @class.NameString;}
 		}
 
 		public String QualifiedClassName {
-			get {return _class == null ? GetType().FullName : _class.PathnameString;}
+			get {return @class == null ? GetType().FullName : @class.PathnameString;}
+		}
+
+		#region Core
+
+		public ESBehavior Class {
+			get {return @class;}
+		}
+		
+		public virtual bool IsNamespace {
+			get {return false;}
+		}
+		
+		public virtual bool IsBehavior {
+			get {return false;}
+		}
+		
+		public virtual bool IsClass {
+			get {return false;}
+		}
+		
+		public virtual bool IsMetaclass {
+			get {return false;}
+		}
+		
+		public virtual bool HasIndexedSlots {
+			get {return false;}
+		}
+		
+		public virtual bool IsString {
+			get {return false;}
+		}
+		
+		public virtual bool IsSymbol {
+			get {return false;}
+		}
+		
+		public virtual bool IsBlock {
+			get {return false;}
+		}
+		
+		public virtual bool IsMethod {
+			get {return false;}
+		}
+		
+		public virtual bool IsImmutable {
+			get {return true;}
+		}
+		
+		public virtual void beImmutable() {
+			// By default, do nothing
+		}
+
+		public bool isMemberOf(ESBehavior aBehavior) {
+			return ReferenceEquals(Class, aBehavior);
+		}
+		
+		public bool isKindOf(ESBehavior aBehavior) {
+			return Class.includesBehavior(aBehavior);
+		}
+
+		public virtual bool hasSameValueAs(ESObject other) {
+			return ReferenceEquals(this, other);
+		}
+		
+		public virtual ESObject shallowCopy() {
+			// May or may NOT have the same semantics as sending the message #shallowCopy to an ESObject!!!.
+			ESObject copy = (ESObject)MemberwiseClone();
+			copy.postShallowCopy();
+			return copy;
+		}
+		
+		public virtual void postShallowCopy() {
+			// By default, do nothing
+		}
+		
+		public virtual ESObject copy() {
+			// May or may NOT have the same semantics as sending the message #copy to an ESObject!!!.
+			ESObject copy = shallowCopy();
+			copy.postCopy();
+			return copy;
+		}
+		
+		public virtual void postCopy() {
+			// By default, do nothing
+		}
+		
+		public virtual ESObject asMutable() {
+			if (IsImmutable) return copy();
+			return this;
+		}
+		
+		public ESObject asImmutable() {
+			if (IsImmutable) return this;
+			ESObject immutableCopy = copy();
+			immutableCopy.beImmutable();
+			return immutableCopy;
 		}
 		
 		public virtual BindingHandle asBindingHandle() {
 			return asMutableBindingHandle();
 		}
+
+		public BindingHandle asImmutableBindingHandle() {
+			return new DirectBindingHandle(this, true);
+		}
+	
+		public BindingHandle asMutableBindingHandle() {
+			return new DirectBindingHandle(this, false);
+		}
+
+		#endregion
+
+		#region Instance variable accessing
+
+		public virtual long size() {
+			return 0;
+		}
+		
+		public virtual Object instVarValueAt(long slotIndex) {
+			Class.ObjectSpace.throwInvalidInstanceVariableAccess(Class, slotIndex);
+			return null;
+		}
+		
+		public virtual Object instVarValueAtPut(long slotIndex, Object newValue) {
+			Class.ObjectSpace.throwInvalidInstanceVariableAccess(Class, slotIndex);
+			return null;
+		}	
+		
+		public Object instVarValueAtName(ESSymbol name) {
+			long slotIndex = Class.instVarIndexFor(name);
+			if (slotIndex < 0) Class.ObjectSpace.throwInvalidInstanceVariableAccess(@class.Name, name, slotIndex);
+			return instVarValueAt(slotIndex);
+		}
+		
+		public Object instVarValueAtNamePut(ESSymbol name, Object newValue) {
+			long slotIndex = Class.instVarIndexFor(name);
+			if (slotIndex < 0) Class.ObjectSpace.throwInvalidInstanceVariableAccess(@class.Name, name, slotIndex);
+			return instVarValueAtPut(slotIndex, newValue);
+		}
+		
+		#endregion
+		
+		#region Sending messages
+		
+		public bool respondsTo(ESSymbol selector) {
+			return Class.canUnderstand(selector);
+		}
+		
+		public Object respondTo(ESMessage message) {
+			return performWithArguments(message.Selector, message.Arguments);
+		}
+		
+		public Object perform(ESSymbol unaryMessageSelector) {
+			ESMethod method = @class.compiledMethodAt(unaryMessageSelector);
+			if (method == null) {
+				ESObjectSpace objectSpace = @class.ObjectSpace;
+				return objectSpace.performDoesNotUnderstand(this, @class, objectSpace.newMessage(unaryMessageSelector, null));
+			}
+			return method.value0(this);
+		}
+		
+		public Object performWith1(ESSymbol binaryOrKeywordMessageSelector, Object a1) {
+			ESMethod method = @class.compiledMethodAt(binaryOrKeywordMessageSelector);
+			if (method == null) {
+				ESObjectSpace objectSpace = @class.ObjectSpace;
+				return objectSpace.performDoesNotUnderstand(this, @class, objectSpace.newMessage(binaryOrKeywordMessageSelector, new Object[]{a1}));
+			}
+			return method.value1(this, a1);
+		}
+		
+		public Object performWith2(ESSymbol keywordMessageSelector, Object a1, Object a2) {
+			ESMethod method = @class.compiledMethodAt(keywordMessageSelector);
+			if (method == null) {
+				ESObjectSpace objectSpace = @class.ObjectSpace;
+				return objectSpace.performDoesNotUnderstand(this, @class, objectSpace.newMessage(keywordMessageSelector, new Object[]{a1, a2}));
+			}
+			return method.value2(this, a1, a2);
+		}
+		
+		public Object performWith3(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3) {
+			ESMethod method = @class.compiledMethodAt(keywordMessageSelector);
+			if (method == null) {
+				ESObjectSpace objectSpace = @class.ObjectSpace;
+				return objectSpace.performDoesNotUnderstand(this, @class, objectSpace.newMessage(keywordMessageSelector, new Object[]{a1, a2, a3}));
+			}
+			return method.value3(this, a1, a2, a3);
+		}
+		
+		public Object performWith4(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3, Object a4) {
+			ESMethod method = @class.compiledMethodAt(keywordMessageSelector);
+			if (method == null) {
+				ESObjectSpace objectSpace = @class.ObjectSpace;
+				return objectSpace.performDoesNotUnderstand(this, @class, objectSpace.newMessage(keywordMessageSelector, new Object[]{a1, a2, a3, a4}));
+			}
+			return method.value4(this, a1, a2, a3, a4);
+		}
+		
+		public Object performWithArguments(ESSymbol selector, Object[] arguments) {
+			ESMethod method = @class.compiledMethodAt(selector);
+			if (method == null) {
+				ESObjectSpace objectSpace = @class.ObjectSpace;
+				return objectSpace.performDoesNotUnderstand(this, @class, objectSpace.newMessage(selector, arguments));
+			}
+			return method.valueWithReceiverWithArguments(this, arguments);
+		}
+		
+		#endregion
+
+		#region Debugging
+
+		public void halt() {
+			Debugger.Break();
+		}
+
+		public void show() {
+			Console.Write(ToString());
+		}
+
+		public void crShow() {
+			Console.WriteLine("");
+			Console.Write(ToString());
+		}
+
+		public void showCr() {
+			Console.WriteLine(ToString());
+		}
+
+		#endregion
+
+		#endregion
 		
 		#region Conversions to primitive types
 
@@ -725,248 +851,6 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Essence# API
-
-		#region Core
-
-		public ESBehavior Class {
-			get {return _class;}
-		}
-
-		public virtual bool IsNil {
-			get {return false;}
-		}
-		
-		public virtual bool NotNil {
-			get {return true;}
-		}
-		
-		public virtual bool IsTrue {
-			get {return false;}
-		}
-		
-		public virtual bool IsFalse {
-			get {return false;}
-		}
-		
-		public virtual bool IsNamespace {
-			get {return false;}
-		}
-		
-		public virtual bool IsBehavior {
-			get {return false;}
-		}
-		
-		public virtual bool IsClass {
-			get {return false;}
-		}
-		
-		public virtual bool IsMetaclass {
-			get {return false;}
-		}
-		
-		public virtual bool HasIndexedSlots {
-			get {return false;}
-		}
-		
-		public virtual bool IsString {
-			get {return false;}
-		}
-		
-		public virtual bool IsSymbol {
-			get {return false;}
-		}
-		
-		public virtual bool IsBlock {
-			get {return false;}
-		}
-		
-		public virtual bool IsMethod {
-			get {return false;}
-		}
-		
-		public virtual bool IsImmutable {
-			get {return true;}
-		}
-		
-		public virtual void beImmutable() {
-			// By default, do nothing
-		}
-
-		public bool isMemberOf(ESBehavior aBehavior) {
-			return ReferenceEquals(Class, aBehavior);
-		}
-		
-		public bool isKindOf(ESBehavior aBehavior) {
-			return Class.includesBehavior(aBehavior);
-		}
-
-		/*
-		public virtual long hash() {
-			return base.GetHashCode();
-		}
-		*/
-
-		public virtual bool hasSameValueAs(ESObject other) {
-			return ReferenceEquals(this, other);
-		}
-		
-		public virtual ESObject shallowCopy() {
-			return (ESObject)MemberwiseClone();
-		}
-		
-		public virtual ESObject copy() {
-			// May or may NOT have the same semantics as sending the message #copy to an STObject!!!.
-			ESObject copy = shallowCopy();
-			copy.postCopy();
-			return copy;
-		}
-		
-		public virtual void postCopy() {
-			// May or may NOT have the same semantics as sending the message #postCopy to an STObject!!!.
-			// By default, do nothing
-		}
-		
-		public virtual ESObject asMutable() {
-			if (IsImmutable) return copy();
-			return this;
-		}
-		
-		public ESObject asImmutable() {
-			if (IsImmutable) return this;
-			ESObject immutableCopy = copy();
-			immutableCopy.beImmutable();
-			return immutableCopy;
-		}
-
-		public BindingHandle asImmutableBindingHandle() {
-			return new DirectBindingHandle(this, true);
-		}
-	
-		public BindingHandle asMutableBindingHandle() {
-			return new DirectBindingHandle(this, false);
-		}
-
-		#endregion
-
-		#region Instance variable accessing
-
-		public virtual long size() {
-			return 0;
-		}
-		
-		public virtual Object instVarValueAt(long slotIndex) {
-			Class.Kernel.throwInvalidInstanceVariableAccess(Class, slotIndex);
-			return null;
-		}
-		
-		public virtual Object instVarValueAtPut(long slotIndex, Object newValue) {
-			Class.Kernel.throwInvalidInstanceVariableAccess(Class, slotIndex);
-			return null;
-		}	
-		
-		public Object instVarValueAtName(ESSymbol name) {
-			long slotIndex = Class.instVarIndexFor(name);
-			return slotIndex >= 0 ? instVarValueAt(slotIndex) : Class.Kernel.throwInvalidInstanceVariableAccess(_class.Name, name, slotIndex);
-		}
-		
-		public Object instVarValueAtNamePut(ESSymbol name, Object newValue) {
-			long slotIndex = Class.instVarIndexFor(name);
-			if (slotIndex < 0) Class.Kernel.throwInvalidInstanceVariableAccess(_class.Name, name, slotIndex);
-			return instVarValueAtPut(slotIndex, newValue);
-		}
-		
-		#endregion
-		
-		#region Sending messages
-		
-		public bool respondsTo(ESSymbol selector) {
-			return Class.canUnderstand(selector);
-		}
-		
-		public Object respondTo(ESMessage message) {
-			return performWithArguments(message.Selector, message.Arguments);
-		}
-		
-		public Object perform(ESSymbol unaryMessageSelector) {
-			ESMethod method = _class.compiledMethodAt(unaryMessageSelector);
-			if (method == null) {
-				ESKernel kernel = _class.Kernel;
-				return kernel.performDoesNotUnderstand(this, _class, kernel.newMessage(unaryMessageSelector, null));
-			}
-			return method.value0(this);
-		}
-		
-		public Object performWith1(ESSymbol binaryOrKeywordMessageSelector, Object a1) {
-			ESMethod method = _class.compiledMethodAt(binaryOrKeywordMessageSelector);
-			if (method == null) {
-				ESKernel kernel = _class.Kernel;
-				return kernel.performDoesNotUnderstand(this, _class, kernel.newMessage(binaryOrKeywordMessageSelector, new Object[]{a1}));
-			}
-			return method.value1(this, a1);
-		}
-		
-		public Object performWith2(ESSymbol keywordMessageSelector, Object a1, Object a2) {
-			ESMethod method = _class.compiledMethodAt(keywordMessageSelector);
-			if (method == null) {
-				ESKernel kernel = _class.Kernel;
-				return kernel.performDoesNotUnderstand(this, _class, kernel.newMessage(keywordMessageSelector, new Object[]{a1, a2}));
-			}
-			return method.value2(this, a1, a2);
-		}
-		
-		public Object performWith3(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3) {
-			ESMethod method = _class.compiledMethodAt(keywordMessageSelector);
-			if (method == null) {
-				ESKernel kernel = _class.Kernel;
-				return kernel.performDoesNotUnderstand(this, _class, kernel.newMessage(keywordMessageSelector, new Object[]{a1, a2, a3}));
-			}
-			return method.value3(this, a1, a2, a3);
-		}
-		
-		public Object performWith4(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3, Object a4) {
-			ESMethod method = _class.compiledMethodAt(keywordMessageSelector);
-			if (method == null) {
-				ESKernel kernel = _class.Kernel;
-				return kernel.performDoesNotUnderstand(this, _class, kernel.newMessage(keywordMessageSelector, new Object[]{a1, a2, a3, a4}));
-			}
-			return method.value4(this, a1, a2, a3, a4);
-		}
-		
-		public Object performWithArguments(ESSymbol selector, Object[] arguments) {
-			ESMethod method = _class.compiledMethodAt(selector);
-			if (method == null) {
-				ESKernel kernel = _class.Kernel;
-				return kernel.performDoesNotUnderstand(this, _class, kernel.newMessage(selector, arguments));
-			}
-			return method.valueWithReceiverWithArguments(this, arguments);
-		}
-		
-		#endregion
-
-		#region Debugging
-
-		public void halt() {
-			Debugger.Break();
-		}
-
-		public void show() {
-			Console.Write(ToString());
-		}
-
-		public void crShow() {
-			Console.WriteLine("");
-			Console.Write(ToString());
-		}
-
-		public void showCr() {
-			Console.WriteLine(ToString());
-		}
-
-		#endregion
-
-		#endregion
-
 		#region Foreign language interoperability
 
 		public virtual DynamicMetaObject GetMetaObject(Expression parameter) {
@@ -990,11 +874,11 @@ namespace EssenceSharp.Runtime {
 		}      
 		
  		public static bool operator false(ESObject receiver) {
-       			return receiver == null ? false :  receiver.IsFalse;
+       			return false;
 		}
 		
  		public static bool operator true(ESObject receiver) {
-       			return receiver == null ? false :  receiver.IsTrue;
+       			return false;
 		}
 		
 		public override void printTypeUsing(Action<String> append) {
@@ -1017,8 +901,8 @@ namespace EssenceSharp.Runtime {
 
 		public class Primitives : PrimitiveDomain {
 
-			protected override void bindToKernel() {
-				domainClass = kernel.ObjectClass;
+			protected override void bindToObjectSpace() {
+				domainClass = objectSpace.ObjectClass;
 			}
 
 			public override PrimitiveDomainType Type {
@@ -1034,15 +918,15 @@ namespace EssenceSharp.Runtime {
 			#region Core
 
 			public Object _class_(Object receiver) {
-				return kernel.classOf(receiver);
+				return ((ESObject)receiver).Class;
 			}
 		
 			public Object _isMemberOf_(Object receiver, Object aBehavior) {
-				return ReferenceEquals(kernel.classOf(receiver), aBehavior);
+				return ReferenceEquals(((ESObject)receiver).Class, aBehavior);
 			}
 		
 			public Object _isKindOf_(Object receiver, Object aBehavior) {
-				return kernel.classOf(receiver).includesBehavior((ESBehavior)aBehavior);
+				return ((ESObject)receiver).Class.includesBehavior((ESBehavior)aBehavior);
 			}
 		
 			public static Object _hasSameIdentityAs_(Object receiver, Object comparand) {
@@ -1095,7 +979,7 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _asAssociationKeyWithValue_ (Object receiver, Object value) {
-				return kernel.newAssociation(receiver, value);
+				return objectSpace.newAssociation(receiver, value);
 			}
 
 			public static Object _asNamespace_(Object receiver) {
@@ -1151,7 +1035,7 @@ namespace EssenceSharp.Runtime {
 			#region Sending messages
 		
 			public Object _respondsTo_(Object receiver, Object selector) {
-				return kernel.classOf(receiver).canUnderstand(kernel.asESSymbol(selector));
+				return objectSpace.classOf(receiver).canUnderstand(objectSpace.asESSymbol(selector));
 			}
 		
 			public Object _respondTo_(Object receiver, Object message) {
@@ -1161,9 +1045,9 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
-				ESBehavior esClass = kernel.classOf(receiver);
+				ESBehavior esClass = objectSpace.classOf(receiver);
 				ESMethod method = esClass.compiledMethodAt(stMessage.Selector);
-				if (method == null) return kernel.performDoesNotUnderstand(receiver, esClass, stMessage);
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, stMessage);
 				return method.valueWithReceiverWithArguments(receiver, stMessage.Arguments);
 			}
 		
@@ -1174,9 +1058,9 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
-				ESBehavior esClass = kernel.classOf(receiver);
+				ESBehavior esClass = objectSpace.classOf(receiver);
 				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return kernel.performDoesNotUnderstand(receiver, esClass, kernel.newMessage(stSelector, null));
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, null));
 				return method.value0(receiver);
 			}
 		
@@ -1187,9 +1071,9 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
-				ESBehavior esClass = kernel.classOf(receiver);
+				ESBehavior esClass = objectSpace.classOf(receiver);
 				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return kernel.performDoesNotUnderstand(receiver, esClass, kernel.newMessage(stSelector, new Object[]{a1}));
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, new Object[]{a1}));
 				return method.value1(receiver, a1);
 			}
 		
@@ -1200,9 +1084,9 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
-				ESBehavior esClass = kernel.classOf(receiver);
+				ESBehavior esClass = objectSpace.classOf(receiver);
 				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return kernel.performDoesNotUnderstand(receiver, esClass, kernel.newMessage(stSelector, new Object[]{a1, a2}));
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, new Object[]{a1, a2}));
 				return method.value2(receiver, a1, a2);
 			}
 		
@@ -1213,9 +1097,9 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
-				ESBehavior esClass = kernel.classOf(receiver);
+				ESBehavior esClass = objectSpace.classOf(receiver);
 				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return kernel.performDoesNotUnderstand(receiver, esClass, kernel.newMessage(stSelector, new Object[]{a1, a2, a3}));
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, new Object[]{a1, a2, a3}));
 				return method.value3(receiver, a1, a2, a3);
 			}
 		
@@ -1226,9 +1110,9 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
-				ESBehavior esClass = kernel.classOf(receiver);
+				ESBehavior esClass = objectSpace.classOf(receiver);
 				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return kernel.performDoesNotUnderstand(receiver, esClass, kernel.newMessage(stSelector, new Object[]{a1, a2, a3, a4}));
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, new Object[]{a1, a2, a3, a4}));
 				return method.value4(receiver, a1, a2, a3, a4);
 			}
 		
@@ -1245,9 +1129,9 @@ namespace EssenceSharp.Runtime {
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
-				ESBehavior esClass = kernel.classOf(receiver);
+				ESBehavior esClass = objectSpace.classOf(receiver);
 				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return kernel.performDoesNotUnderstand(receiver, esClass, kernel.newMessage(stSelector, argArray));
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, argArray));
 				return method.valueWithReceiverWithArguments(receiver, argArray);
 			}
 		

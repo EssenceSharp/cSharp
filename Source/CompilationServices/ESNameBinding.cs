@@ -76,11 +76,19 @@ namespace EssenceSharp.CompilationServices {
 			String nameContext;
 			instanceVariableBindings = null;
 			namespaceResidentBindings = null;
-			HashSet<ESSymbol> instVarNames = null;			
+			HashSet<ESSymbol> instVarNames = null;
+			if (environment == null) {
+				if (methodHomeClass == null) {
+					environment = Context.ObjectSpace.SmalltalkNamespace;
+				} else {
+					environment = methodHomeClass;
+				}
+			}
+			var envName = environment == null ? "??" : environment.PathnameString;
 			var methodName = Context.MethodSelector;
 			if (methodName != null) {
 				if (methodHomeClass == null) {
-					nameContext = environment.PathnameString + " ## " + methodName.PrimitiveValue + " => ";
+					nameContext = envName + " ## " + methodName.PrimitiveValue + " => ";
 				} else {
 					nameContext = methodHomeClass.PathnameString + ">>" + methodName.PrimitiveValue + " => ";
 					methodHomeClass.allInstVarNamesAndIndexesDo((instVarName, index) => {
@@ -94,16 +102,21 @@ namespace EssenceSharp.CompilationServices {
 						}});
 				}
 			} else {
-				nameContext = environment.PathnameString + " => ";
+				nameContext = envName + " => ";
 			}
 			HashSet<ESSymbol> undeclared = null;
 			foreach (var kvp in nonLocalBindings) {
 				var nonLocalVar = kvp.Value;
 				var nonLocalName = nonLocalVar.NameSymbol;
 				if (instVarNames == null || !instVarNames.Contains(nonLocalName)) {
-					var nsResidentVar = declareNamespaceVariable(environment, nonLocalName, null);
-					nonLocalVar.occurrencesDo(occurrence => occurrence.Declaration = nsResidentVar);
-					var binding = nonLocalName.bindingInNamespaceIfAbsent(environment, AccessPrivilegeLevel.Local, ImportTransitivity.Transitive, null);
+					ESBindingReference binding;
+					if (environment == null) { 
+						binding = null;
+					} else {
+						var nsResidentVar = declareNamespaceVariable(environment, nonLocalName, null);
+						nonLocalVar.occurrencesDo(occurrence => occurrence.Declaration = nsResidentVar);
+						binding = nonLocalName.bindingInNamespaceIfAbsent(environment, AccessPrivilegeLevel.Local, ImportTransitivity.Transitive, null);
+					}
 					if (binding == null) {
 						if (undeclared == null) undeclared = new HashSet<ESSymbol>();
 						var nameInContext = Context.symbolFor(nameContext + nonLocalName);
@@ -528,10 +541,16 @@ namespace EssenceSharp.CompilationServices {
 		public NonLocalVariableDeclaration(NameBindingScope scope, ESSymbol name) : base(scope, name) {}
 
 		public override Expression asCLRGetValueExpression() {
+			// Context.markAsUncompilable();
+			// return ExpressionTreeGuru.nilConstant;
+
 			throw new InvalidOperationException("A NonStackResidentVariableDeclaration cannot be used to generate code. Use either an InstanceVariableDeclaration or a NamespaceResidentVariableDeclaration instead.");
 		}
 
 		public override Expression asCLRSetValueExpression(Expression newValue) {
+			// Context.markAsUncompilable();
+			// return Expression.Constant(newValue);
+
 			throw new InvalidOperationException("A NonStackResidentVariableDeclaration cannot be used to generate code. Use either an InstanceVariableDeclaration or a NamespaceResidentVariableDeclaration instead.");
 		}
 

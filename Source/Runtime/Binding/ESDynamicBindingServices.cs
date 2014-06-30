@@ -45,30 +45,23 @@ using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
 namespace EssenceSharp.Runtime.Binding {
-	
-	public enum MessageReceiverKind {
-		General,
-		Self,
-		Super,
-		ThisContext
-	}
 
 	public abstract class BinderRegistry {
 
 		protected DynamicBindingGuru			dynamicBindingGuru	= null;
-		protected ESKernel				kernel			= null;
+		protected ESObjectSpace				objectSpace		= null;
 
 		protected BinderRegistry(DynamicBindingGuru dynamicBindingGuru) {
 			this.dynamicBindingGuru = dynamicBindingGuru;
-			kernel = dynamicBindingGuru.Kernel;
+			objectSpace = dynamicBindingGuru.ObjectSpace;
 		}
 
 		public DynamicBindingGuru DynamicBindingGuru {
 			get {return dynamicBindingGuru;}
 		}
 
-		public ESKernel Kernel {
-			get {return kernel;}
+		public ESObjectSpace ObjectSpace {
+			get {return objectSpace;}
 		}
 
 	}
@@ -137,13 +130,19 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public static readonly Type			delegateType			= typeof(Delegate);
 
-		public static readonly Type			esKernelType			= typeof(ESKernel);
+		public static readonly Type			esObjectSpaceType		= typeof(ESObjectSpace);
 		public static readonly Type			esObjectType			= typeof(ESObject);
 		public static readonly Type			esNamedSlotsObjectType		= typeof(ESNamedSlotsObject);
 		public static readonly Type			esNamespaceType			= typeof(ESNamespace);
 		public static readonly Type			esBehaviorType			= typeof(ESBehavior);
 		public static readonly Type			esClassType			= typeof(ESClass);
 		public static readonly Type			esMetaclassType			= typeof(ESMetaclass);
+		public static readonly Type			esBehavioralTraitType		= typeof(ESBehavioralTrait);
+		public static readonly Type			esInstanceTraitType		= typeof(ESInstanceTrait);
+		public static readonly Type			esClassTraitType		= typeof(ESClassTrait);
+		public static readonly Type			esTraitTransformationType	= typeof(ESTraitTransformation);
+		public static readonly Type			esTraitCompositionType		= typeof(ESTraitComposition);
+
 		public static readonly Type			esCompiledCodeType		= typeof(ESCompiledCode);
 		public static readonly Type			esBlockType			= typeof(ESBlock);
 		public static readonly Type			esMethodType			= typeof(ESMethod);
@@ -177,15 +176,21 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#endregion
 
-		private static readonly HashSet<Type>		essenceSharpTypes	= new HashSet<Type>();
-		private static readonly Dictionary<Type, int>	numericTypeGenerality	= new Dictionary<Type, int>();
+		private static readonly HashSet<Type>		essenceSharpTypes		= new HashSet<Type>();
+		private static readonly Dictionary<Type, int>	numericTypeGenerality		= new Dictionary<Type, int>();
 
 		static TypeGuru() {
 			essenceSharpTypes.Add(esObjectType);
 			essenceSharpTypes.Add(esNamedSlotsObjectType);
 			essenceSharpTypes.Add(esNamespaceType);
 			essenceSharpTypes.Add(esBehaviorType);
+			essenceSharpTypes.Add(esClassType);
 			essenceSharpTypes.Add(esMetaclassType);
+			essenceSharpTypes.Add(esBehavioralTraitType);
+			essenceSharpTypes.Add(esInstanceTraitType);
+			essenceSharpTypes.Add(esClassTraitType);
+			essenceSharpTypes.Add(esTraitTransformationType);
+			essenceSharpTypes.Add(esTraitCompositionType);
 			essenceSharpTypes.Add(esAssociationType);
 			essenceSharpTypes.Add(esBindingReferenceType);
 			essenceSharpTypes.Add(esIdentityDictionaryType);
@@ -596,7 +601,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public static  Expression expressionToGetClassOfESObject(Expression self) {
 			if (!TypeGuru.esObjectType.IsAssignableFrom(self.Type)) self = self.withType(TypeGuru.esObjectType);
-			return Expression.Field(self, TypeGuru.esObjectType, "_class");
+			return Expression.Field(self, TypeGuru.esObjectType, "class");
 			// return Expression.Property(self, TypeGuru.esObjectType, "Class");
 		}
 
@@ -608,14 +613,11 @@ namespace EssenceSharp.Runtime.Binding {
 			return expressionToGetVersionIdOfESClass(Expression.Constant(esClass));
 		}
 
-		public static  Expression expressionToTestThatESObjectHasSameClassVersion(Expression self, ConstantExpression expectedClassVersionId) {
-			var getVersionIdOfESClass = expressionToGetVersionIdOfESClass(expressionToGetClassOfESObject(self));
-			return Expression.Equal(getVersionIdOfESClass, expectedClassVersionId);
-		}
-
 		public static  Expression expressionToTestThatESObjectHasSameClassVersion(Expression self, ESBehavior esClass) {
 			var getVersionIdOfESClass = expressionToGetVersionIdOfESClass(expressionToGetClassOfESObject(self));
 			return Expression.Equal(getVersionIdOfESClass, Expression.Constant(esClass.VersionId));
+			// var getClass = expressionToGetClassOfESObject(self);
+			// return Expression.ReferenceEqual(getClass, Expression.Constant(esClass));
 		}
 
 		public static  Expression expressionToTestThatClassHasSameClassVersion(ESBehavior esClass) {
@@ -641,10 +643,10 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#region ES Indexed Slot Objects to Host System Arrays 
 
-		public static Expression expressionToCreateESStringFromString(ESKernel kernel, Expression stringExpression) {
+		public static Expression expressionToCreateESStringFromString(ESObjectSpace objectSpace, Expression stringExpression) {
 			return Expression.Call(
-					Expression.Constant(kernel),
-					TypeGuru.esKernelType.GetMethod("newString", new Type[]{TypeGuru.stringType}),
+					Expression.Constant(objectSpace),
+					TypeGuru.esObjectSpaceType.GetMethod("newString", new Type[]{TypeGuru.stringType}),
 					stringExpression);
 		}
 		
@@ -673,17 +675,17 @@ namespace EssenceSharp.Runtime.Binding {
 					expressionToInvoke_ToString(enumerationConstantExpression));
 		}
 
-		public static Expression expressionToCreateESStringFromNonESObject(ESKernel kernel, Expression self) {
+		public static Expression expressionToCreateESStringFromNonESObject(ESObjectSpace objectSpace, Expression self) {
 			return Expression.Call(
-					Expression.Constant(kernel),
-					TypeGuru.esKernelType.GetMethod("esStringFromNonESObject", new Type[]{TypeGuru.objectType}),
+					Expression.Constant(objectSpace),
+					TypeGuru.esObjectSpaceType.GetMethod("esStringFromNonESObject", new Type[]{TypeGuru.objectType}),
 					self);
 		}
 
-		public static Expression expressionToCreateESSymbolFromNonESObject(ESKernel kernel, Expression self) {
+		public static Expression expressionToCreateESSymbolFromNonESObject(ESObjectSpace objectSpace, Expression self) {
 			return Expression.Call(
-					Expression.Constant(kernel),
-					TypeGuru.esKernelType.GetMethod("esSymbolFromNonESObject", new Type[]{TypeGuru.stringType}),
+					Expression.Constant(objectSpace),
+					TypeGuru.esObjectSpaceType.GetMethod("esSymbolFromNonESObject", new Type[]{TypeGuru.stringType}),
 					self);
 		}
 
@@ -771,7 +773,7 @@ namespace EssenceSharp.Runtime.Binding {
 			return sourceExpression;
 		}
 
-		public static Expression expressionToCreateBridgeFunctorForCompiledCodeOrDelegate(ESKernel kernel, DynamicMetaObject compiledCodeOrDelegateMO, Type functorType, Type targetType) {
+		public static Expression expressionToCreateBridgeFunctorForCompiledCodeOrDelegate(ESObjectSpace objectSpace, DynamicMetaObject compiledCodeOrDelegateMO, Type functorType, Type targetType) {
 			var isBlock = compiledCodeOrDelegateMO.isBlock();
 			var compiledCodeOrDelegateExpression = compiledCodeOrDelegateMO.asExpressionWithFormalType();
 			var functorExpression = expressionToConvertCompiledCodeOrDelegateToFunctor(compiledCodeOrDelegateExpression, functorType);
@@ -797,25 +799,25 @@ namespace EssenceSharp.Runtime.Binding {
 				body = Expression.Block(TypeGuru.voidType, Expression.Invoke(functorExpression, innerParameters));
 			} else {
 				body = Expression.Invoke(functorExpression, innerParameters);
-				var typeBinder = new TypeBindingGuru(kernel, body);
+				var typeBinder = new TypeBindingGuru(objectSpace, body);
 				body = typeBinder.metaObjectToConvertTo(methodInfo.ReturnType).Expression;
 			}
 			return Expression.Lambda(targetType, body, false, outerParameters);
 		}
 
-		public static Expression expressionToCreateBridgeFunctorForBlockOrDelegate(ESKernel kernel, DynamicMetaObject compiledCodeOrDelegateMO, long arity, Type targetType) {
+		public static Expression expressionToCreateBridgeFunctorForBlockOrDelegate(ESObjectSpace objectSpace, DynamicMetaObject compiledCodeOrDelegateMO, long arity, Type targetType) {
 			return
 				expressionToCreateBridgeFunctorForCompiledCodeOrDelegate(
-					kernel, 
+					objectSpace, 
 					compiledCodeOrDelegateMO, 
 					ESCompiledCode.blockFunctionTypeForNumArgs(arity), 
 					targetType);
 		}
 
-		public static Expression expressionToCreateBridgeFunctorForMethodOrDelegate(ESKernel kernel, DynamicMetaObject compiledCodeOrDelegateMO, long arity, Type targetType) {
+		public static Expression expressionToCreateBridgeFunctorForMethodOrDelegate(ESObjectSpace objectSpace, DynamicMetaObject compiledCodeOrDelegateMO, long arity, Type targetType) {
 			return
 				expressionToCreateBridgeFunctorForCompiledCodeOrDelegate(
-					kernel, 
+					objectSpace, 
 					compiledCodeOrDelegateMO, 
 					ESCompiledCode.methodFunctionTypeForNumArgs(arity), 
 					targetType);
@@ -837,6 +839,40 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#region Operational expressions
 
+		public static Expression expressionToInvokeESMethod(ESMethod method, Expression[] argumentsWithReceiver) {
+			return 
+				Expression.Invoke(
+					Expression.Constant(method.Function).withType(ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
+					argumentsWithReceiver);
+		}
+
+		public static Expression expressionToSendDoesNotUnderstand(Expression self, ESBehavior esClass, SymbolRegistry symbolRegistry, Expression createMessageAction) {
+
+			var method = esClass.compiledMethodAt(symbolRegistry.DoesNotUnderstandSelector);
+			if (method == null) {
+				return
+					Expression.Call(
+							null,
+							TypeGuru.esObjectSpaceType.GetMethod("throwMessageNotUnderstood", new Type[]{TypeGuru.objectType, TypeGuru.esMessageType}),
+							self,
+							createMessageAction);
+			} else {
+				return			
+					Expression.Invoke(
+						Expression.Constant(method.Function).withType(ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
+						self, 
+						createMessageAction); 
+
+			}
+		
+		}
+
+		public static Expression expressionToSendDoesNotUnderstand(Expression self, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] args) {
+			var objectSpace = esClass.ObjectSpace;
+			var message = expressionToCreateMessage(objectSpace.MessageClass, selector, args);
+			return expressionToSendDoesNotUnderstand(self, esClass, objectSpace.SymbolRegistry, message);
+		}
+
 		public static Expression expressionToCreateMustBeBooleanException(String errorMessage) {
 			return Expression.New(
 					TypeGuru.mustBeBooleanExceptionType.GetConstructor(
@@ -857,10 +893,10 @@ namespace EssenceSharp.Runtime.Binding {
 			return Expression.TryCatch(expressionWhoseTypeMustBeBoolean.withType(TypeGuru.boolType), catchBlock);
 		}
 
-		public static Expression expressionToInvoke_Kernel_classOf(ESKernel kernel, Expression self) {
+		public static Expression expressionToInvoke_objectSpace_classOf(ESObjectSpace objectSpace, Expression self) {
 			return Expression.Call(
-					Expression.Constant(kernel),
-					TypeGuru.esKernelType.GetMethod("classOf", new Type[]{TypeGuru.objectType}),
+					Expression.Constant(objectSpace),
+					TypeGuru.esObjectSpaceType.GetMethod("classOf", new Type[]{TypeGuru.objectType}),
 					self);
 		}
 
@@ -1067,8 +1103,8 @@ namespace EssenceSharp.Runtime.Binding {
 			return Expression.New(
 					compiledMethodConstructorInfo,
 					Expression.Constant(esClass),
-					Expression.Constant(envrionment),
-					Expression.Constant(homeClass),
+					Expression.Constant(envrionment).withType(typeof(NamespaceObject)),
+					Expression.Constant(homeClass).withType(typeof(BehavioralObject)),
 					Expression.Constant(methodDeclarationNode));
 
 		}
@@ -1194,7 +1230,7 @@ namespace EssenceSharp.Runtime.Binding {
 			return
 				Expression.Call(
 						null,
-						TypeGuru.esKernelType.GetMethod(
+						TypeGuru.esObjectSpaceType.GetMethod(
 								"throwInvalidFunctionCallException", 
 								new Type[]{TypeGuru.stringType, TypeGuru.longType, TypeGuru.longType, TypeGuru.typeType, TypeGuru.typeType, TypeGuru.exceptionType}),
 						Expression.Constant(messageText),
@@ -1203,40 +1239,6 @@ namespace EssenceSharp.Runtime.Binding {
 						Expression.Constant(expectedFunctionType),
 						Expression.Constant(actualFunctionType),
 						Expression.Convert(nilConstant, TypeGuru.exceptionType));
-		}
-
-		public static Expression expressionToSendDoesNotUnderstand(Expression self, ESBehavior esClass, SymbolRegistry symbolRegistry, Expression createMessageAction) {
-
-			var method = esClass.compiledMethodAt(symbolRegistry.DoesNotUnderstandSelector);
-			if (method == null) {
-				return
-					Expression.Call(
-							null,
-							TypeGuru.esKernelType.GetMethod("throwMessageNotUnderstood", new Type[]{TypeGuru.objectType, TypeGuru.esMessageType}),
-							self,
-							createMessageAction);
-			} else {
-				return			
-					Expression.Invoke(
-						Expression.Constant(method.Function).withType(ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
-						self, 
-						createMessageAction); 
-
-			}
-		
-		}
-
-		public static Expression expressionToSendDoesNotUnderstand(Expression self, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] args) {
-			var kernel = esClass.Kernel;
-			var message = expressionToCreateMessage(kernel.MessageClass, selector, args);
-			return expressionToSendDoesNotUnderstand(self, esClass, kernel.SymbolRegistry, message);
-		}
-
-		public static Expression expressionToInvokeESMethod(ESMethod method, Expression[] argumentsWithReceiver) {
-			return 
-				Expression.Invoke(
-					Expression.Constant(method.Function).withType(ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
-					argumentsWithReceiver);
 		}
 
 		#endregion
@@ -1317,6 +1319,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public static BindingRestrictions restrictionThatForeignObjectHasSameClassVersion(Expression self, Type expectedType, ESBehavior esClass) {
 			return restrictionFor(self, expectedType).Merge(ExpressionTreeGuru.expressionToTestThatClassHasSameClassVersion(esClass).asBindingRestriction());
+			// return restrictionFor(self, expectedType);
 		}
 
 	}
@@ -1465,15 +1468,15 @@ namespace EssenceSharp.Runtime.Binding {
 					metaObject.Value);
 		}
 
-		public static TypeBindingGuru typeBindingGuru(this DynamicMetaObject metaObject, ESKernel kernel) {
-			return new TypeBindingGuru(kernel, metaObject);
+		public static TypeBindingGuru typeBindingGuru(this DynamicMetaObject metaObject, ESObjectSpace objectSpace) {
+			return new TypeBindingGuru(objectSpace, metaObject);
 		}
 
 	}
 
 	public class TypeBindingGuru {
 
-		protected ESKernel			kernel;
+		protected ESObjectSpace			objectSpace;
 		protected DynamicMetaObject		metaObject;
 		protected Object			model;
 		protected ESObject			esModel;
@@ -1483,17 +1486,17 @@ namespace EssenceSharp.Runtime.Binding {
 		protected HashSet<Type>			preferredTargetTypes;
 		protected HashSet<Type>			disfavoredTargetTypes;
 
-		public TypeBindingGuru(ESKernel kernel, Expression expression) : this (kernel, expression.asDynamicMetaObject(BindingRestrictions.Empty)) {
+		public TypeBindingGuru(ESObjectSpace objectSpace, Expression expression) : this (objectSpace, expression.asDynamicMetaObject(BindingRestrictions.Empty)) {
 		}
 
-		public TypeBindingGuru(ESKernel kernel, Expression expression, Object model) : this (kernel, expression.asDynamicMetaObject(BindingRestrictions.Empty, model)) {
+		public TypeBindingGuru(ESObjectSpace objectSpace, Expression expression, Object model) : this (objectSpace, expression.asDynamicMetaObject(BindingRestrictions.Empty, model)) {
 		}
 
-		public TypeBindingGuru(ESKernel kernel, Expression expression, BindingRestrictions restrictions, Object model) : this (kernel, expression.asDynamicMetaObject(restrictions, model)) {
+		public TypeBindingGuru(ESObjectSpace objectSpace, Expression expression, BindingRestrictions restrictions, Object model) : this (objectSpace, expression.asDynamicMetaObject(restrictions, model)) {
 		}
 
-		public TypeBindingGuru(ESKernel kernel, DynamicMetaObject metaObject) {
-			this.kernel	= kernel;
+		public TypeBindingGuru(ESObjectSpace objectSpace, DynamicMetaObject metaObject) {
+			this.objectSpace	= objectSpace;
 			this.metaObject	= metaObject;
 			model		= metaObject.Value;
 			modelType	= metaObject.LimitType;
@@ -1563,8 +1566,8 @@ namespace EssenceSharp.Runtime.Binding {
 			}
 		}
 
-		public ESKernel Kernel {
-			get {return kernel;}
+		public ESObjectSpace ObjectSpace {
+			get {return objectSpace;}
 		}
 
 		public DynamicMetaObject MetaObject {
@@ -1918,7 +1921,7 @@ namespace EssenceSharp.Runtime.Binding {
 					expression = metaObject.asExpressionWithFormalType();
 					break;
 				case ObjectStateArchitecture.IndexedCharSlots:
-					var asSymbolExpression = ExpressionTreeGuru.expressionToCreateESSymbolFromESString(kernel.SymbolRegistry, metaObject.asExpressionWithFormalType());
+					var asSymbolExpression = ExpressionTreeGuru.expressionToCreateESSymbolFromESString(objectSpace.SymbolRegistry, metaObject.asExpressionWithFormalType());
 					if (targetType == TypeGuru.esSymbolType) return metaObject.withExpressionAndTypeRestriction(asSymbolExpression);
 					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.esSymbolType, targetType);
 					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asSymbolExpression, targetType, methodInfo);
@@ -2081,11 +2084,11 @@ namespace EssenceSharp.Runtime.Binding {
 				case ObjectStateArchitecture.Block:
 					var block = Model as ESBlock;
 					return metaObject.withExpressionAndTypeRestriction(
-						ExpressionTreeGuru.expressionToCreateBridgeFunctorForBlockOrDelegate(Kernel, metaObject, block.NumArgs, targetType));
+						ExpressionTreeGuru.expressionToCreateBridgeFunctorForBlockOrDelegate(objectSpace, metaObject, block.NumArgs, targetType));
 				case ObjectStateArchitecture.Method:
 					var method = Model as ESMethod;
 					return metaObject.withExpressionAndTypeRestriction(
-						ExpressionTreeGuru.expressionToCreateBridgeFunctorForMethodOrDelegate(Kernel, metaObject, method.NumArgs, targetType));
+						ExpressionTreeGuru.expressionToCreateBridgeFunctorForMethodOrDelegate(objectSpace, metaObject, method.NumArgs, targetType));
 				case ObjectStateArchitecture.Behavior:
 				case ObjectStateArchitecture.Class:
 				case ObjectStateArchitecture.Metaclass:

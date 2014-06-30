@@ -121,7 +121,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public bool createMetaObjectToSendMessage(String messageName, DynamicMetaObject[] args, out DynamicMetaObject messageSendMO) {
 			var esClass = ValueClass;
-			var kernel = esClass.Kernel;
+			var kernel = esClass.ObjectSpace;
 			long numArgs = args.Length;
 			var method = esClass.compiledMethodAtSystemSelector(messageName, numArgs);
 			if (method == null) {
@@ -197,7 +197,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public override DynamicMetaObject BindDeleteMember(DeleteMemberBinder binder) {
 			DynamicMetaObject messageSendMO;
-			var kernel = ValueClass.Kernel;
+			var kernel = ValueClass.ObjectSpace;
 			var memberName = kernel.symbolFor(binder.Name);
 			if (createMetaObjectToSendMessage("removeKey:", DynamicBindingGuru.argArrayFor(Expression.Constant(memberName).asDynamicMetaObject(BindingRestrictions.Empty, memberName)), out messageSendMO)) return messageSendMO;
 			return binder.FallbackDeleteMember(this, messageSendMO);
@@ -264,7 +264,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			if (messageSendMO == null) {
 				var esClass = ValueClass;
-				var kernel = esClass.Kernel;
+				var kernel = esClass.ObjectSpace;
 				var selector = kernel.symbolFor("??");
 				messageSendMO = metaObjectToSendDoesNotUnderstand(selector, DynamicBindingGuru.emptyArgArray);
 			}
@@ -276,7 +276,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			DynamicMetaObject messageSendMO		= null;
 			ESBehavior esClass			= null;
-			ESKernel kernel;
+			ESObjectSpace kernel;
 			ESSymbol selector			= null;
 
 			switch (binder.Operation) {
@@ -334,62 +334,62 @@ namespace EssenceSharp.Runtime.Binding {
 				default:
 				case ExpressionType.AddAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("+=");
 					break;
 				case ExpressionType.AndAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("&=");
 					break;
 				case ExpressionType.DivideAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("/=");
 					break;
 				case ExpressionType.ExclusiveOrAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("^=");
 					break;
 				case ExpressionType.LeftShiftAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("<<=");
 					break;
 				case ExpressionType.ModuloAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("%=");
 					break;
 				case ExpressionType.MultiplyAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("*=");
 					break;
 				case ExpressionType.OrAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("|=");
 					break;
 				case ExpressionType.PowerAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("**=");
 					break;
 				case ExpressionType.RightShiftAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor(">>=");
 					break;
 				case ExpressionType.SubtractAssign:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("-=");
 					break;
 				case ExpressionType.Extension:
 					esClass = ValueClass;
-					kernel = esClass.Kernel;
+					kernel = esClass.ObjectSpace;
 					selector = kernel.symbolFor("??");
 					break;
 			}
@@ -404,14 +404,14 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public override DynamicMetaObject BindConvert(ConvertBinder binder) {
 			var esClass = ValueClass;
-			var kernel = esClass.Kernel;
+			var kernel = esClass.ObjectSpace;
 			var bindingGuru = this.typeBindingGuru(kernel);
 			return new DynamicMetaObject(bindingGuru.metaObjectToConvertTo(binder.Type).Expression, DefaultBindingRestrictions, Value);
 		}
 
 		public override DynamicMetaObject BindInvoke(InvokeBinder binder, DynamicMetaObject[] args) {
 			var esClass = ValueClass;
-			var kernel = esClass.Kernel;
+			var kernel = esClass.ObjectSpace;
 			long numArgs = args.Length;
 			return binder.FallbackInvoke(this, args, metaObjectToSendDoesNotUnderstand(kernel.selectorToEvaluatBlockWithNumArgs(numArgs), args));
 		}
@@ -424,7 +424,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public override DynamicMetaObject BindCreateInstance(CreateInstanceBinder binder, DynamicMetaObject[] args) {
 			var esClass = ValueClass;
-			var kernel = esClass.Kernel;
+			var kernel = esClass.ObjectSpace;
 			long numArgs = args.Length;
 			ESSymbol selector;
 			switch (numArgs) {
@@ -473,7 +473,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var numArgs = args.Length;
 			if (numArgs != block.NumArgs) {
 				var esClass = ValueClass;
-				var kernel = esClass.Kernel;
+				var kernel = esClass.ObjectSpace;
 				return metaObjectToThrowInvalidFunctionCallException(
 						kernel.selectorToEvaluatBlockWithNumArgs(numArgs), 
 						args, 
@@ -599,7 +599,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var numArgs = args.Length;
 			if (numArgs - method.NumArgs != 1) {
 				var esClass = ValueClass;
-				var kernel = esClass.Kernel;
+				var kernel = esClass.ObjectSpace;
 				return metaObjectToThrowInvalidFunctionCallException(
 						kernel.selectorToEvaluatMethodWithNumArgs(Math.Max(0, numArgs - 1)), 
 						args, 
@@ -721,7 +721,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public override DynamicMetaObject BindCreateInstance(CreateInstanceBinder binder, DynamicMetaObject[] args) {
 			DynamicMetaObject messageSendMO;
 			var esClass = ValueClass;
-			var kernel = esClass.Kernel;
+			var kernel = esClass.ObjectSpace;
 			long numArgs = args.Length;
 			String selector;
 			switch (numArgs) {

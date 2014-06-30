@@ -319,8 +319,18 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>
-    </PostBuildEvent>
+    <PostBuildEvent>if not Exist  "$(UserProfile)\My Documents\Developer\Bin\Essence#\" mkdir  "$(UserProfile)\My Documents\Developer\Bin\Essence#\"
+
+copy "$(TargetDir)*.dll" "$(UserProfile)\My Documents\Developer\Bin\Essence#\"
+copy "$(TargetDir)*.pdb" "$(UserProfile)\My Documents\Developer\Bin\Essence#\"
+copy "$(TargetDir)*.exe" "$(UserProfile)\My Documents\Developer\Bin\Essence#\"
+
+if not Exist "$(UserProfile)\My Documents\Developer\$(OutDir)" mkdir "$(UserProfile)\My Documents\Developer\$(OutDir)"
+
+copy "$(TargetDir)*.dll" "$(UserProfile)\My Documents\Developer\$(OutDir)\"
+copy "$(TargetDir)*.pdb" "$(UserProfile)\My Documents\Developer\$(OutDir)\"
+copy "$(TargetDir)*.exe" "$(UserProfile)\My Documents\Developer\$(OutDir)\"
+</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

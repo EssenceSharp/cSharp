@@ -83,7 +83,7 @@ namespace EssenceSharp.CompilationServices {
 		#endregion
 
 		protected ESCompiler							compiler;
-		protected ESKernel							kernel;
+		protected ESObjectSpace							objectSpace;
 		protected SymbolRegistry						symbolRegistry;
 		protected CodeGenerationContext						context;
 		protected List<CodeGenerationContext>					contextStack			= new  List<CodeGenerationContext>();
@@ -95,16 +95,16 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		protected void bindToCompiler() {
-			kernel = compiler.Kernel;
-			symbolRegistry = kernel.SymbolRegistry;
+			objectSpace = compiler.ObjectSpace;
+			symbolRegistry = objectSpace.SymbolRegistry;
 		}
 
 		public ESCompiler Compiler {
 			get {return compiler;}
 		}
 
-		public ESKernel Kernel {
-			get {return kernel;}
+		public ESObjectSpace Kernel {
+			get {return objectSpace;}
 		}
 
 		public CodeGenerationContext Context {
@@ -158,25 +158,25 @@ namespace EssenceSharp.CompilationServices {
 				case ParseNodeType.Char:
 					return ((CharLiteralToken)token).CharValue;
 				case ParseNodeType.String:
-					var stString = kernel.newString(((StringLiteralToken)token).StringValue);
+					var stString = objectSpace.newString(((StringLiteralToken)token).StringValue);
 					stString.beImmutable();
 					return stString;
 				case ParseNodeType.Symbol:
 					return symbolFrom((SymbolLiteralToken)token);
 				case ParseNodeType.LiteralBindingReference:
 					LiteralBindingReferenceToken lbrToken = (LiteralBindingReferenceToken)token;
-					var pathName = kernel.pathnameFromString(lbrToken.StringValue);
+					var pathName = objectSpace.pathnameFromString(lbrToken.StringValue);
 					pathName.beImmutable();
 					return pathName;
 				case ParseNodeType.ByteArray:
-					var stByteArray = kernel.newByteArray(((ByteArrayLiteralToken)token).ByteArray);
+					var stByteArray = objectSpace.newByteArray(((ByteArrayLiteralToken)token).ByteArray);
 					stByteArray.beImmutable();
 					return stByteArray;
 				case ParseNodeType.Array:
 					ArrayLiteralToken arrayToken = (ArrayLiteralToken)token;
 					var elements = new List<Object>();
 					arrayToken.elementsDo(element => elements.Add(valueFromLiteralToken(element)));
-					var stArray = kernel.newArray(elements.ToArray());
+					var stArray = objectSpace.newArray(elements.ToArray());
 					stArray.beImmutable();
 					return stArray;
 				default:
@@ -233,7 +233,7 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		public override AbstractSyntaxTreeNode applyToStringLiteralToken(StringLiteralToken operand) {
-			var stString = kernel.newString(operand.StringValue);
+			var stString = objectSpace.newString(operand.StringValue);
 			stString.beImmutable();
 			return Context.newReducedNode(stString);
 		}
@@ -243,13 +243,13 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		public override AbstractSyntaxTreeNode applyToLiteralBindingReferenceToken(LiteralBindingReferenceToken operand) {
-			var pathName = kernel.pathnameFromString(operand.StringValue);
+			var pathName = objectSpace.pathnameFromString(operand.StringValue);
 			pathName.beImmutable();
 			return Context.newReducedNode(pathName);
 		}
 
 		public override AbstractSyntaxTreeNode applyToByteArrayLiteralToken(ByteArrayLiteralToken operand) {
-			var stByteArray = kernel.newByteArray(operand.ByteArray);
+			var stByteArray = objectSpace.newByteArray(operand.ByteArray);
 			stByteArray.beImmutable();
 			return Context.newReducedNode(stByteArray);
 		}
@@ -542,7 +542,7 @@ namespace EssenceSharp.CompilationServices {
 					node.Span);
 			}
 			Delegate function;
-    			if (!kernel.getPrimitiveFunction(domain, primName, out function)) {
+    			if (!objectSpace.getPrimitiveFunction(domain, primName, out function)) {
 				Context.markAsUncompilable();
 				node = arguments[0];
 				compiler.handlePrimitiveSpeficationError(

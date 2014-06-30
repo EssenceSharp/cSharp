@@ -251,7 +251,7 @@ namespace EssenceSharp.CompilationServices {
 
 		public override Expression asCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
 			if (cachedExpression != null) return cachedExpression;
-			return cachedExpression = ExpressionTreeGuru.expressionToCreateESObjectArray(Context.Kernel.ArrayClass, newCLRExpressionArray<ExpressionNode, Expression>(environment, behavior, elements));
+			return cachedExpression = ExpressionTreeGuru.expressionToCreateESObjectArray(Context.ObjectSpace.ArrayClass, newCLRExpressionArray<ExpressionNode, Expression>(environment, behavior, elements));
 		}
 
 		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(NamespaceObject environment, BehavioralObject behavior) {
@@ -280,7 +280,7 @@ namespace EssenceSharp.CompilationServices {
 			if (cachedExpression != null) return cachedExpression;
 			var associationElements = new List<Expression>();
 			foreach (var element in elements) associationElements.Add(Expression.Convert(element.asCLRExpression(environment, behavior), typeof(ESAssociation)));
-			return cachedExpression = ExpressionTreeGuru.expressionToCreateESDictionary(Context.Kernel.DictionaryClass, associationElements);		}
+			return cachedExpression = ExpressionTreeGuru.expressionToCreateESDictionary(Context.ObjectSpace.DictionaryClass, associationElements);		}
 
 	}
 
@@ -827,7 +827,8 @@ namespace EssenceSharp.CompilationServices {
 
 			// Here is where messages will be sent for real:
 
-			var callSiteConstant = Context.messageSendCallSiteConstantFor(receiver.ReceiverKind, selector);
+			// var callSiteConstant = Context.messageSendCallSiteConstantFor(receiver.ReceiverKind, selector);
+			var callSiteConstant = Context.messageSendCallSiteConstantFor(receiver.ReceiverKind, behavior, selector);
 			if (callSiteConstant == null) Context.markAsUncompilable();
 
 			List<Expression> argumentExpressions = new List<Expression>();
@@ -1148,6 +1149,10 @@ namespace EssenceSharp.CompilationServices {
 			get {return false;}
 		}
 
+		public long Identity {
+			get {return Context.Identity;}
+		}
+
 		public ExecutableCodeNode Body {
 			get {return body;}
 			set {body = value;}
@@ -1163,6 +1168,22 @@ namespace EssenceSharp.CompilationServices {
 
 		public int StatementCount  {
 			get {return body == null ? 0 : body.StatementCount;}
+		}
+
+		public HashSet<ESSymbol> MessagesSent {
+			get {return Context.MessagesSent;}
+		}
+
+		public HashSet<ESSymbol> MessagesSentToSelf {
+			get {return Context.MessagesSentToSelf;}
+		}
+
+		public HashSet<ESSymbol> MessagesSentToSuper {
+			get {return Context.MessagesSentToSuper;}
+		}
+
+		public HashSet<ESSymbol> MessagesSentToThisContext {
+			get {return Context.MessagesSentToThisContext;}
 		}
 
 		public HashSet<ESSymbol> UndeclaredVariables {
@@ -1253,8 +1274,8 @@ namespace EssenceSharp.CompilationServices {
 				return Expression.Block(
 					Context.ReturnValueParameter.Type,
 					new []{Context.SelfParameter, Context.ReturnValueParameter},
-					Expression.Assign(Context.SelfParameter, Expression.Constant(Context.SelfValue)),
-					Expression.TryCatch(Expression.Assign(Context.ReturnValueParameter, bodyExpression), catchBlock),
+					Expression.Assign(Context.SelfParameter, Expression.Constant(Context.SelfValue).withType(TypeGuru.objectType)),
+					Expression.TryCatch(Expression.Assign(Context.ReturnValueParameter, bodyExpression.withType(Context.ReturnValueParameter.Type)), catchBlock),
 					Expression.Label(Context.ReturnTarget, Context.ReturnValueParameter));
 			}
 			return bodyExpression;
@@ -1503,16 +1524,16 @@ namespace EssenceSharp.CompilationServices {
 
  		public Expression onFailCodeAsCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
 			if (StatementCount > 0) return base.bodyAsCLRExpression(environment, behavior);
-			var kernel = Context.Kernel;
+			var objectSpace = Context.ObjectSpace;
 			var homeClass = environment as ESBehavior;
 			var parameters = ParmeterExpressions;
 			var parametersArray = new Expression[parameters.Count];
 			for (var i = 0; i < parametersArray.Length; i++) parametersArray[i] = parameters[i];
-			var message = ExpressionTreeGuru.expressionToCreateMessage(kernel.MessageClass, Selector, parametersArray);
+			var message = ExpressionTreeGuru.expressionToCreateMessage(objectSpace.MessageClass, Selector, parametersArray);
 			return Expression.Block(
 				new ParameterExpression[]{Context.SelfParameter},
 				Expression.Assign(Context.SelfParameter, Expression.Constant(Context.SelfValue)),
-				ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, homeClass, kernel.SymbolRegistry, message));
+				ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, homeClass, objectSpace.SymbolRegistry, message));
 		}
 
 	}
@@ -1687,7 +1708,7 @@ namespace EssenceSharp.CompilationServices {
  		public override Expression asCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
 			if (cachedExpression != null) return cachedExpression;
 			return cachedExpression = ExpressionTreeGuru.expressionToCreateESBlock(
-									Context.Kernel.BlockClass, 
+									Context.ObjectSpace.BlockClass, 
 									declarationNode.asCLRExpression(environment, behavior),
 									declarationNode.NumArgs);
 		}
@@ -1730,7 +1751,7 @@ namespace EssenceSharp.CompilationServices {
  		public override Expression asCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
 			if (cachedExpression != null) return cachedExpression;
 			var homeClass = environment as BehavioralObject;
-			return cachedExpression = ExpressionTreeGuru.expressionToCreateESMethod(Context.Kernel.MethodClass, environment, homeClass, declarationNode);
+			return cachedExpression = ExpressionTreeGuru.expressionToCreateESMethod(Context.ObjectSpace.MethodClass, environment, homeClass, declarationNode);
 		}
 
 	}

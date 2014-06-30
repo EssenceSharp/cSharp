@@ -93,10 +93,9 @@ namespace EssenceSharp.Runtime {
 								// may optionally have programmer-accessible named instance variables.
 		Message,					// A Message instance specifies a message that was or could be be sent, along with the message arguments, if any. 
 								// Instances are created by the run time system when and as needed, although application code may also create and 
-								// use instances. Message instances cannot have programmer-accessible named instance variables. Created by the run 
-								// time when needed.
-		Association,					// An Association is conceptually the same thing as a CLR KeyValuePair. Associations cannot have 
-								// programmer-accessible named instance variables.
+								// use instances. Message instances cannot have programmer-accessible named instance variables.
+		Association,					// An Association is conceptually the same thing as a CLR KeyValuePair. Associations cannot have programmer-accessible 
+								// named instance variables.
 		BindingReference,				// A BindingReference is a specialized type of of Association used by Namespaces. BindingReferences cannot have 
 								// programmer-accessible named instance variables.
 		IdentityDictionary,				// IdentityDictionary instances act as "dictionaries" that map keys to values. An IdentityDictionary compares keys 
@@ -125,9 +124,19 @@ namespace EssenceSharp.Runtime {
 								// is called either the canonical instance or the sole instance. Note that the superclass of the Metaclass of any root 
 								// Behavior (e.g., the metaclass of class Object) is (and must be) the class Class. Instances may optionally have 
 								// programmer-accessible named instance variables. 
-		Trait,
-		ClassTrait,
-		MetaclassTrait,
+		BehavioralTrait,				// A Trait is a composable unit of behavior. Traits can be "used" by a class or by another Trait with the effect of 
+								// adding the methods defined (or used) by the Trait to the method dictionary of the using class or of the using Trait. 
+								// A BehavioralTrait is a Trait usable by any BehavioralTrait or by any Behavior (i.e., by any instance of the class 
+								// BehavioralTrait, or by any instance of the class Behavior, or by any instance of any subclass of either the class 
+								// BehavioralTrait or of the class Behavior.)
+		InstanceTrait,					// An InstanceTrait is a Trait usable by any InstanceTrait or by any Class (i.e, by any instance of the class 
+								// InstanceTrait or by any class that isn't a metaclass)
+		ClassTrait,					// A ClassTrait is a Trait usable by any ClassTrait or by any Metaclass (i.e., by any instance of the class ClassTrait 
+								// or by any instance of  the class Metaclass)
+		TraitTransformation,				// A TraitTransformation acts a decorator of a Trait. It is used to exclude or rename one or more method selectors
+								// of the Trait it decorates. TraitTransformations are defined by algebraic Trait expressions at run time.
+		TraitComposition,				// A TraitComposition combines one or more Traits into a new Trait that is the symmetric set difference of the
+								// combined Traits. TraitCompositions are defined by algebraic Trait expressions at run time.
 		HostSystemObject,				// A "host system object" is simply an instance of any CLR type which is not a formal part of the Essence# runtime 
 								// system. One of the requirements for an Essence# class to represent a CLR type (which may or may not be a "class" 
 								// as the CLR defines that term) is that its instance type must be #HostSystemObject.
@@ -187,6 +196,11 @@ namespace EssenceSharp.Runtime {
 		Behavior,					
 		Class,						
 		Metaclass,	
+		BehavioralTrait,
+		InstanceTrait,
+		ClassTrait,
+		TraitTransformation,
+		TraitComposition,
 		Nil,		 
 		Boolean,
 		True,

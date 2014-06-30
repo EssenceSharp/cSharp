@@ -65,7 +65,7 @@ namespace EssenceSharp.Runtime {
 			return esValue == null ? (FuncNs.Func<Object, Object, Object>)value : esValue.F2;
 		}
 
-		protected ESKernel				kernel			= null;
+		protected ESObjectSpace				objectSpace			= null;
 		protected SymbolRegistry			symbolRegistry		= null;
 		protected ESBehavior				domainClass		= null;
 		protected Dictionary<String, Delegate>		primitiveRegistry	= new Dictionary<String, Delegate>();
@@ -74,25 +74,25 @@ namespace EssenceSharp.Runtime {
 			get;
 		}
 
-		protected virtual void bindToKernel() {
+		protected virtual void bindToObjectSpace() {
 		}
 
-		protected virtual void unbindFromKernel() {
+		protected virtual void unbindFromObjectSpace() {
 		}
 
-		public ESKernel Kernel {
-			get {return kernel;}
+		public ESObjectSpace ObjectSpace {
+			get {return objectSpace;}
 
 			internal 
-			set {	if (kernel == value) return;
-				if (kernel !=null) {
-					unbindFromKernel();
+			set {	if (objectSpace == value) return;
+				if (objectSpace !=null) {
+					unbindFromObjectSpace();
 					symbolRegistry = null;
 				}
-				kernel = value;
-				if (kernel != null) {
-					symbolRegistry = kernel.SymbolRegistry;
-					bindToKernel();
+				objectSpace = value;
+				if (objectSpace != null) {
+					symbolRegistry = objectSpace.SymbolRegistry;
+					bindToObjectSpace();
 				}}
 
 		}
@@ -138,7 +138,7 @@ namespace EssenceSharp.Runtime {
 			if (!getPrimitiveFunction(primitiveName, out function)) {
 				return null;
 			}
-			return kernel.newMethod(selector, function);
+			return objectSpace.newMethod(selector, function);
 		}
 
 		public virtual void publishCanonicalPrimitives() {
@@ -158,7 +158,7 @@ namespace EssenceSharp.Runtime {
 
 		public void installPublishedPrimitivesInClass(ESSymbol protocol, ESBehavior targetClass) {
 			publishedPrimitivesDo((PrimitiveDomainType domain, String name, Delegate function) => {
-				targetClass.addMethod(kernel.newMethod(SymbolRegistry.symbolFor(name), function));
+				targetClass.addMethod(objectSpace.newMethod(SymbolRegistry.symbolFor(name), function));
 			});
 		}
 
@@ -224,9 +224,9 @@ namespace EssenceSharp.Runtime {
 
 	public class CLR_System_Exception_Primitives : PrimitiveDomain {
 
-		protected override void bindToKernel() {
+		protected override void bindToObjectSpace() {
 			var typeName = new TypeName(typeof(System.Exception));
-			domainClass = kernel.classForHostSystemType(typeName);
+			domainClass = objectSpace.classForHostSystemType(typeName);
 		}
 
 		public override PrimitiveDomainType Type {
@@ -249,9 +249,9 @@ namespace EssenceSharp.Runtime {
 
 	public class CLR_System_Collections_List_1_Object_Primitives : PrimitiveDomain {
 
-		protected override void bindToKernel() {
+		protected override void bindToObjectSpace() {
 			var typeName = new TypeName(typeof(System.Collections.Generic.List<Object>));
-			domainClass = kernel.classForHostSystemType(typeName);
+			domainClass = objectSpace.classForHostSystemType(typeName);
 		}
 
 		public override PrimitiveDomainType Type {
@@ -259,7 +259,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public override ESPathname Pathname {
-			get {return Kernel.pathnameFromString("Smalltalk.OrderedCollection");}
+			get {return objectSpace.pathnameFromString("Smalltalk.OrderedCollection");}
 		}
 
 		#region Primitive Definitions
@@ -335,8 +335,8 @@ namespace EssenceSharp.Runtime {
 
 	public class UndefinedObjectPrimitives : PrimitiveDomain {
 
-		protected override void bindToKernel() {
-			domainClass = kernel.UndefinedObjectClass;
+		protected override void bindToObjectSpace() {
+			domainClass = objectSpace.UndefinedObjectClass;
 		}
 
 		public override PrimitiveDomainType Type {
@@ -404,8 +404,8 @@ namespace EssenceSharp.Runtime {
 
 	public class FalsePrimitives : PrimitiveDomain {
 
-		protected override void bindToKernel() {
-			domainClass = kernel.FalseClass;
+		protected override void bindToObjectSpace() {
+			domainClass = objectSpace.FalseClass;
 		}
 
 		public override PrimitiveDomainType Type {
@@ -508,8 +508,8 @@ namespace EssenceSharp.Runtime {
 
 	public class TruePrimitives : PrimitiveDomain {
 
-		protected override void bindToKernel() {
-			domainClass = kernel.TrueClass;
+		protected override void bindToObjectSpace() {
+			domainClass = objectSpace.TrueClass;
 		}
 
 		public override PrimitiveDomainType Type {
@@ -612,8 +612,8 @@ namespace EssenceSharp.Runtime {
 
 	public class CharacterPrimitives : PrimitiveDomain {
 
-		protected override void bindToKernel() {
-			domainClass = kernel.CharacterClass;
+		protected override void bindToObjectSpace() {
+			domainClass = objectSpace.CharacterClass;
 		}
 
 		public override PrimitiveDomainType Type {
@@ -696,8 +696,8 @@ namespace EssenceSharp.Runtime {
 
 	public class SmallIntegerPrimitives : PrimitiveDomain {
 
-		protected override void bindToKernel() {
-			domainClass = kernel.SmallIntegerClass;
+		protected override void bindToObjectSpace() {
+			domainClass = objectSpace.SmallIntegerClass;
 		}
 
 		public override PrimitiveDomainType Type {
@@ -1140,8 +1140,8 @@ namespace EssenceSharp.Runtime {
 
 	public class SinglePrecisionPrimitives : PrimitiveDomain {
 
-		protected override void bindToKernel() {
-			domainClass = kernel.FloatClass;
+		protected override void bindToObjectSpace() {
+			domainClass = objectSpace.FloatClass;
 		}
 
 		public override PrimitiveDomainType Type {
@@ -1496,8 +1496,8 @@ namespace EssenceSharp.Runtime {
 
 	public class DoublePrecisionPrimitives : PrimitiveDomain {
 
-		protected override void bindToKernel() {
-			domainClass = kernel.DoubleClass;
+		protected override void bindToObjectSpace() {
+			domainClass = objectSpace.DoubleClass;
 		}
 
 		public override PrimitiveDomainType Type {
@@ -1852,8 +1852,8 @@ namespace EssenceSharp.Runtime {
 
 	public class QuadPrecisionPrimitives : PrimitiveDomain {
 
-		protected override void bindToKernel() {
-			domainClass = kernel.QuadClass;
+		protected override void bindToObjectSpace() {
+			domainClass = objectSpace.QuadClass;
 		}
 
 		public override PrimitiveDomainType Type {

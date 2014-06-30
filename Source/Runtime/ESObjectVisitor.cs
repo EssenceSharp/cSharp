@@ -68,7 +68,12 @@ namespace EssenceSharp.Runtime {
 		T applyToBehavior(ESBehavior operand);
 		T applyToClass(ESClass operand);
 		T applyToMetaclass(ESMetaclass operand);
- 
+ 		T applyToBehavioralTrait(ESBehavioralTrait operand);
+		T applyToInstanceTrait(ESInstanceTrait operand);
+		T applyToClassTrait(ESClassTrait operand);
+		T applyToTraitTransformation(ESTraitTransformation operand);
+		T applyToTraitComposition(ESTraitComposition operand);
+
 	}
 
 	public abstract class AbstractOperation<T> : Operation<T> {
@@ -187,6 +192,26 @@ namespace EssenceSharp.Runtime {
 			return applyToESObject(operand);
 		}
 
+		public virtual T applyToBehavioralTrait(ESBehavioralTrait operand) {
+			return applyToESObject(operand);
+		}
+
+		public virtual T applyToInstanceTrait(ESInstanceTrait operand) {
+			return applyToESObject(operand);
+		}
+
+		public virtual T applyToClassTrait(ESClassTrait operand) {
+			return applyToESObject(operand);
+		}
+
+		public virtual T applyToTraitTransformation(ESTraitTransformation operand) {
+			return applyToESObject(operand);
+		}
+
+		public virtual T applyToTraitComposition(ESTraitComposition operand) {
+			return applyToESObject(operand);
+		}
+
 	}
 
 	public abstract class GeneralGraphNavigator<T> : AbstractOperation<T> {
@@ -296,6 +321,27 @@ namespace EssenceSharp.Runtime {
 		public override T applyToMetaclass(ESMetaclass operand) {
 			return operation.applyToMetaclass(operand);
 		}
+
+		public override T applyToBehavioralTrait(ESBehavioralTrait operand) {
+			return operation.applyToBehavioralTrait(operand);
+		}
+
+		public override T applyToInstanceTrait(ESInstanceTrait operand) {
+			return operation.applyToInstanceTrait(operand);
+		}
+
+		public override T applyToClassTrait(ESClassTrait operand) {
+			return operation.applyToClassTrait(operand);
+		}
+
+		public override T applyToTraitTransformation(ESTraitTransformation operand) {
+			return operation.applyToTraitTransformation(operand);
+		}
+
+		public override T applyToTraitComposition(ESTraitComposition operand) {
+			return operation.applyToTraitComposition(operand);
+		}
+
 	}
 
 }

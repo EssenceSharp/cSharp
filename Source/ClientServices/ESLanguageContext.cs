@@ -57,13 +57,13 @@ namespace EssenceSharp.ClientServices {
 		}
 
 		protected EssenceSharpOptions		options		= null;
-		protected ESKernel			kernel		= null;
+		protected ESObjectSpace			objectSpace	= null;
 		protected bool				librariesLoaded	= false;
 
 		public EssenceSharpContext(ScriptDomainManager manager, Dictionary<String,  Object> optionsDictionary) : base(manager) {
-			kernel = new ESKernel();
+			objectSpace = new ESObjectSpace();
 			bindToLanguageOptions(optionsDictionary ?? new  Dictionary<String,  Object>());
-			librariesLoaded = Kernel.ensureStartUp(options.LibraryNames, options.LoadLibrariesVerbosely, options.ReportTimings);
+			librariesLoaded = ObjectSpace.ensureStartUp(options.LibraryNames, options.LoadLibrariesVerbosely, options.ReportTimings);
 		}
  
 		protected void bindToLanguageOptions(Dictionary<String,  Object> protoOptions) {
@@ -75,35 +75,35 @@ namespace EssenceSharp.ClientServices {
 					searchPathBuilder.Append(Path.PathSeparator);
 				}
 			}
-			Kernel.EssenceSharpPath = LanguageOptions.GetOption(protoOptions, EssenceSharpOptions.essenceSharpPathKey, ESFileUtility.defaultEssenceSharpPath());
-			searchPathBuilder.Append(Kernel.SharedScriptsPath);
+			ObjectSpace.EssenceSharpPath = LanguageOptions.GetOption(protoOptions, EssenceSharpOptions.essenceSharpPathKey, ESFileUtility.defaultEssenceSharpPath());
+			searchPathBuilder.Append(ObjectSpace.SharedScriptsPath);
 			protoOptions[EssenceSharpOptions.scriptSearchPathsKey]		= searchPathBuilder.ToString();
 
 			options	= new EssenceSharpOptions(protoOptions);
-			options.assemblyNameBindingsDo((qualifiedNsName, assemblyName) => Kernel.bindNamespaceToAssemblyNamed(qualifiedNsName, new AssemblyName(assemblyName)));
-			options.assemblyPathBindingsDo((qualifiedNsName, assemblyPath) => Kernel.bindNamespaceToAssemblyAt(qualifiedNsName, new FileInfo(assemblyPath)));
+			options.assemblyNameBindingsDo((qualifiedNsName, assemblyName) => ObjectSpace.bindNamespaceToAssemblyNamed(qualifiedNsName, new AssemblyName(assemblyName)));
+			options.assemblyPathBindingsDo((qualifiedNsName, assemblyPath) => ObjectSpace.bindNamespaceToAssemblyAt(qualifiedNsName, new FileInfo(assemblyPath)));
 
 			foreach (var pathnamePrefix in options.LibrarySearchPaths) {
-				Kernel.LibraryPathBinder.searchPathAddLastIfAbsent(pathnamePrefix);
+				ObjectSpace.LibraryPathBinder.searchPathAddLastIfAbsent(pathnamePrefix);
 			}
 
 			foreach (var pathnamePrefix in options.SearchPaths) {
-				Kernel.ScriptPathBinder.searchPathAddLastIfAbsent(pathnamePrefix);
+				ObjectSpace.ScriptPathBinder.searchPathAddLastIfAbsent(pathnamePrefix);
 			}
 
 		}
 
 		public override void Shutdown() {
 			base.Shutdown();
-			kernel = null;
+			objectSpace = null;
 		}
 
-		public ESKernel Kernel {
-			get {	return kernel;}
+		public ESObjectSpace ObjectSpace {
+			get {return objectSpace;}
 		}
 
 		public override Version LanguageVersion {
-			get {return new AssemblyName(typeof(ESKernel).Assembly.FullName).Version;}
+			get {return new AssemblyName(typeof(ESObjectSpace).Assembly.FullName).Version;}
 		}
         
 		public override LanguageOptions Options {
@@ -111,7 +111,7 @@ namespace EssenceSharp.ClientServices {
 		}
 
 		public bool scriptPathnameFor(String scriptPathameSuffix, out FileInfo scriptPath) {
-			return Kernel.pathForScript(scriptPathameSuffix, out scriptPath);
+			return ObjectSpace.pathForScript(scriptPathameSuffix, out scriptPath);
 		}
 
 		public override CompilerOptions GetCompilerOptions() {
@@ -141,8 +141,8 @@ namespace EssenceSharp.ClientServices {
 
 			var esCompilerOptions = (ESCompilerOptions)compilationOptions;
 			var parsingOptions = esCompilerOptions.ParsingOptions;
-			var environment = esCompilerOptions.getEnvironment(Kernel);	
-			if (environment == null) environment = Kernel.SmalltalkNamespace;
+			var environment = esCompilerOptions.getEnvironment(ObjectSpace);	
+			if (environment == null) environment = ObjectSpace.SmalltalkNamespace;
 
 			using (var sourceStream = sourceUnit.GetReader()) {
 				switch (sourceUnit.Kind) {
@@ -158,16 +158,16 @@ namespace EssenceSharp.ClientServices {
 						ESMethod method = null;
 						switch (esCompilerOptions.ExpectedSourceSyntax) {
 							case CompilationUnitKind.SelfExpression:
-								return librariesLoaded && Kernel.compileSelfExpression(sourceUnit, parsingOptions, environment, esCompilerOptions.Receiver, errorSink, out block) ?
+								return librariesLoaded && ObjectSpace.compileSelfExpression(sourceUnit, parsingOptions, environment, esCompilerOptions.Receiver, errorSink, out block) ?
 									new ESBlockScriptCode(sourceUnit, environment, block) :
 									new ESBlockScriptCode(sourceUnit, environment, null);
 							case CompilationUnitKind.BlockDeclaration:
-								return librariesLoaded && Kernel.compile(sourceUnit, parsingOptions, environment, esCompilerOptions.Receiver, errorSink, out block) ?
+								return librariesLoaded && ObjectSpace.compile(sourceUnit, parsingOptions, environment, esCompilerOptions.Receiver, errorSink, out block) ?
 									new ESBlockScriptCode(sourceUnit, environment, block) :
 									new ESBlockScriptCode(sourceUnit, environment, null);
 							case CompilationUnitKind.MethodDeclaration:
 								var methodClass = (ESBehavior)environment;
-								return librariesLoaded && Kernel.compileMethod(sourceUnit, parsingOptions, methodClass, esCompilerOptions.getMethodProtocol(Kernel), errorSink, out method) ?
+								return librariesLoaded && ObjectSpace.compileMethod(sourceUnit, parsingOptions, methodClass, esCompilerOptions.getMethodProtocol(ObjectSpace), errorSink, out method) ?
 									new ESMethodScriptCode(sourceUnit, methodClass, esCompilerOptions.Receiver, method) :
 									new ESMethodScriptCode(sourceUnit, methodClass, esCompilerOptions.Receiver, null);
 						}

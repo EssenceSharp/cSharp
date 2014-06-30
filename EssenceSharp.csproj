@@ -184,7 +184,7 @@
     <Compile Include="Source\Exceptions\System\NullReceiverException.cs" />
     <Compile Include="Source\Exceptions\System\PrimitiveFailures\MustBeBoolean.cs" />
     <Compile Include="Source\Exceptions\System\PrimitiveFailures\NamespaceEntryNameConflictException.cs" />
-    <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimIllegalOperationException.cs" />
+    <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimInvalidOperationException.cs" />
     <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimIndexBoundsExcessionException.cs" />
     <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimInvalidKeyException.cs" />
     <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimInvalidOperandException.cs" />
@@ -203,7 +203,7 @@
     <Compile Include="Source\Runtime\SystemPrimitives.cs" />
     <Compile Include="Source\Runtime\EnumerationTypes.cs" />
     <Compile Include="Source\Runtime\ESDictionaries.cs" />
-    <Compile Include="Source\Runtime\ESKernel.cs" />
+    <Compile Include="Source\Runtime\ESObjectSpace.cs" />
     <Compile Include="Source\UtilityServices\ESFileUtility.cs" />
     <Compile Include="Source\UtilityServices\ESLexicalUtility.cs" />
     <Compile Include="Source\CompilationServices\ESAstNodeGenerator.cs" />
@@ -218,7 +218,7 @@
     <Compile Include="Source\ParsingServices\ESLexicalAnalyzer.cs" />
     <Compile Include="Source\Runtime\Binding\ESMessageSendBinder.cs" />
     <Compile Include="Source\ParsingServices\ESParser.cs" />
-    <Compile Include="Source\Runtime\ESClasses.cs" />
+    <Compile Include="Source\Runtime\ESBehavior.cs" />
     <Compile Include="Source\Runtime\ESCompiledCode.cs" />
     <Compile Include="Source\Runtime\ESMessage.cs" />
     <Compile Include="Source\Runtime\ESNamespaces.cs" />
