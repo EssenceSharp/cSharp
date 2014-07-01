@@ -290,8 +290,7 @@ namespace EssenceSharp.CompilationServices {
 		public virtual bool compile(ScriptType rootParseNodeType, NamespaceObject environment, Object selfValue, List<ParameterExpression> rootParameters, out Expression expression) {
 			BlockLiteralNode blockLiteralNode;
 			if (compile(rootParseNodeType, selfValue, rootParameters, out blockLiteralNode)) {
-				var hehavior = environment as BehavioralObject;
-				expression = blockLiteralNode.asCLRExpression(environment, hehavior ?? ObjectSpace.classOf(selfValue));
+				expression = blockLiteralNode.asCLRExpression(environment, null);
 				var undeclaredVariables = blockLiteralNode.UndeclaredVariables;
 				if (undeclaredVariables != null && undeclaredVariables.Count > 0)
 					handleUndeclaredVariableReferences(undeclaredVariables, SourceSpan.None);

@@ -73,6 +73,7 @@ namespace EssenceSharp.Runtime {
 		ESMethod compiledMethodAt(ESSymbol selector);
 
 		void withUnimplementedMessagesSentToSelfDo(Action<ESSymbol> enumerator1);
+		void withUndeclaredVariablesDo(Action<ESSymbol, ESSymbol> enumerator2);
 
 		#endregion
 		
@@ -147,8 +148,6 @@ namespace EssenceSharp.Runtime {
 		HashSet<ESSymbol> localSelectors();
 
 		long selectorCount();
-
-		void withUnimplementedMessagesSentToSelfDo(Action<ESSymbol> enumerator1);
 
 		ESMethod localCompiledMethodAtSystemSelector(String systemSelector, long numArgs);
 		bool localIncludesSystemSelector(String systemSelector, long numArgs);
@@ -464,6 +463,13 @@ namespace EssenceSharp.Runtime {
 		
 		public bool includesSelector(ESSymbol selector) {
 			return localIncludesSelector(selector) || (traitUsage != null && traitUsage.includesSelector(selector));
+		}
+
+		public void withUndeclaredVariablesDo(Action<ESSymbol, ESSymbol> enumerator2) {
+			selectorsAndMethodsDo((selector, method) => {
+				((ESMethod)method).withUndeclaredVariablesDo(varName => enumerator2((ESSymbol)selector, (ESSymbol)varName));
+				return null;
+			});
 		}
 
 		#endregion
@@ -972,13 +978,6 @@ namespace EssenceSharp.Runtime {
 				return ((ESBehavioralObject)receiver).compiledMethodAt(objectSpace.asESSymbol(selector));
 			}
 
-			public Object _withUnimplementedMessagesSentToSelfDo_(Object receiver, Object enumerator1) {
-				var theReceiver = (ESBehavioralObject)receiver;
-				var functor1 = asFunctor1(enumerator1);
-				theReceiver.withUnimplementedMessagesSentToSelfDo(selector => functor1(selector));
-				return receiver;
-			}
-
 
 			public Object _localSystemSelectorsDo_(Object receiver, Object enumerator2) {
 				((ESBehavioralObject)receiver).localSystemSelectorsDo(asFunctor2(enumerator2));
@@ -1031,6 +1030,20 @@ namespace EssenceSharp.Runtime {
 				return ((ESBehavioralObject)receiver).compiledMethodAtSystemSelector(asHostString(systemSelector), asHostLong(numArgs));
 			}
 
+
+			public Object _withUnimplementedMessagesSentToSelfDo_(Object receiver, Object enumerator1) {
+				var theReceiver = (ESBehavioralObject)receiver;
+				var functor1 = asFunctor1(enumerator1);
+				theReceiver.withUnimplementedMessagesSentToSelfDo(selector => functor1(selector));
+				return receiver;
+			}
+
+			public Object _withUndeclaredVariablesDo_(Object receiver, Object enumerator2) {
+				var theReceiver = (ESBehavioralObject)receiver;
+				var functor2 = asFunctor2(enumerator2);
+				theReceiver.withUndeclaredVariablesDo((selector, varName) => functor2(selector, varName));
+				return receiver;
+			}
 
 			public Object _addMethod_(Object receiver, Object method) {
 				return ((ESBehavioralObject)receiver).addMethod((ESMethod)method);
@@ -1209,6 +1222,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("compiledMethodAtSystemSelector:numArgs:",		new FuncNs.Func<Object, Object, Object, Object>(_compiledMethodAtSystemSelector_));
 
 				publishPrimitive("withUnimplementedMessagesSentToSelfDo:",		new FuncNs.Func<Object, Object, Object>(_withUnimplementedMessagesSentToSelfDo_));
+				publishPrimitive("withUndeclaredVariablesDo:",				new FuncNs.Func<Object, Object, Object>(_withUndeclaredVariablesDo_));
 
 				publishPrimitive("addMethod:systemSelector:",				new FuncNs.Func<Object, Object, Object, Object>(_addMethodBoundToSystemSelector_));
 				publishPrimitive("protocol:systemSelector:method:",			new FuncNs.Func<Object, Object, Object, Object, Object>(_protocolSystemSelectorMethod_));
@@ -3512,6 +3526,7 @@ namespace EssenceSharp.Runtime {
 		public abstract TraitUsageExpression excluding(ESSymbol selector);
 		public abstract TraitUsageExpression aliasing(ESSymbol sourceSelector, ESSymbol selectorAlias);
 		public abstract void withUnimplementedMessagesSentToSelfDo(Action<ESSymbol> enumerator1);
+		public abstract void withUndeclaredVariablesDo(Action<ESSymbol, ESSymbol> enumerator2);
 		public abstract void methodConflictsDo(Action<ESSymbol, ESMethod> enumerator2);
 		public abstract void hostSystemMethodConflictsDo(Action<long, String, ESMethod> enumerator3);
 
@@ -3806,6 +3821,14 @@ namespace EssenceSharp.Runtime {
 				return receiver;
 			}
 
+			public Object _withUndeclaredVariablesDo_(Object receiver, Object enumerator2) {
+				var theReceiver = (ESAbstractTraitUsageExpression)receiver;
+				var functor2 = asFunctor2(enumerator2);
+				theReceiver.withUndeclaredVariablesDo((selector, varName) => functor2(selector, varName));
+				return receiver;
+			}
+
+
 			public Object _systemSelectorsDo_(Object receiver, Object enumerator2) {
 				((ESBehavioralObject)receiver).systemSelectorsDo(asFunctor2(enumerator2));
 				return receiver;
@@ -3876,6 +3899,9 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("allSelectors",					new FuncNs.Func<Object, Object>(_allSelectors_));
 				publishPrimitive("canUnderstand:",					new FuncNs.Func<Object, Object, Object>(_canUnderstand_));
 				publishPrimitive("compiledMethodAt:",					new FuncNs.Func<Object, Object, Object>(_compiledMethodAt_));
+
+				publishPrimitive("withUnimplementedMessagesSentToSelfDo:",		new FuncNs.Func<Object, Object, Object>(_withUnimplementedMessagesSentToSelfDo_));
+				publishPrimitive("withUndeclaredVariablesDo:",				new FuncNs.Func<Object, Object, Object>(_withUndeclaredVariablesDo_));
 
 				publishPrimitive("systemSelectorsDo:",					new FuncNs.Func<Object, Object, Object>(_systemSelectorsDo_));
 				publishPrimitive("systemSelectorsAndMethodsDo:",			new FuncNs.Func<Object, Object, Object>(_systemSelectorsAndMethodsDo_));
@@ -4041,10 +4067,6 @@ namespace EssenceSharp.Runtime {
 			subject.handleSelectorAliasingCollision(sourceSelector, previousAlias, selectorAlias);
 		}
 
-		public override void withUnimplementedMessagesSentToSelfDo(Action<ESSymbol> enumerator1) {
-			subject.withUnimplementedMessagesSentToSelfDo(enumerator1);
-		}
-
 		public override void methodConflictsDo(Action<ESSymbol, ESMethod> enumerator2) {
 			subject.methodConflictsDo(enumerator2);
 		}
@@ -4128,6 +4150,14 @@ namespace EssenceSharp.Runtime {
 
 		public override bool includesSystemSelector(string systemSelector, long numArgs) {
 			return subject.includesSystemSelector(systemSelector, numArgs);
+		}
+
+		public override void withUnimplementedMessagesSentToSelfDo(Action<ESSymbol> enumerator1) {
+			subject.withUnimplementedMessagesSentToSelfDo(enumerator1);
+		}
+
+		public override void withUndeclaredVariablesDo(Action<ESSymbol, ESSymbol> enumerator2) {
+			subject.withUndeclaredVariablesDo(enumerator2);
 		}
 
 		#endregion
@@ -4464,11 +4494,6 @@ namespace EssenceSharp.Runtime {
 			return this;
 		}
 
-		public override void withUnimplementedMessagesSentToSelfDo(Action<ESSymbol> enumerator1) {
-			if (!isReduced) reduce();
-			foreach (var selector in unimplementedMessagesSentToSelf) enumerator1(selector);
-		}
-
 		public override void methodConflictsDo(Action<ESSymbol, ESMethod> enumerator2) {
 			if (!isReduced) reduce();
 			foreach (var kvp in methodConflicts) {
@@ -4588,10 +4613,22 @@ namespace EssenceSharp.Runtime {
 			return hostMethodDict.ContainsKey(systemSelector);		
 		}
 
+		public override void withUnimplementedMessagesSentToSelfDo(Action<ESSymbol> enumerator1) {
+			if (!isReduced) reduce();
+			foreach (var selector in unimplementedMessagesSentToSelf) enumerator1(selector);
+		}
+
+		public override void withUndeclaredVariablesDo(Action<ESSymbol, ESSymbol> enumerator2) {
+			selectorsAndMethodsDo((selector, method) => {
+				((ESMethod)method).withUndeclaredVariablesDo(varName => enumerator2((ESSymbol)selector, (ESSymbol)varName));
+				return null;
+			});
+		}
+
 		#endregion
 
 		public override T valueBy<T>(Operation<T> operation) {
-		    return operation.applyToTraitComposition(this);
+			return operation.applyToTraitComposition(this);
 		}
 
 		public new class Primitives : ESAbstractTraitUsageExpression.Primitives {

@@ -78,12 +78,10 @@ namespace EssenceSharp.CompilationServices {
 			namespaceResidentBindings = null;
 			HashSet<ESSymbol> instVarNames = null;
 			if (environment == null) {
-				if (methodHomeClass == null) {
-					environment = Context.ObjectSpace.SmalltalkNamespace;
-				} else {
-					environment = methodHomeClass;
-				}
+				if (methodHomeClass != null) environment = methodHomeClass;
 			}
+			if (methodHomeClass == null) methodHomeClass = environment as BehavioralObject;
+
 			var envName = environment == null ? "??" : environment.PathnameString;
 			var methodName = Context.MethodSelector;
 			if (methodName != null) {
@@ -124,6 +122,7 @@ namespace EssenceSharp.CompilationServices {
 					}
 				}
 			}
+			if (environment == null && methodHomeClass == null) return null;
 			return undeclared;
 		}
 		

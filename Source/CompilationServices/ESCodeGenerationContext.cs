@@ -383,16 +383,16 @@ namespace EssenceSharp.CompilationServices {
 			return new BlockDeclarationNode(this);
 		}
 
-		public MethodDeclarationNode newMethodDeclarationNode(ESSymbol selector) {
-			return new MethodDeclarationNode(this, selector);
+		public MethodDeclarationNode newMethodDeclarationNode(ESSymbol className, ESSymbol selector) {
+			return new MethodDeclarationNode(this, className, selector);
 		}
 
-		public PrimitiveFunctionMethodDeclarationNode newPrimitiveFunctionMethodDeclarationNode(ESSymbol selector, Delegate primitiveFunction) {
-			return new PrimitiveFunctionMethodDeclarationNode(this, selector, primitiveFunction);
+		public PrimitiveFunctionMethodDeclarationNode newPrimitiveFunctionMethodDeclarationNode(ESSymbol className, ESSymbol selector, Delegate primitiveFunction) {
+			return new PrimitiveFunctionMethodDeclarationNode(this, className, selector, primitiveFunction);
 		}
 
-		public InlineOperationMethodDeclarationNode newInlineOperationMethodDeclarationNode(ESSymbol selector, InlineOperation operation) {
-			return new InlineOperationMethodDeclarationNode(this, selector, operation);
+		public InlineOperationMethodDeclarationNode newInlineOperationMethodDeclarationNode(ESSymbol className, ESSymbol selector, InlineOperation operation) {
+			return new InlineOperationMethodDeclarationNode(this, className, selector, operation);
 		}
 
 		public BlockLiteralNode newBlockLiteralNode(BlockDeclarationNode declarationNode) {

@@ -178,6 +178,14 @@ namespace EssenceSharp.ParsingServices {
 		public MethodHeader Header {
 			get {return header;}
 		}
+
+		public bool SpecifiesClassName {
+			get {return Header.SpecifiesClassName;}
+		}
+		
+		public SymbolLiteralToken ClassNameSymbol {
+			get {return Header.ClassNameSymbol;}
+		}
 		
 		public ExecutableCode Body {
 			get {return body;}
@@ -327,9 +335,26 @@ namespace EssenceSharp.ParsingServices {
 	
 	public abstract class MethodHeader : NonTerminalParseTreeNode {
 		
-		protected SymbolLiteralToken selectorSymbol;
+		protected DeclarableIdentifierToken	classNameToken;
+		protected SymbolLiteralToken		classNameSymbol;
+		protected SymbolLiteralToken		selectorSymbol;
 
-		protected MethodHeader(int occurrenceIndex) : base(occurrenceIndex) {
+		protected MethodHeader(DeclarableIdentifierToken classNameToken, int occurrenceIndex) : base(occurrenceIndex) {
+			this.classNameToken = classNameToken;
+			if (classNameToken != null) { 
+				classNameSymbol = new SymbolLiteralToken(
+							(char)0, 
+							classNameToken.Name, 
+							SymbolType.Identifier, 
+							1, 
+							null, 
+							1, 
+							classNameToken.OccurrenceIndex, 
+							classNameToken.LineNumberStart, 
+							classNameToken.ColumnNumberStart, 
+							classNameToken.LineNumberEnd, 
+							classNameToken.ColumnNumberEnd);
+			}
 		}
 
 		public override ParseNodeType ParseNodeType {
@@ -338,6 +363,18 @@ namespace EssenceSharp.ParsingServices {
 
 		public override bool IsMethodHeader {
 			get {return true;}
+		}
+
+		public bool SpecifiesClassName {
+			get {return classNameToken != null;}
+		}
+		
+		public DeclarableIdentifierToken ClassNameToken {
+			get {return classNameToken;}
+		}
+		
+		public SymbolLiteralToken ClassNameSymbol {
+			get {return classNameSymbol;}
 		}
 		
 		public SymbolLiteralToken SelectorSymbol {
@@ -361,7 +398,7 @@ namespace EssenceSharp.ParsingServices {
 	public class UnaryMethodHeader : MethodHeader {
 		protected DeclarableIdentifierToken selectorToken = null;
 		
-		public UnaryMethodHeader(DeclarableIdentifierToken selectorToken, int occurrenceIndex) : base(occurrenceIndex) {
+		public UnaryMethodHeader(DeclarableIdentifierToken classNameToken, DeclarableIdentifierToken selectorToken, int occurrenceIndex) : base(classNameToken, occurrenceIndex) {
 			this.selectorToken = selectorToken;
 			selectorSymbol = new SymbolLiteralToken((char)0, selectorToken.Name, SymbolType.Identifier, 0, null, 1, selectorToken.OccurrenceIndex, selectorToken.LineNumberStart, selectorToken.ColumnNumberStart, selectorToken.LineNumberEnd, selectorToken.ColumnNumberEnd);
 		}
@@ -371,11 +408,11 @@ namespace EssenceSharp.ParsingServices {
 		}
 
 		public override LexicalToken InitialToken {
-			get {return SelectorToken;}
+			get {return classNameToken ?? selectorToken;}
 		}
 
 		public override LexicalToken FinalToken {
-			get {return SelectorToken;}
+			get {return selectorToken ?? classNameToken;}
 		}
 
 		public DeclarableIdentifierToken SelectorToken {
@@ -424,7 +461,7 @@ namespace EssenceSharp.ParsingServices {
 		protected BinaryMessageSelectorToken selectorToken = null;
 		protected DeclarableIdentifierToken parameter = null;
 		
-		public BinaryMethodHeader(BinaryMessageSelectorToken selectorToken, DeclarableIdentifierToken parameter, int occurrenceIndex) : base(occurrenceIndex) {
+		public BinaryMethodHeader(DeclarableIdentifierToken classNameToken, BinaryMessageSelectorToken selectorToken, DeclarableIdentifierToken parameter, int occurrenceIndex) : base(classNameToken, occurrenceIndex) {
 			this.selectorToken = selectorToken;
 			this.parameter = parameter;
 			selectorSymbol = new SymbolLiteralToken(
@@ -446,7 +483,7 @@ namespace EssenceSharp.ParsingServices {
 		}
 			
 		public override LexicalToken InitialToken {
-			get {return SelectorToken;}
+			get {return (LexicalToken)classNameToken ?? selectorToken;}
 		}
 
 		public override LexicalToken FinalToken {
@@ -508,16 +545,16 @@ namespace EssenceSharp.ParsingServices {
 
 		protected KeywordMethodHeaderSegment[] segments = null;
 		
-		public KeywordMethodHeader(KeywordMethodHeaderSegment[] segments, int occurrenceIndex) : base(occurrenceIndex) {
+		public KeywordMethodHeader(DeclarableIdentifierToken classNameToken, KeywordMethodHeaderSegment[] segments, int occurrenceIndex) : base(classNameToken, occurrenceIndex) {
 			this.segments = segments;
 			selectorSymbol = computeSelectorSymbol();
 		}
 		
-		public KeywordMethodHeader(List<KeywordMethodHeaderSegment> segments, int occurrenceIndex) : this(segments.ToArray(), occurrenceIndex) {
+		public KeywordMethodHeader(DeclarableIdentifierToken classNameToken, List<KeywordMethodHeaderSegment> segments, int occurrenceIndex) : this(classNameToken, segments.ToArray(), occurrenceIndex) {
 		}
 			
 		public override LexicalToken InitialToken {
-			get {return segments[0].InitialToken;}
+			get {return classNameToken ?? segments[0].InitialToken;}
 		}
 
 		public override LexicalToken FinalToken {

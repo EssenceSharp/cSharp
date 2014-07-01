@@ -92,6 +92,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public class Registry : BinderRegistry {
 
+			protected ESBehavior									unknownClass;
 			protected Dictionary<BehavioralObject, Dictionary<ESSymbol, MessageSendBinder>>		selfReceiverRegistry		= new Dictionary<BehavioralObject, Dictionary<ESSymbol, MessageSendBinder>>();
 			protected Dictionary<ESSymbol, MessageSendBinder>					generalReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
 			protected Dictionary<ESSymbol, MessageSendBinder>					superReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
@@ -100,9 +101,17 @@ namespace EssenceSharp.Runtime.Binding {
 			public Registry(DynamicBindingGuru dynamicBindingGuru) : base(dynamicBindingGuru) {
 			}
 
+			protected ESBehavior UnknownClass {
+				get {
+					if (unknownClass == null) unknownClass = new ESBehavior(ObjectStateArchitecture.Abstract);
+					return unknownClass;
+				}
+			}
+
 			public MessageSendBinder canonicalBinderFor(MessageReceiverKind receiverKind, BehavioralObject selfReceiverClass, ESSymbol selector) {
 				Dictionary<ESSymbol, MessageSendBinder> registry = null;
 				MessageSendBinder binder;
+				if (selfReceiverClass == null) selfReceiverClass = UnknownClass;
 				switch (receiverKind) {
 					case MessageReceiverKind.Self:
 						if (!selfReceiverRegistry.TryGetValue(selfReceiverClass, out registry)) {

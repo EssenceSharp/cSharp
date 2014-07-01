@@ -91,7 +91,7 @@ namespace EssenceSharp.Runtime {
 			set { isVerbose = value;}
 		}
 
-		public ESObjectSpace Kernel {
+		public ESObjectSpace ObjectSpace {
 			get {return objectSpace;}
 		}
 
@@ -162,6 +162,12 @@ namespace EssenceSharp.Runtime {
 				if (!factory.initializeAll()) return false;
 			foreach (var factory in namespaceFactories) 
 				if (!factory.initializeAll()) return false;
+
+			foreach (var factory in traitFactories) 
+				factory.reportUndeclaredVariables();
+			foreach (var factory in classFactories) 
+				factory.reportUndeclaredVariables();
+
 			return true;
 
 		}
@@ -563,6 +569,9 @@ namespace EssenceSharp.Runtime {
 		protected BehavioralObjectFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) : base(objectSpace, baseEnvironment, name) {
 		}
 
+		public abstract BehavioralObject ClassObject {get;}
+		public abstract BehavioralObject MetaclassObject {get;}
+
 		public FileInfo ClassConfigurationFile {
 			get {return classConfigurationFile;}
 			set {classConfigurationFile = value;}
@@ -617,6 +626,17 @@ namespace EssenceSharp.Runtime {
 			return evaluateAsSelfExpression(methodClass, methodClass, methodDeclarationFile);
 		}
 
+		public void reportUndeclaredVariables() {
+			ClassObject.withUndeclaredVariablesDo((selector, undeclared) => {
+				Console.Write("Undeclared: ");
+				Console.WriteLine(undeclared.PrimitiveValue);
+			});
+			MetaclassObject.withUndeclaredVariablesDo((selector, undeclared) => {
+				Console.Write("Undeclared: ");
+				Console.WriteLine(undeclared.PrimitiveValue);
+			});
+		}
+
 	}
 
 	public class ClassFactory : BehavioralObjectFactory {
@@ -626,6 +646,14 @@ namespace EssenceSharp.Runtime {
 		protected FileInfo metaclassInitializationFile;
 
 		public ClassFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) : base(objectSpace, baseEnvironment, name) {
+		}
+
+		public override BehavioralObject ClassObject {
+			get {return ThisClass;}
+		}
+
+		public override BehavioralObject MetaclassObject {
+			get {return ThisMetaclass;}
 		}
 
 		public ESClass ThisClass {
@@ -712,6 +740,14 @@ namespace EssenceSharp.Runtime {
 		protected ESClassTrait thisMetaclass;
 
 		public TraitFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) : base(objectSpace, baseEnvironment, name) {
+		}
+
+		public override BehavioralObject ClassObject {
+			get {return ThisClass;}
+		}
+
+		public override BehavioralObject MetaclassObject {
+			get {return ThisMetaclass;}
 		}
 
 		public ESInstanceTrait ThisClass {

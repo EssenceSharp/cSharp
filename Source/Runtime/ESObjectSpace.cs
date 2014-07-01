@@ -1981,6 +1981,13 @@ namespace EssenceSharp.Runtime {
 			bindToFileSystem();
 		}
 
+		protected void createDynamicBinderRegistries() {
+			dynamicBindingGuru		= new DynamicBindingGuru(this);
+			messageSendBinderRegistry	= new MessageSendBinder.Registry(dynamicBindingGuru);
+			getVariableValueBinderRegistry	= new GetVariableValueBinder.Registry(dynamicBindingGuru);
+			setVariableValueBinderRegistry	= new SetVariableValueBinder.Registry(dynamicBindingGuru);
+		}
+
 		protected virtual void assignMetaclassToCanonicalClasses() {
 
 			canonicalObjectClass.setClass(newMetaclass());
@@ -2297,13 +2304,6 @@ namespace EssenceSharp.Runtime {
 			typeToClassMap[TypeGuru.doubleType] = DoubleClass;
 			typeToClassMap[TypeGuru.decimalType] = QuadClass;
 
-		}
-
-		protected void createDynamicBinderRegistries() {
-			dynamicBindingGuru		= new DynamicBindingGuru(this);
-			messageSendBinderRegistry	= new MessageSendBinder.Registry(dynamicBindingGuru);
-			getVariableValueBinderRegistry	= new GetVariableValueBinder.Registry(dynamicBindingGuru);
-			setVariableValueBinderRegistry	= new SetVariableValueBinder.Registry(dynamicBindingGuru);
 		}
 
 		protected virtual void bindToFileSystem() {

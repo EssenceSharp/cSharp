@@ -1556,6 +1556,13 @@ namespace EssenceSharp.Runtime {
 			get {return methodDeclarationNode == null ? null : methodDeclarationNode.MessagesSentToThisContext;}
 		}
 
+		public void withUndeclaredVariablesDo(Action<ESSymbol> enumerator1) {
+			if (methodDeclarationNode == null) return;
+			var undeclaredVariables = methodDeclarationNode.UndeclaredVariables;
+			if (undeclaredVariables == null) return;
+			foreach (var varName in undeclaredVariables) enumerator1(varName);
+		}
+
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
 			if (homeClass == null) {
 				append(" ??");
@@ -2207,6 +2214,12 @@ namespace EssenceSharp.Runtime {
 				return ((ESMethod)receiver).MessagesSentToThisContext;
 			}
 
+			public Object _withUndeclaredVariablesDo_(Object receiver, Object enumerator1) {
+				var functor1 = asFunctor1(enumerator1);
+				((ESMethod)receiver).withUndeclaredVariablesDo(undeclaredVar => functor1(undeclaredVar));
+				return receiver;
+			}
+
 			public Object _valueWithReceiverWithArguments_(Object receiver, Object self, Object arguments) {
 				ESObject esObject = arguments as ESObject;
 				Object[] argArray = esObject == null ? (Object[])arguments : esObject.asHostArray<Object>();
@@ -2368,6 +2381,9 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("messagesSentToSuper",				new FuncNs.Func<Object, Object>(_messagesSentToSuper_));
 				publishPrimitive("messagesSentToThisContext",			new FuncNs.Func<Object, Object>(_messagesSentToThisContext_));
 
+				publishPrimitive("withUndeclaredVariablesDo:",			new FuncNs.Func<Object, Object, Object>(_withUndeclaredVariablesDo_));
+
+				
 				publishPrimitive("valueWithReceiver:withArguments:",		new FuncNs.Func<Object, Object, Object, Object>(_valueWithReceiverWithArguments_));
 
 				publishPrimitive("valueWithReceiver:",				new FuncNs.Func<Object, Object, Object>(_valueWithReceiver_));

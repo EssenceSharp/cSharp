@@ -59,19 +59,19 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>W4bAHHOqjuvw2Ag1BdGlM0dTokE=</dsig:DigestValue>
+        <dsig:DigestValue>DabSa8XS0Yt0ln40lYO5rLJDf+I=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="EssenceSharp.dll" size="814080">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="EssenceSharp.dll" size="819200">
       <assemblyIdentity name="EssenceSharp" version="0.0.0.1" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>xcSV39F58veLum9hkVv0E6tXOv0=</dsig:DigestValue>
+        <dsig:DigestValue>k+RaH75wx0nAwMNMdYBvONsczHw=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

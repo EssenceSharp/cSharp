@@ -421,6 +421,10 @@ namespace EssenceSharp.ParsingServices {
 			get {return false;}
 		}
 		
+		public virtual bool CanBeDeclaredAsVariable {
+			get {return false;}
+		}		
+		
 		public virtual bool CanBeDeclaredAsVariableOrParameter {
 			get {return false;}
 		}		

@@ -768,7 +768,11 @@ namespace EssenceSharp.ParsingServices {
 		public String UnarySelector {
 			get {return Name;}
 		}
-		
+
+		public virtual bool IsValidMessageSelector {
+			get {return false;}
+		}
+
 		public override void esPrintUsing(uint depth, Action<String> append, Action<uint> newLine) {
 			// Print out canonical Smalltalk literal representation
 			
@@ -795,8 +799,16 @@ namespace EssenceSharp.ParsingServices {
 			get {return qualifiedNameSeparatorChar;}
 		}
 
-		public override bool CanBeDeclaredAsVariableOrParameter {
+		public override bool IsValidMessageSelector {
+			get {return qualifiedNameSeparatorChar == null;}
+		}
+
+		public override bool CanBeDeclaredAsVariable {
 			get {return true;}
+		}
+
+		public override bool CanBeDeclaredAsVariableOrParameter {
+			get {return qualifiedNameSeparatorChar == null;}
 		}
 
 		public override T valueBy<T>(ParseTreeNodeOperation<T> operation) {

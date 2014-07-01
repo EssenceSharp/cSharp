@@ -438,8 +438,9 @@ namespace EssenceSharp.CompilationServices {
 
 		public override AbstractSyntaxTreeNode applyToMethodDeclaration(MethodDeclaration operand) {
 			Context.setRootScope();
+			var className = operand.SpecifiesClassName ? symbolFrom(operand.ClassNameSymbol) : null;
 			Context.MethodSelector = symbolFrom(operand.SelectorSymbol);
-			var method = Context.newMethodDeclarationNode(Context.MethodSelector);
+			var method = Context.newMethodDeclarationNode(className, Context.MethodSelector);
 			method.Body = generateExecutableCodeNodeForMethodDeclaration(operand);
 			return method;
 		}
@@ -455,6 +456,7 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		public override AbstractSyntaxTreeNode applyToPrimitiveMethodDeclaration(PrimitiveMethodDeclaration operand) {
+			var className = operand.SpecifiesClassName ? symbolFrom(operand.ClassNameSymbol) : null;
 			var methodSelector = symbolFrom(operand.SelectorSymbol);
 			Context.setRootScope();
 			Context.MethodSelector = methodSelector;
@@ -468,14 +470,14 @@ namespace EssenceSharp.CompilationServices {
 				compiler.handlePrimitiveSpeficationError(
 					"Unknown/unsupported primitive specification format: " + primitiveSpecSelector.ToString(), 
 					primitiveSpec.Span);
-				method = Context.newPrimitiveFunctionMethodDeclarationNode(Context.MethodSelector, primitiveFunction);
+				method = Context.newPrimitiveFunctionMethodDeclarationNode(className, Context.MethodSelector, primitiveFunction);
 			} else {
 				MethodOperationType opType = (MethodOperationType)primType;
 				long requiredArity = -1;
 				switch (opType) {
 					case MethodOperationType.Function:
 						primitiveFunction = primitiveFunctionFor(primitiveSpec.Arguments);
-						method = Context.newPrimitiveFunctionMethodDeclarationNode(methodSelector, primitiveFunction);
+						method = Context.newPrimitiveFunctionMethodDeclarationNode(className, methodSelector, primitiveFunction);
 						if (primitiveFunction == null) {
 							requiredArity = methodSelector.NumArgs;
 						} else {
@@ -502,7 +504,7 @@ namespace EssenceSharp.CompilationServices {
 						compiler.handlePrimitiveSpeficationError(
 							"Unknown/unsupported primitive specification format: " + primitiveSpecSelector.ToString(), 
 							primitiveSpec.Span);
-						method = Context.newPrimitiveFunctionMethodDeclarationNode(methodSelector, primitiveFunction);
+						method = Context.newPrimitiveFunctionMethodDeclarationNode(className, methodSelector, primitiveFunction);
 						break;
 				}
 				if (methodSelector.NumArgs != requiredArity) {
@@ -516,7 +518,7 @@ namespace EssenceSharp.CompilationServices {
 					primitiveSpec.messageArgumentsDo(argument => operandName = argument.asPathString('.'));
 					if (opType == MethodOperationType.InvokeMethod && operandName == "new") opType = MethodOperationType.CreateInstance;
 					var operation = new InlineOperation(opType, operandName);
-					method = Context.newInlineOperationMethodDeclarationNode(methodSelector, operation);
+					method = Context.newInlineOperationMethodDeclarationNode(className, methodSelector, operation);
 				}
 			}
 			method.Body = generateExecutableCodeNodeForMethodDeclaration(operand);

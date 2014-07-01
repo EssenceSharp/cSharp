@@ -394,16 +394,16 @@ namespace EssenceSharp.ParsingServices {
 							nextOccurrenceIndex());
 		}
 
-		protected virtual UnaryMethodHeader newUnaryMethodHeader(DeclarableIdentifierToken identifierToken) {
-			return new UnaryMethodHeader(identifierToken, nextOccurrenceIndex());
+		protected virtual UnaryMethodHeader newUnaryMethodHeader(DeclarableIdentifierToken classNameToken, DeclarableIdentifierToken identifierToken) {
+			return new UnaryMethodHeader(classNameToken, identifierToken, nextOccurrenceIndex());
 		}
 
-		protected virtual BinaryMethodHeader newBinaryMethodHeader(BinaryMessageSelectorToken selectorToken, DeclarableIdentifierToken parameterToken) {
-			return new BinaryMethodHeader(selectorToken, parameterToken, nextOccurrenceIndex());
+		protected virtual BinaryMethodHeader newBinaryMethodHeader(DeclarableIdentifierToken classNameToken, BinaryMessageSelectorToken selectorToken, DeclarableIdentifierToken parameterToken) {
+			return new BinaryMethodHeader(classNameToken, selectorToken, parameterToken, nextOccurrenceIndex());
 		}
 
-		protected virtual KeywordMethodHeader newKeywordMethodHeader(List<KeywordMethodHeaderSegment> segments) {
-			return new KeywordMethodHeader(segments, nextOccurrenceIndex());
+		protected virtual KeywordMethodHeader newKeywordMethodHeader(DeclarableIdentifierToken classNameToken, List<KeywordMethodHeaderSegment> segments) {
+			return new KeywordMethodHeader(classNameToken, segments, nextOccurrenceIndex());
 		}
 
 		protected virtual KeywordMethodHeaderSegment newKeywordMethodHeaderSegment(KeywordToken keywordToken, DeclarableIdentifierToken parameterToken) {
@@ -620,24 +620,56 @@ namespace EssenceSharp.ParsingServices {
 			// MethodHeader
 
 			try {
-				pushContext(ParsingContext.MethodHeader);
+				DeclarableIdentifierToken classNameToken = null;
 				LexicalToken selectorOrKeywordToken = null;
 				if (nextMatches(ParseNodeType.MethodHeaderBegin, out selectorOrKeywordToken)) {
-					if (!next(out selectorOrKeywordToken)) 
+					if (!next(out selectorOrKeywordToken)) { 
 						return handledUnexpectedToken(
 								ParseNodeType.MethodHeader, 
 								new ParseNodeType[]{ParseNodeType.UnaryMethodHeader, ParseNodeType.BinaryMethodHeader, ParseNodeType.KeywordMethodHeader}, 
 								nextToken);
+					}
+					pushContext(ParsingContext.MethodHeader);
+					// /*
+					if (selectorOrKeywordToken.CanBeDeclaredAsVariable) {
+						LexicalToken classNameSelectorSeparator = null; 
+						if (peek(out classNameSelectorSeparator)) {
+							if (classNameSelectorSeparator.ParseNodeType == ParseNodeType.BinaryMessageSelector
+							&& ((BinaryMessageSelectorToken)classNameSelectorSeparator).Name == ">>") {
+								advanceToken();
+								classNameToken = (DeclarableIdentifierToken)selectorOrKeywordToken;
+								if (!next(out selectorOrKeywordToken)) {
+									return handledUnexpectedToken(
+											ParseNodeType.MethodHeader, 
+											new ParseNodeType[]{ParseNodeType.UnaryMethodHeader, ParseNodeType.BinaryMethodHeader, ParseNodeType.KeywordMethodHeader}, 
+											nextToken);
+								}
+							}
+						}
+					}
+					// */
 				} else {
+					pushContext(ParsingContext.MethodHeader);
 					advanceToken();
 				}
 				if (selectorOrKeywordToken == null || selectorOrKeywordToken.IsEndOfSource) return selectorOrKeywordToken;
-				
+
+				if (selectorOrKeywordToken.ParseNodeType == ParseNodeType.Identifier) { 
+					var identifierToken = (IdentifierToken)selectorOrKeywordToken;
+					if (!identifierToken.IsValidMessageSelector) {
+						// Probably means it's using qualified name syntax. Bad programmer! No cookie!
+						return handledUnexpectedToken(
+								ParseNodeType.MethodHeader, 
+								new ParseNodeType[]{ParseNodeType.Identifier, ParseNodeType.BinaryMessageSelector, ParseNodeType.Keyword}, 
+								nextToken);
+					}
+				}
+
 				LexicalToken parameterToken = null;
 				switch (selectorOrKeywordToken.ParseNodeType) {
 					case ParseNodeType.Identifier:
 						
-						return newUnaryMethodHeader((DeclarableIdentifierToken)selectorOrKeywordToken);
+						return newUnaryMethodHeader(classNameToken, (DeclarableIdentifierToken)selectorOrKeywordToken);
 						
 					case ParseNodeType.BinaryMessageSelector:
 					case ParseNodeType.VerticalBar:
@@ -647,7 +679,7 @@ namespace EssenceSharp.ParsingServices {
 								if (selectorOrKeywordToken.ParseNodeType == ParseNodeType.VerticalBar) {
 									selectorOrKeywordToken = ((VerticalBarToken)selectorOrKeywordToken).AsBinaryMessageSelectorToken;
 								}
-								return newBinaryMethodHeader((BinaryMessageSelectorToken)selectorOrKeywordToken, (DeclarableIdentifierToken)parameterToken);
+								return newBinaryMethodHeader(classNameToken, (BinaryMessageSelectorToken)selectorOrKeywordToken, (DeclarableIdentifierToken)parameterToken);
 							} else {
 								return handledUnexpectedToken(
 										ParseNodeType.BinaryMethodHeader, 
@@ -688,7 +720,7 @@ namespace EssenceSharp.ParsingServices {
 								nextIsKeyword = false;
 							}
 						}
-						return newKeywordMethodHeader(segments);
+						return newKeywordMethodHeader(classNameToken, segments);
 						
 					default:
 						
@@ -781,11 +813,9 @@ namespace EssenceSharp.ParsingServices {
 			// BlockParameterDeclarationList
 			List<BlockParameterToken> parameters = new List<BlockParameterToken>();
 			LexicalToken blockParameter;
-			pushContext(ParsingContext.VariableDeclaration);
 			while (nextMatches(ParseNodeType.BlockParameter, out blockParameter)) {
 				parameters.Add((BlockParameterToken)blockParameter);
 			}
-			popContext();
 			if (parameters.Count < 1) return null;
 			LexicalToken listEnd;
 			if  (nextMatches(ParseNodeType.VerticalBar, out listEnd)) {
@@ -823,7 +853,7 @@ namespace EssenceSharp.ParsingServices {
 	
 			do {
 				if (nextMatches(ParseNodeType.Identifier, out identifier)) {
-					if (identifier.CanBeDeclaredAsVariableOrParameter) {
+					if (identifier.CanBeDeclaredAsVariable) {
 						assignmentPrefix = parseAssignmentPrefix((DeclarableIdentifierToken)identifier);
 						if (assignmentPrefix == null) {
 							initialExpressionToken = identifier;
@@ -1331,7 +1361,9 @@ namespace EssenceSharp.ParsingServices {
 		protected ParseTreeNode parseMethodLiteral(BlockBeginToken beginToken) {
 			// MethodLiteral
 			LexicalToken methodHeaderBeginToken;
-			if (!nextMatches(ParseNodeType.MethodHeaderBegin, out methodHeaderBeginToken)) methodHeaderBeginToken = null;
+			if (peek(out methodHeaderBeginToken)) {
+				if (methodHeaderBeginToken.ParseNodeType != ParseNodeType.MethodHeaderBegin)  methodHeaderBeginToken = null;
+			}
 			ParseTreeNode  methodDeclaration = parseMethodDeclaration();
 			if (methodDeclaration == null || methodDeclaration.IsEndOfSource) {
 				return handledUnexpectedToken(ParseNodeType.MethodLiteral, new ParseNodeType[]{ParseNodeType.MethodDeclaration}, methodDeclaration == null ? nextToken : methodDeclaration);

@@ -1373,14 +1373,25 @@ namespace EssenceSharp.CompilationServices {
 
 	public class MethodDeclarationNode : CodeDeclarationNode {
 
+		protected ESSymbol className;
 		protected ESSymbol selector;
 
-		public MethodDeclarationNode(CodeGenerationContext context, ESSymbol selector) : base(context) {
+		public MethodDeclarationNode(CodeGenerationContext context, ESSymbol className, ESSymbol selector) : base(context) {
+			this.className = className;
 			this.selector = selector;
 		}
 
-		public MethodDeclarationNode(CodeGenerationContext context, ESSymbol selector, ExecutableCodeNode body) : base(context, body) {
+		public MethodDeclarationNode(CodeGenerationContext context, ESSymbol className, ESSymbol selector, ExecutableCodeNode body) : base(context, body) {
+			this.className = className;
 			this.selector = selector;
+		}
+
+		public bool SpecifiesClassName {
+			get {return className != null;}
+		}
+
+		public ESSymbol ClassName {
+			get {return className;}
 		}
 
 		public ESSymbol Selector {
@@ -1397,6 +1408,27 @@ namespace EssenceSharp.CompilationServices {
 
 		public virtual InlineOperation InlineOperation {
 			get {return null;}
+		}
+
+		public BehavioralObject findSpecifiedClassIn(NamespaceObject environment) {
+			if (SpecifiesClassName) {
+				var value = ClassName.valueInNamespaceIfAbsent(environment ?? Context.ObjectSpace.SmalltalkNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive, null);
+				return value as BehavioralObject;
+			} else {
+				return null;
+			}
+		}
+
+		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(NamespaceObject environment, BehavioralObject behavior) {
+			if (behavior == null) { 
+				if (SpecifiesClassName) {
+					behavior = findSpecifiedClassIn(environment);
+					if (behavior == null) behavior = environment as BehavioralObject;
+				} else {
+					behavior = environment as BehavioralObject;
+				}
+			}
+			return base.bindNonLocalVariablesToEnvironment(environment, behavior);;
 		}
 
 		public override void parameterDeclarationsDo(Action<ParameterDeclaration> enumerator1) {
@@ -1422,6 +1454,7 @@ namespace EssenceSharp.CompilationServices {
 		}
 
  		public override Expression asCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
+			if (environment == null) environment = behavior;
 			bindNonLocalVariablesToEnvironment(environment, behavior);
 			var parameters = ParmeterExpressions;
 			var body = bodyAsCLRExpression(environment, behavior);
@@ -1512,10 +1545,10 @@ namespace EssenceSharp.CompilationServices {
 
 	public abstract class PrimitiveMethodDeclarationNode : MethodDeclarationNode {
 
-		protected PrimitiveMethodDeclarationNode(CodeGenerationContext context, ESSymbol selector) : base(context, selector) {
+		protected PrimitiveMethodDeclarationNode(CodeGenerationContext context, ESSymbol className, ESSymbol selector) : base(context, className, selector) {
 		}
 
-		protected PrimitiveMethodDeclarationNode(CodeGenerationContext context, ESSymbol selector, ExecutableCodeNode body) : base(context, selector, body) {
+		protected PrimitiveMethodDeclarationNode(CodeGenerationContext context, ESSymbol className, ESSymbol selector, ExecutableCodeNode body) : base(context, className, selector, body) {
 		}
 
 		public override bool IsPrimitive {
@@ -1542,11 +1575,11 @@ namespace EssenceSharp.CompilationServices {
 
 		protected Delegate		primitiveFunction;
 
-		public PrimitiveFunctionMethodDeclarationNode(CodeGenerationContext context, ESSymbol selector, Delegate primitiveFunction) : base(context, selector) {
+		public PrimitiveFunctionMethodDeclarationNode(CodeGenerationContext context, ESSymbol className, ESSymbol selector, Delegate primitiveFunction) : base(context, className, selector) {
 			this.primitiveFunction = primitiveFunction;
 		}
 
-		public PrimitiveFunctionMethodDeclarationNode(CodeGenerationContext context, ESSymbol selector, Delegate primitiveFunction, ExecutableCodeNode body) : base(context, selector, body) {
+		public PrimitiveFunctionMethodDeclarationNode(CodeGenerationContext context, ESSymbol className, ESSymbol selector, Delegate primitiveFunction, ExecutableCodeNode body) : base(context, className, selector, body) {
 			this.primitiveFunction = primitiveFunction;
 		}
 
@@ -1568,7 +1601,7 @@ namespace EssenceSharp.CompilationServices {
 
 		protected InlineOperation	operation;
 
-		public InlineOperationMethodDeclarationNode(CodeGenerationContext context, ESSymbol selector, InlineOperation operation) : base(context, selector) {
+		public InlineOperationMethodDeclarationNode(CodeGenerationContext context, ESSymbol className, ESSymbol selector, InlineOperation operation) : base(context, className, selector) {
 			this.operation = operation;
 		}
 
@@ -1731,6 +1764,10 @@ namespace EssenceSharp.CompilationServices {
 			get {return declarationNode;}
 		}
 
+		public MethodDeclarationNode MethodDeclarationNode {
+			get {return (MethodDeclarationNode)declarationNode;}
+		}
+
 		public ESSymbol Selector {
 			get {return declarationNode.Selector;}
 		}
@@ -1745,13 +1782,14 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		public override HashSet<ESSymbol> bindNonLocalVariablesToEnvironment(NamespaceObject environment, BehavioralObject behavior) {
-			return declarationNode.bindNonLocalVariablesToEnvironment(environment, behavior);
+			return MethodDeclarationNode.SpecifiesClassName ?
+				declarationNode.bindNonLocalVariablesToEnvironment(environment, behavior) : 
+				declarationNode.bindNonLocalVariablesToEnvironment(null, null);
 		}
 
  		public override Expression asCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
 			if (cachedExpression != null) return cachedExpression;
-			var homeClass = environment as BehavioralObject;
-			return cachedExpression = ExpressionTreeGuru.expressionToCreateESMethod(Context.ObjectSpace.MethodClass, environment, homeClass, declarationNode);
+			return cachedExpression = ExpressionTreeGuru.expressionToCreateESMethod(Context.ObjectSpace.MethodClass, environment, behavior, MethodDeclarationNode);
 		}
 
 	}

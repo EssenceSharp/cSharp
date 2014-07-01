@@ -424,6 +424,12 @@ namespace EssenceSharp.Runtime {
 			return new DirectBindingHandle(this, false);
 		}
 
+		public void changeClassToThatOf(ESObject other) {
+			var otherClass = other.Class;
+			if (!Class.canInheritFrom(otherClass)) throw new InvalidOperationException("changeClassToThatOf: The class of the argument is not compatible with that of the receiver.");
+			setClass(otherClass);
+		}
+
 		#endregion
 
 		#region Instance variable accessing
@@ -1006,6 +1012,15 @@ namespace EssenceSharp.Runtime {
 				return receiver;
 			}
 
+			public static Object _changeClassToThatOf_(Object receiver, Object other) {
+				try { 
+					((ESObject)receiver).changeClassToThatOf((ESObject)other);
+				} catch (InvalidCastException ex) {
+					throw new InvalidOperationException("changeClassToThatOf: The class of the argument is not compatible with that of the receiver.", ex);
+				}
+				return receiver;
+			}
+
 			#endregion
 
 			#region Instance variable accessing
@@ -1174,6 +1189,9 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("show",						new FuncNs.Func<Object, Object>(_show_));
 				publishPrimitive("crShow",						new FuncNs.Func<Object, Object>(_crShow_));
 				publishPrimitive("showCr",						new FuncNs.Func<Object, Object>(_showCr_));
+				publishPrimitive("changeClassToThatOf:",				new FuncNs.Func<Object, Object, Object>(_changeClassToThatOf_));
+
+				
 
 			}
 
