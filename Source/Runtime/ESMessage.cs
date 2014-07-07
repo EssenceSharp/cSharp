@@ -35,20 +35,22 @@ using FuncNs = Microsoft.Scripting.Utils;
 using FuncNs = System;
 #endif
 using EssenceSharp.UtilityServices;
+using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
 
 namespace EssenceSharp.Runtime {
 			
 	public class ESMessage : ESObject {
 
-		protected ESSymbol 										selector 					= null;
-		protected Object[]										arguments					= null;
+		protected ESSymbol	selector;
+		protected long 		numArgs;
+		protected Object[]	arguments;
 		
 		public ESMessage(ESBehavior esClass) : base(esClass) {
 		}
 		
 		public ESMessage(ESBehavior esClass, ESSymbol selector, Object[] arguments) : base(esClass) {
-			this.selector = selector;
+			setSelector(selector);
 			this.arguments = arguments;
 		}
 
@@ -58,33 +60,105 @@ namespace EssenceSharp.Runtime {
 		
 		public ESSymbol Selector {
 			get {return selector;}
-			set {selector = value;}
+			set {setSelector(value);}
 		}
 		
+		public long NumArgs {
+			get {return numArgs;}
+		}
+
+		public virtual void setSelector(ESSymbol newSelector) {
+			selector = newSelector;
+			numArgs = selector == null ? 0 : selector.NumArgs;
+		}
+
 		public Object[] Arguments {
 			get {return arguments;}
 			set {arguments = value;}
 		}
 		
-		public override bool hasSameValueAs(ESObject other) {
-			if (ReferenceEquals(this, other)) return true;
-			ESMessage messageComparand = other as ESMessage;
-			if (messageComparand == null) return false;
-			if (selector == null) return false;
-			Object[] otherArguments = messageComparand.Arguments;
-			if (arguments == null) {
-				if (otherArguments != null) return false;
-				return selector.hasSameValueAs(messageComparand.Selector);
-			} else if (otherArguments == null) return false;
-			if (selector.hasSameValueAs(messageComparand.Selector)) {
-				return elementsAreIdentical(arguments, otherArguments);
-			} else {
-				return false;
+		public virtual Object sendTo(Object receiver) {
+			var esReceiver = receiver as ESObject;
+			if (esReceiver != null) {
+				return esReceiver.performWithArguments(selector, arguments);
 			}
-		}
-		
-		public Object sendTo(ESObject receiver) {
-			return receiver.performWithArguments(Selector, Arguments);
+			var providedArgCount = arguments == null ? 0 : arguments.Length;
+			if (providedArgCount < numArgs) {
+				ESObjectSpace.throwInvalidFunctionCallException("Message.sendTo()", NumArgs, 0, ESCompiledCode.methodFunctionTypeForNumArgs(numArgs), ESCompiledCode.methodFunctionTypeForNumArgs(providedArgCount), null);
+			}
+			var os = Class.ObjectSpace;
+			var block = os.newBlockToSend(selector);
+			var function = block.Function;
+ 			switch (numArgs) {
+				case 0:
+					return ((FuncNs.Func<Object, Object>)function)(receiver);
+				case 1:
+					return ((FuncNs.Func<Object, Object, Object>)function)(receiver, arguments[0]);
+				case 2:
+					return ((FuncNs.Func<Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1]);
+				case 3:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2]);
+				case 4:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3]);
+				case 5:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4]);
+				case 6:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]);
+				case 7:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6]);
+				case 8:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7]);
+				case 9:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8]);
+				case 10:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9]);
+				case 11:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10]);
+				case 12:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11]);
+				case 13:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12]);
+				case 14:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13]);
+				case 15:
+					return ((FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14]);
+				case 16:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15]);
+				case 17:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16]);
+				case 18:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17]);
+				case 19:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18]);
+				case 20:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19]);
+				case 21:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20]);
+				case 22:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21]);
+				case 23:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21], arguments[22]);
+				case 24:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21], arguments[22], arguments[23]);
+				case 25:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21], arguments[22], arguments[23], arguments[24]);
+				case 26:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21], arguments[22], arguments[23], arguments[24], arguments[25]);
+				case 27:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21], arguments[22], arguments[23], arguments[24], arguments[25], arguments[26]);
+				case 28:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21], arguments[22], arguments[23], arguments[24], arguments[25], arguments[26], arguments[27]);
+				case 29:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21], arguments[22], arguments[23], arguments[24], arguments[25], arguments[26], arguments[27], arguments[28]);
+				case 30:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21], arguments[22], arguments[23], arguments[24], arguments[25], arguments[26], arguments[27], arguments[28], arguments[29]);
+				case 31:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21], arguments[22], arguments[23], arguments[24], arguments[25], arguments[26], arguments[27], arguments[28], arguments[29], arguments[30]);
+				case 32:
+					return ((Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function)(receiver, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9], arguments[10], arguments[11], arguments[12], arguments[13], arguments[14], arguments[15], arguments[16], arguments[17], arguments[18], arguments[19], arguments[20], arguments[21], arguments[22], arguments[23], arguments[24], arguments[25], arguments[26], arguments[27], arguments[28], arguments[29], arguments[30], arguments[31]);
+				default:
+					throw new PrimitiveFailException("Too many arguments");
+			}
 		}
 		
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
@@ -125,8 +199,12 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _setSelector_(Object receiver, Object selector) {
-				((ESMessage)receiver).Selector = objectSpace.asESSymbol(selector);
+				((ESMessage)receiver).setSelector(objectSpace.asESSymbol(selector));
 				return receiver;
+			}
+		
+			public Object _numArgs_(Object receiver) {
+				return ((ESMessage)receiver).NumArgs;
 			}
 		
 			public Object _arguments_(Object receiver) {
@@ -149,6 +227,7 @@ namespace EssenceSharp.Runtime {
 
 				publishPrimitive("selector",						new FuncNs.Func<Object, Object>(_selector_));
 				publishPrimitive("selector:",						new FuncNs.Func<Object, Object, Object>(_setSelector_));
+				publishPrimitive("numArgs",						new FuncNs.Func<Object, Object>(_numArgs_));
 				publishPrimitive("arguments",						new FuncNs.Func<Object, Object>(_arguments_));
 				publishPrimitive("arguments:",						new FuncNs.Func<Object, Object, Object>(_setArguments_));
 				publishPrimitive("sendTo:",						new FuncNs.Func<Object, Object, Object>(_sendTo_));

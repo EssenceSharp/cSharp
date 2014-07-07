@@ -82,8 +82,8 @@ namespace EssenceSharp.Runtime.Binding {
 			var rightType = rightInput.LimitType;
 			var typeWithHighestGenerality = leftType.typeWithHighestNumericGenerality(rightType);
 			if (typeWithHighestGenerality == null) return false;
-			leftOutput = leftType == typeWithHighestGenerality ? Expression.Unbox(leftOutput, leftType) : Expression.Unbox(leftOutput, typeWithHighestGenerality);
-			rightOutput = rightType == typeWithHighestGenerality ? Expression.Unbox(rightOutput, rightType) : Expression.Unbox(rightOutput, typeWithHighestGenerality);
+			leftOutput = leftType == typeWithHighestGenerality ? leftOutput.withType(leftType) : leftOutput.withType(typeWithHighestGenerality);
+			rightOutput = rightType == typeWithHighestGenerality ? rightOutput.withType(rightType) : rightOutput.withType(typeWithHighestGenerality);
 			return true;
 		}
 
@@ -161,7 +161,7 @@ namespace EssenceSharp.Runtime.Binding {
 			return expressionArray;
 		}
 
-		public static List<DynamicMetaObject> typeCompatibleArgumentsFor(ParameterInfo[] parameters, List<TypeBindingGuru> argGurus) {
+		public static List<DynamicMetaObject> typeCompatibleArgumentsFor(ParameterInfo[] parameters, List<ArgumentBindingGuru> argGurus) {
 			var arguments = new List<DynamicMetaObject>();
 			long arity = parameters.Length;
 			if (argGurus.Count != arity) return null;
@@ -180,11 +180,11 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#region Static-typing-idiocy duplicate methods
 
-		public static List<DynamicMetaObject> typeCompatibleArgumentsFor(MethodInfo methodInfo, List<TypeBindingGuru> argGurus) {
+		public static List<DynamicMetaObject> typeCompatibleArgumentsFor(MethodInfo methodInfo, List<ArgumentBindingGuru> argGurus) {
 			return typeCompatibleArgumentsFor(methodInfo.GetParameters(), argGurus);
 		}
 
-		public static List<DynamicMetaObject> typeCompatibleArgumentsFor(ConstructorInfo constructorInfo, List<TypeBindingGuru> argGurus) {
+		public static List<DynamicMetaObject> typeCompatibleArgumentsFor(ConstructorInfo constructorInfo, List<ArgumentBindingGuru> argGurus) {
 			return typeCompatibleArgumentsFor(constructorInfo.GetParameters(), argGurus);
 		}
 
@@ -217,7 +217,7 @@ namespace EssenceSharp.Runtime.Binding {
 				PropertyInfo property;
 				MethodInfo methodInfo;
 				DynamicMetaObject arg;
-				TypeBindingGuru argGuru;
+				ArgumentBindingGuru argGuru;
 				Expression fieldExpression;
 				Expression propertyExpression;
 				expression = null;
@@ -469,8 +469,8 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#region Argument / Method Binding
 
-		public List<TypeBindingGuru> dynamicMetaObjectArgumentGurusFor(IEnumerable<DynamicMetaObject> metaObjects) {
-			var argGurus = new List<TypeBindingGuru>();
+		public List<ArgumentBindingGuru> dynamicMetaObjectArgumentGurusFor(IEnumerable<DynamicMetaObject> metaObjects) {
+			var argGurus = new List<ArgumentBindingGuru>();
 			foreach (var mo in metaObjects) argGurus.Add(mo.typeBindingGuru(objectSpace));
 			return argGurus;
 		}
@@ -616,8 +616,8 @@ namespace EssenceSharp.Runtime.Binding {
 			return new DynamicMetaObject(invariantRestrictionOperation.withCanonicalReturnType(), BindingRestrictionsGuru.invariantRestriction, value);
 		}
 
-		public DynamicMetaObject metaObjectForInstanceRestrictedOperation(Expression instanceRestrictedOperation, Object value) {
-			return new DynamicMetaObject(instanceRestrictedOperation.withCanonicalReturnType(), BindingRestrictionsGuru.restrictionFor(instanceRestrictedOperation, value), value);
+		public DynamicMetaObject metaObjectForInstanceRestrictedOperation(Expression self, Expression instanceRestrictedOperation, Object value) {
+			return new DynamicMetaObject(instanceRestrictedOperation.withCanonicalReturnType(), BindingRestrictionsGuru.restrictionFor(self, value), value);
 		}
 
 		public DynamicMetaObject metaObjectForTypeRestrictedOperation(Expression typeRestrictedOperation, Type restrictionType, Object value) {
@@ -625,7 +625,6 @@ namespace EssenceSharp.Runtime.Binding {
 		}
 
 		public DynamicMetaObject metaObjectForForeignObjectOperation(DynamicMetaObject receiver, ESBehavior esClass, Expression invariantOperationExpression) {
-			
 			return new DynamicMetaObject(invariantOperationExpression.withCanonicalReturnType(), receiver.bindingRestrictionsForForeignObjectReceiver(esClass), receiver.Value);
 		}
 
@@ -1783,6 +1782,10 @@ namespace EssenceSharp.Runtime.Binding {
 			return metaObjectToSendDoesNotUnderstand(receiver, esClass, selector, argumentsWithoutReceiver, receiver.bindingRestrictionsForForeignObjectReceiver(esClass));
 		}
 
+		public DynamicMetaObject metaObjectToSendDoesNotUnderstandToNil(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] argumentsWithoutReceiver) {
+			return metaObjectToSendDoesNotUnderstand(receiver, objectSpace.UndefinedObjectClass, selector, argumentsWithoutReceiver, receiver.addingInstanceRestriction());
+		}
+
 		public DynamicMetaObject metaObjectToSendDoesNotUnderstand(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] argumentsWithoutReceiver, BindingRestrictions bindingRestrictions) {
 			return new DynamicMetaObject(ExpressionTreeGuru.expressionToSendDoesNotUnderstand(receiver.Expression, esClass, selector, argumentsWithoutReceiver), bindingRestrictions, receiver.Value);
 		}
@@ -1849,6 +1852,9 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public DynamicMetaObject metaObjectToSendMessageToNil(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 			var method = objectSpace.UndefinedObjectClass.compiledMethodAt(selector);
+			if (method == null) {
+				return metaObjectToSendSyntheticMessageToNil(receiver, selector, metaObjectArgs);
+			}
 			return metaObjectToSendMessage(
 					receiver, 
 					objectSpace,
@@ -1857,18 +1863,6 @@ namespace EssenceSharp.Runtime.Binding {
 					method,
 					metaObjectArgs, 
 					ExpressionTreeGuru.expressionToTestThatNilHasSameClassVersion(receiver.Expression, objectSpace.UndefinedObjectClass).asBindingRestriction());
-		}
-
-		public DynamicMetaObject metaObjectToSendMessageToNilSelf(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
-			var method = objectSpace.UndefinedObjectClass.compiledMethodAt(selector);
-			return metaObjectToSendMessage(
-					receiver, 
-					objectSpace,
-					objectSpace.UndefinedObjectClass, 
-					selector, 
-					method,
-					metaObjectArgs, 
-					ExpressionTreeGuru.expressionToTestThatClassHasSameClassVersion(objectSpace.UndefinedObjectClass).asBindingRestriction());
 		}
 
 		public DynamicMetaObject metaObjectToSendMessageToNilSuper(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
@@ -1884,6 +1878,9 @@ namespace EssenceSharp.Runtime.Binding {
 					method = superclass == null ? null : superclass.compiledMethodAt(selector);
 				}
 			}
+			if (method == null) {
+				return metaObjectToSendSyntheticMessageToNil(receiver, selector, metaObjectArgs);
+			}
 			return metaObjectToSendMessage(
 					receiver, 
 					objectSpace,
@@ -1891,7 +1888,113 @@ namespace EssenceSharp.Runtime.Binding {
 					selector, 
 					method,
 					metaObjectArgs, 
-					ExpressionTreeGuru.expressionToTestThatClassHasSameClassVersion(objectSpace.UndefinedObjectClass).asBindingRestriction());
+					ExpressionTreeGuru.expressionToTestThatNilHasSameClassVersion(receiver.Expression, objectSpace.UndefinedObjectClass).asBindingRestriction());
+		}
+
+		public DynamicMetaObject metaObjectToSendSyntheticMessageToNil(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] args) {
+
+			var self = receiver.Expression;
+			var esClass = objectSpace.UndefinedObjectClass;
+
+			// ExpressionTreeGuru.expressionToTestThatNilHasSameClassVersion(receiver.Expression, objectSpace.UndefinedObjectClass).asBindingRestriction()
+
+			switch (selector.CanonicalSemantics) {
+
+				// Invariant operations:
+				case CanonicalSelectorSemantics.IsIdenticalTo:
+					return metaObjectForInvariantOperation(ExpressionTreeGuru.expressionToSendReferenceEquals(receiver.Expression, args[0].Expression), receiver.Value);
+				case CanonicalSelectorSemantics.IsNotIdenticalTo:
+					return metaObjectForInvariantOperation(ExpressionTreeGuru.expressionToSendReferenceNotEquals(receiver.Expression, args[0].Expression), receiver.Value);
+				case CanonicalSelectorSemantics.IdentityHash:		
+					return metaObjectForInstanceRestrictedOperation(self, Expression.Constant(0L), receiver.Value);
+				case CanonicalSelectorSemantics.IsNil:
+					return metaObjectForInvariantOperation(ExpressionTreeGuru.expressionToSendReferenceEquals(receiver.Expression, ExpressionTreeGuru.nilConstant), receiver.Value);
+				case CanonicalSelectorSemantics.IsNotNil:
+					return metaObjectForInvariantOperation(ExpressionTreeGuru.expressionToSendReferenceNotEquals(receiver.Expression, ExpressionTreeGuru.nilConstant), receiver.Value);
+
+				// Receiver-type-dependent operations:
+				case CanonicalSelectorSemantics.Yourself:
+					return metaObjectForInstanceRestrictedOperation(self, self, receiver.Value);
+				case CanonicalSelectorSemantics.Class:
+					return metaObjectForInstanceRestrictedOperation(self, Expression.Constant(esClass), receiver.Value);
+				case CanonicalSelectorSemantics.IsMemberOf:
+					return metaObjectForInstanceRestrictedOperation(self, ExpressionTreeGuru.expressionToSendReferenceEquals(Expression.Constant(esClass), args[0].Expression), receiver.Value);
+				case CanonicalSelectorSemantics.IsKindOf:
+					var classExpression = Expression.Constant(esClass);
+					var messageSendMO = metaObjectToSendMessageToESObject(classExpression.asDynamicMetaObject(), objectSpace, esClass.Class, symbolFor("includesBehavior:"), args);
+					return messageSendMO.Expression.asDynamicMetaObject(self.expressionToTestThatNilHasSameClassVersion(esClass).asBindingRestriction(), receiver.Value);
+
+				case CanonicalSelectorSemantics.Size:	
+					return metaObjectForInstanceRestrictedOperation(self, Expression.Constant(0L), receiver.Value);
+
+				case CanonicalSelectorSemantics.IsTrue:
+				case CanonicalSelectorSemantics.IsFalse:
+					return metaObjectForInstanceRestrictedOperation(self, Expression.Constant(false), receiver.Value);
+
+				case CanonicalSelectorSemantics.IsEqualTo:
+					return metaObjectForInstanceRestrictedOperation(self, ExpressionTreeGuru.expressionToSendReferenceEquals(receiver.Expression, args[0].Expression), receiver.Value);
+				case CanonicalSelectorSemantics.IsNotEqualTo:
+					return metaObjectForInstanceRestrictedOperation(self, ExpressionTreeGuru.expressionToSendReferenceNotEquals(receiver.Expression, args[0].Expression), receiver.Value);
+
+				// GetMemberBinder:
+				case CanonicalSelectorSemantics.IsImmutable:
+					return metaObjectForInstanceRestrictedOperation(self, Expression.Constant(true), receiver.Value);
+				case CanonicalSelectorSemantics.AsImmutable:
+					return metaObjectForInstanceRestrictedOperation(self, self, receiver.Value);
+
+				// InvokeMemberBinder:
+				case CanonicalSelectorSemantics.Hash:
+					return metaObjectForInstanceRestrictedOperation(self, Expression.Constant(0L), receiver.Value);
+				case CanonicalSelectorSemantics.ShallowCopy:
+					return metaObjectForInstanceRestrictedOperation(self, self, receiver.Value);
+				case CanonicalSelectorSemantics.Copy:
+					return metaObjectForInstanceRestrictedOperation(self, self, receiver.Value);
+
+				case CanonicalSelectorSemantics.AsAssociationTo:
+					return metaObjectToCreateAssociation(receiver, esClass, selector, args[0]);
+
+
+				case CanonicalSelectorSemantics.IsBoolean:
+					return metaObjectForInstanceRestrictedOperation(self, Expression.Constant(false), receiver.Value);
+
+				case CanonicalSelectorSemantics.IfNil:
+					return metaObjectToInvokeArgIfTrue(
+						receiver,
+						esClass,
+						ExpressionTreeGuru.expressionToSendReferenceEquals(receiver.Expression, ExpressionTreeGuru.nilConstant),
+						args[0],
+						receiver.Expression);
+				case CanonicalSelectorSemantics.IfNotNil:
+					return metaObjectToInvokeArgIfFalse(
+						receiver,
+						esClass,
+						ExpressionTreeGuru.expressionToSendReferenceEquals(receiver.Expression, ExpressionTreeGuru.nilConstant),
+						args[0],
+						receiver.Expression);
+				case CanonicalSelectorSemantics.IfNilIfNotNil:
+					return metaObjectToInvokeArgIfTrueAndArgIfFalse(
+						receiver,
+						esClass,
+						ExpressionTreeGuru.expressionToSendReferenceEquals(receiver.Expression, ExpressionTreeGuru.nilConstant),
+						args[0],
+						args[1]);
+				case CanonicalSelectorSemantics.IfNotNilIfNil:
+					return metaObjectToInvokeArgIfTrueAndArgIfFalse(
+						receiver,
+						esClass,
+						ExpressionTreeGuru.expressionToSendReferenceNotEquals(receiver.Expression, ExpressionTreeGuru.nilConstant),
+						args[0],
+						args[1]);
+
+				default:
+				case CanonicalSelectorSemantics.None:
+					
+					break; // Yes, the C# compiler really IS that dumb....
+
+			}
+
+			return metaObjectToSendDoesNotUnderstandToNil(receiver, selector, args);
+
 		}
 
 		#endregion
@@ -1900,7 +2003,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public DynamicMetaObject metaObjectToSendMessageToSelf(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 			var model = receiver.Value;
-			if (model == null) return metaObjectToSendMessageToNilSelf(receiver, selector, metaObjectArgs);
+			if (model == null) return metaObjectToSendMessageToNil(receiver, selector, metaObjectArgs);
 			var esObject = model as ESObject;
 			if (esObject == null) {
 				return metaObjectToSendMessageToForeignSelf(receiver, selector, metaObjectArgs);
@@ -2063,7 +2166,7 @@ namespace EssenceSharp.Runtime.Binding {
 				case CanonicalSelectorSemantics.IsNotIdenticalTo:
 					return metaObjectForInvariantOperation(ExpressionTreeGuru.expressionToSendReferenceNotEquals(receiver.Expression, args[0].Expression), receiver.Value);
 				case CanonicalSelectorSemantics.IdentityHash:		
-					return metaObjectForInvariantOperation(ExpressionTreeGuru.expressionToInvoke_RuntimeHelpers_GetHashCode(receiver.Expression), receiver.Value);
+					return metaObjectForForeignObjectOperation(receiver, esClass, ExpressionTreeGuru.expressionToInvoke_RuntimeHelpers_GetHashCode(receiver.Expression));
 				case CanonicalSelectorSemantics.IsNil:
 					return metaObjectForInvariantOperation(ExpressionTreeGuru.expressionToSendReferenceEquals(receiver.Expression, ExpressionTreeGuru.nilConstant), receiver.Value);
 				case CanonicalSelectorSemantics.IsNotNil:
@@ -2202,6 +2305,9 @@ namespace EssenceSharp.Runtime.Binding {
 				// InvokeBinder:
 				case CanonicalSelectorSemantics.InvokeBlock:
 					return receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selector), args);
+
+				case CanonicalSelectorSemantics.InvokeBlockWithArguments:
+					break;
 
 				// GetMemberBinder:
 				case CanonicalSelectorSemantics.IsImmutable:
@@ -2430,7 +2536,6 @@ namespace EssenceSharp.Runtime.Binding {
 
 				// Problematic:
 				case CanonicalSelectorSemantics.Perform:		// Emit expression to get ESClass and use it to dynamically send message to instance
-				case CanonicalSelectorSemantics.PerformWith:		// Emit expression to get ESClass and use it to dynamically send message to instance
 				case CanonicalSelectorSemantics.PerformWithArguments:	// Emit expression to get ESClass and use it to dynamically send message to instance
 					break;
 

@@ -94,6 +94,8 @@ namespace EssenceSharp.Runtime {
 		Message,					// A Message instance specifies a message that was or could be be sent, along with the message arguments, if any. 
 								// Instances are created by the run time system when and as needed, although application code may also create and 
 								// use instances. Message instances cannot have programmer-accessible named instance variables.
+		MessageSend,					// A MessageSend serves as a polymorphic inline cache that is directly assessible in Essence# code. It is especially
+								// useful in situations where the message to be sent cannot be known at the time the code using it is compiled.
 		Association,					// An Association is conceptually the same thing as a CLR KeyValuePair. Associations cannot have programmer-accessible 
 								// named instance variables.
 		BindingReference,				// A BindingReference is a specialized type of of Association used by Namespaces. BindingReferences cannot have 
@@ -164,8 +166,6 @@ namespace EssenceSharp.Runtime {
 								// that can create and govern the behavior of BigNum values. Also, Int64 and UInt64 arithmetic operations will 
 								// transparently overflow into BigNum values.
 		ScaledDecimal,					// When implemented, the ScaledDecimal class will provide unlimited-precision rational numbers with a fixed decimal point.
-		MessageSend,					// When implemented, the MessageSend class will enable the creation and use of polymorphic inline caches by Essence# code 
-								// (which is not the same thing as the use of DLR CallSites by the Essence# runtime system.)
 
 	}
 
@@ -264,9 +264,6 @@ namespace EssenceSharp.Runtime {
 		InstVarValueAtNamePut,
 		New,
 		NewWithSize,
-		Perform,
-		PerformWith,
-		PerformWithArguments,
 		Size,
 		At,
 		AtIfAbsent,
@@ -278,6 +275,9 @@ namespace EssenceSharp.Runtime {
 		RemoveKey,
 		RemoveKeyIfAbsent,
 		InvokeBlock,
+		InvokeBlockWithArguments,
+		Perform,
+		PerformWithArguments,
 		OnDo,
 		Ensure,
 		IfCurtailed,

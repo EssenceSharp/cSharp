@@ -200,6 +200,8 @@
     <Compile Include="Source\Runtime\Binding\ESGetVariableValueBinder.cs" />
     <Compile Include="Source\Runtime\Binding\ESNamedVariableBinder.cs" />
     <Compile Include="Source\Runtime\Binding\ESSetVariableValueBinder.cs" />
+    <Compile Include="Source\Runtime\Binding\ArgumentBindingGuru.cs" />
+    <Compile Include="Source\Runtime\ESMessageSend.cs" />
     <Compile Include="Source\Runtime\SystemPrimitives.cs" />
     <Compile Include="Source\Runtime\EnumerationTypes.cs" />
     <Compile Include="Source\Runtime\ESDictionaries.cs" />

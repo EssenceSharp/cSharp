@@ -69,11 +69,11 @@ namespace EssenceSharp.Runtime {
 		public ObjectEqualityComparator(ESObjectSpace objectSpace) {
 
 			ESBlock equalsBlock;
-			objectSpace.compile(new StringReader(":left :right | left = right"), objectSpace.SmalltalkNamespace, null, out equalsBlock);
+			objectSpace.compile(new StringReader(":left :right | left = right"), objectSpace.SmalltalkNamespace, null, null, out equalsBlock);
 			areEqual = equalsBlock.F2;
 
 			ESBlock hashBlock;
-			objectSpace.compile(new StringReader(":anObject | anObject hash"), objectSpace.SmalltalkNamespace, null, out hashBlock);
+			objectSpace.compile(new StringReader(":anObject | anObject hash"), objectSpace.SmalltalkNamespace, null, null, out hashBlock);
 			hashCodeOf = hashBlock.F1;
 
 		}
@@ -121,7 +121,6 @@ namespace EssenceSharp.Runtime {
 		void beImmutable();
 		bool isMemberOf(ESBehavior aBehavior);
 		bool isKindOf(ESBehavior aBehavior);
-		bool hasSameValueAs(ESObject other);
 		ESObject shallowCopy();
 		void postShallowCopy();
 		ESObject copy();
@@ -373,10 +372,6 @@ namespace EssenceSharp.Runtime {
 		public bool isKindOf(ESBehavior aBehavior) {
 			return Class.includesBehavior(aBehavior);
 		}
-
-		public virtual bool hasSameValueAs(ESObject other) {
-			return ReferenceEquals(this, other);
-		}
 		
 		public virtual ESObject shallowCopy() {
 			// May or may NOT have the same semantics as sending the message #shallowCopy to an ESObject!!!.
@@ -515,6 +510,33 @@ namespace EssenceSharp.Runtime {
 				return objectSpace.performDoesNotUnderstand(this, @class, objectSpace.newMessage(keywordMessageSelector, new Object[]{a1, a2, a3, a4}));
 			}
 			return method.value4(this, a1, a2, a3, a4);
+		}
+		
+		public Object performWith5(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3, Object a4, Object a5) {
+			ESMethod method = @class.compiledMethodAt(keywordMessageSelector);
+			if (method == null) {
+				ESObjectSpace objectSpace = @class.ObjectSpace;
+				return objectSpace.performDoesNotUnderstand(this, @class, objectSpace.newMessage(keywordMessageSelector, new Object[]{a1, a2, a3, a4, a5}));
+			}
+			return method.value5(this, a1, a2, a3, a4, a5);
+		}
+		
+		public Object performWith6(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6) {
+			ESMethod method = @class.compiledMethodAt(keywordMessageSelector);
+			if (method == null) {
+				ESObjectSpace objectSpace = @class.ObjectSpace;
+				return objectSpace.performDoesNotUnderstand(this, @class, objectSpace.newMessage(keywordMessageSelector, new Object[]{a1, a2, a3, a4, a5, a6}));
+			}
+			return method.value6(this, a1, a2, a3, a4, a5, a6);
+		}
+		
+		public Object performWith7(ESSymbol keywordMessageSelector, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7) {
+			ESMethod method = @class.compiledMethodAt(keywordMessageSelector);
+			if (method == null) {
+				ESObjectSpace objectSpace = @class.ObjectSpace;
+				return objectSpace.performDoesNotUnderstand(this, @class, objectSpace.newMessage(keywordMessageSelector, new Object[]{a1, a2, a3, a4, a5, a6, a7}));
+			}
+			return method.value7(this, a1, a2, a3, a4, a5, a6, a7);
 		}
 		
 		public Object performWithArguments(ESSymbol selector, Object[] arguments) {
@@ -1067,74 +1089,113 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public Object _perform_(Object receiver, Object selector) {
-				ESSymbol stSelector;
+				ESSymbol messageSelector;
 				try {
-					stSelector = (ESSymbol)selector;
+					messageSelector = (ESSymbol)selector;
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
 				ESBehavior esClass = objectSpace.classOf(receiver);
-				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, null));
+				ESMethod method = esClass.compiledMethodAt(messageSelector);
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(messageSelector, null));
 				return method.value0(receiver);
 			}
 		
 			public Object _performWith1_(Object receiver, Object selector, Object a1) {
-				ESSymbol stSelector;
+				ESSymbol messageSelector;
 				try {
-					stSelector = (ESSymbol)selector;
+					messageSelector = (ESSymbol)selector;
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
 				ESBehavior esClass = objectSpace.classOf(receiver);
-				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, new Object[]{a1}));
+				ESMethod method = esClass.compiledMethodAt(messageSelector);
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(messageSelector, new Object[]{a1}));
 				return method.value1(receiver, a1);
 			}
 		
 			public Object _performWith2_(Object receiver, Object selector, Object a1, Object a2) {
-				ESSymbol stSelector;
+				ESSymbol messageSelector;
 				try {
-					stSelector = (ESSymbol)selector;
+					messageSelector = (ESSymbol)selector;
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
 				ESBehavior esClass = objectSpace.classOf(receiver);
-				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, new Object[]{a1, a2}));
+				ESMethod method = esClass.compiledMethodAt(messageSelector);
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(messageSelector, new Object[]{a1, a2}));
 				return method.value2(receiver, a1, a2);
 			}
 		
 			public Object _performWith3_(Object receiver, Object selector, Object a1, Object a2, Object a3) {
-				ESSymbol stSelector;
+				ESSymbol messageSelector;
 				try {
-					stSelector = (ESSymbol)selector;
+					messageSelector = (ESSymbol)selector;
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
 				ESBehavior esClass = objectSpace.classOf(receiver);
-				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, new Object[]{a1, a2, a3}));
+				ESMethod method = esClass.compiledMethodAt(messageSelector);
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(messageSelector, new Object[]{a1, a2, a3}));
 				return method.value3(receiver, a1, a2, a3);
 			}
 		
 			public Object _performWith4_(Object receiver, Object selector, Object a1, Object a2, Object a3, Object a4) {
-				ESSymbol stSelector;
+				ESSymbol messageSelector;
 				try {
-					stSelector = (ESSymbol)selector;
+					messageSelector = (ESSymbol)selector;
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
 				ESBehavior esClass = objectSpace.classOf(receiver);
-				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, new Object[]{a1, a2, a3, a4}));
+				ESMethod method = esClass.compiledMethodAt(messageSelector);
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(messageSelector, new Object[]{a1, a2, a3, a4}));
 				return method.value4(receiver, a1, a2, a3, a4);
 			}
 		
-			public Object _performWithArguments_(Object receiver, Object selector, Object arguments) {
-				ESSymbol stSelector;
+			public Object _performWith5_(Object receiver, Object selector, Object a1, Object a2, Object a3, Object a4, Object a5) {
+				ESSymbol messageSelector;
 				try {
-					stSelector = (ESSymbol)selector;
+					messageSelector = (ESSymbol)selector;
+				} catch {
+					throw new PrimInvalidOperandException();
+				}
+				ESBehavior esClass = objectSpace.classOf(receiver);
+				ESMethod method = esClass.compiledMethodAt(messageSelector);
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(messageSelector, new Object[]{a1, a2, a3, a4, a5}));
+				return method.value5(receiver, a1, a2, a3, a4, a5);
+			}
+		
+			public Object _performWith6_(Object receiver, Object selector, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6) {
+				ESSymbol messageSelector;
+				try {
+					messageSelector = (ESSymbol)selector;
+				} catch {
+					throw new PrimInvalidOperandException();
+				}
+				ESBehavior esClass = objectSpace.classOf(receiver);
+				ESMethod method = esClass.compiledMethodAt(messageSelector);
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(messageSelector, new Object[]{a1, a2, a3, a4, a5, a6}));
+				return method.value6(receiver, a1, a2, a3, a4, a5, a6);
+			}
+		
+			public Object _performWith7_(Object receiver, Object selector, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7) {
+				ESSymbol messageSelector;
+				try {
+					messageSelector = (ESSymbol)selector;
+				} catch {
+					throw new PrimInvalidOperandException();
+				}
+				ESBehavior esClass = objectSpace.classOf(receiver);
+				ESMethod method = esClass.compiledMethodAt(messageSelector);
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(messageSelector, new Object[]{a1, a2, a3, a4, a5, a6, a7}));
+				return method.value7(receiver, a1, a2, a3, a4, a5, a6, a7);
+			}
+		
+			public Object _performWithArguments_(Object receiver, Object selector, Object arguments) {
+				ESSymbol messageSelector;
+				try {
+					messageSelector = (ESSymbol)selector;
 				} catch {
 					throw new PrimInvalidOperandException();
 				}
@@ -1145,8 +1206,8 @@ namespace EssenceSharp.Runtime {
 					throw new PrimInvalidOperandException();
 				}
 				ESBehavior esClass = objectSpace.classOf(receiver);
-				ESMethod method = esClass.compiledMethodAt(stSelector);
-				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(stSelector, argArray));
+				ESMethod method = esClass.compiledMethodAt(messageSelector);
+				if (method == null) return objectSpace.performDoesNotUnderstand(receiver, esClass, objectSpace.newMessage(messageSelector, argArray));
 				return method.valueWithReceiverWithArguments(receiver, argArray);
 			}
 		

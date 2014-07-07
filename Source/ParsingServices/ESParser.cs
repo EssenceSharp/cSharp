@@ -63,7 +63,8 @@ namespace EssenceSharp.ParsingServices {
 			Console.Write("] ");
 			Console.Write(description);
 			if (errorCode > 0) {
-				Console.Write(" error code = " + errorCode);
+				Console.Write(" (error code = " + errorCode);
+				Console.Write(")");
 			}
 			Console.WriteLine();
 		}
@@ -73,7 +74,7 @@ namespace EssenceSharp.ParsingServices {
 		#region Instance Variables
 
 		private int									errorCount				= 0;
-		private System.Action<String, SourceSpan, int, Severity> 			reportErrorFunctor			= new System.Action<String, SourceSpan, int, Severity>(reportError);
+		private System.Action<String, SourceSpan, int, Severity> 			handleErrorAction			= new System.Action<String, SourceSpan, int, Severity>(reportError);
 		private Functor3<ParseTreeNode, ParseNodeType, ParseNodeType[], ParseTreeNode> 	handleUnexpectedTokenFunctor 		= null;
 		
 		private ESLexicalAnalyzer 							scanner 				= null;
@@ -206,7 +207,7 @@ namespace EssenceSharp.ParsingServices {
 			} else {
 				span = unexpectedNode.Span;
 			}
-			ReportError(sb.ToString(), span, 0, Severity.Error); // String, SourceSpan, int errorCode, Severity
+			HandleError(sb.ToString(), span, 0, Severity.Error); // String, SourceSpan, int errorCode, Severity
 			return unexpectedNode == null ? null : (unexpectedNode.IsEndOfSource ? unexpectedNode : null);
 		}
 
@@ -234,10 +235,9 @@ namespace EssenceSharp.ParsingServices {
 			get {return errorCount;}
 		}
 		
-		public System.Action<String, SourceSpan, int, Severity> ReportError {
-			get {return reportErrorFunctor;}
-			set {	reportErrorFunctor = value;
-				bindToScanner();}
+		public System.Action<String, SourceSpan, int, Severity> HandleError {
+			get {return handleErrorAction;}
+			set {handleErrorAction = value;}
 		}	
 
 		public Functor3<ParseTreeNode, ParseNodeType, ParseNodeType[], ParseTreeNode> HandledUnexpectedToken {

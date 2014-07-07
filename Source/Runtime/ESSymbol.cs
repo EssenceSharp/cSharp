@@ -280,12 +280,20 @@ namespace EssenceSharp.Runtime {
 		
 			#region Primitive Definitions
 		
-			public Object _numArgs_(Object receiver) {
+			public static Object _numArgs_(Object receiver) {
 				return ((ESSymbol)receiver).NumArgs;
 			}
 		
 			public Object _type_(Object receiver) {
 				return SymbolRegistry.symbolFor(((ESSymbol)receiver).Type.ToString());
+			}
+
+			public Object _asMessageSend_(Object receiver) {
+				return objectSpace.newMessageSend((ESSymbol)receiver);
+			}
+
+			public Object _asMessageSendWithReceiver_(Object receiver, Object messageSendReceiver) {
+				return objectSpace.newMessageSend(messageSendReceiver, (ESSymbol)receiver);
 			}
 
 			#endregion
@@ -295,6 +303,15 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("numArgs",						new FuncNs.Func<Object, Object>(_numArgs_));
 				publishPrimitive("type",						new FuncNs.Func<Object, Object>(_type_));
 
+				publishPrimitive("asMessageSend",					new FuncNs.Func<Object, Object>(_asMessageSend_));
+				publishPrimitive("asMessageSendWithReceiver:",				new FuncNs.Func<Object, Object, Object>(_asMessageSendWithReceiver_));
+
+			}
+
+			public override void installPublishedPrimitivesInClass(ESSymbol protocol, ESBehavior targetClass) {
+				publishedPrimitivesDo((PrimitiveDomainType domain, String name, Delegate function) => {
+					targetClass.addMethod(objectSpace.newMethod(SymbolRegistry.symbolFor(name), function));
+				});
 			}
 
 		}
@@ -429,9 +446,6 @@ namespace EssenceSharp.Runtime {
 			symbolFor("instVarAtName:put:").CanonicalSemantics		= CanonicalSelectorSemantics.InstVarValueAtNamePut;	// (x, y, z) => x.GetType().InvokeMember(x.GetType().GetField(y), setFieldBindingFlags, binder, x, new object[] {z})
 			symbolFor("new").CanonicalSemantics				= CanonicalSelectorSemantics.New;			// (x)    => new x() -- x must be a class
 			symbolFor("new:").CanonicalSemantics				= CanonicalSelectorSemantics.NewWithSize;		// (x, y) => new x(y) -- x must be a class, y is probably a size/capacity (but doesn't have to be)
-			symbolFor("perform:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;			// (x, y) => x.GetType().InvokeMember(y), bindingFlags, binder, x, new Object[0])
-			symbolFor("perform:with:").CanonicalSemantics			= CanonicalSelectorSemantics.PerformWith;		// (x, y, z) => x.GetType().InvokeMember(y), bindingFlags, binder, x, new object[] {z})
-			symbolFor("perform:withArguments:").CanonicalSemantics		= CanonicalSelectorSemantics.PerformWithArguments;	// (x, y, z) => x.GetType().InvokeMember(y), bindingFlags, binder, x, (Object[])z)
 			symbolFor("size").CanonicalSemantics				= CanonicalSelectorSemantics.Size;			// (x) => x is Array ? x.Length : (x is Collection ? x.Count : 0)
 			symbolFor("at:").CanonicalSemantics				= CanonicalSelectorSemantics.At;			// (x, y) => x[y] -- Array or Collection
 			symbolFor("at:ifAbsent:").CanonicalSemantics			= CanonicalSelectorSemantics.AtIfAbsent;		// (x, y, z) => x.TryGetValue(y, out value) ? value : z()
@@ -517,6 +531,7 @@ namespace EssenceSharp.Runtime {
 			symbolFor("ensure:").CanonicalSemantics				= CanonicalSelectorSemantics.Ensure;			// (x, y) => try {x()} finally {y();}
 			symbolFor("ifCurtailed:").CanonicalSemantics			= CanonicalSelectorSemantics.IfCurtailed;		// (x, y) => try {x()} catch {y();}
 
+			symbolFor("valueWithArguments:").CanonicalSemantics		= CanonicalSelectorSemantics.InvokeBlockWithArguments;	// (x, y) => x(y[0], y[1]..y[y.Length - 1])
 			symbolFor("value").CanonicalSemantics				= CanonicalSelectorSemantics.InvokeBlock;		// (x) => x()
 			symbolFor("value:").CanonicalSemantics				= CanonicalSelectorSemantics.InvokeBlock;		// (x, a1) => x(a1)
 			symbolFor("value:value:").CanonicalSemantics				= CanonicalSelectorSemantics.InvokeBlock;		// (x, a1, a2) => x(a1, a2)
@@ -550,6 +565,41 @@ namespace EssenceSharp.Runtime {
 			symbolFor("value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:").CanonicalSemantics				= CanonicalSelectorSemantics.InvokeBlock;		// (x, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30) => x(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30)
 			symbolFor("value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:").CanonicalSemantics				= CanonicalSelectorSemantics.InvokeBlock;		// (x, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31) => x(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31)
 			symbolFor("value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:value:").CanonicalSemantics				= CanonicalSelectorSemantics.InvokeBlock;		// (x, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32) => x(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32)
+
+			symbolFor("perform:withArguments:").CanonicalSemantics		= CanonicalSelectorSemantics.PerformWithArguments;	// (x, y, z) => x.GetType().InvokeMember(y, bindingFlags, binder, x, (Object[])z)
+			symbolFor("perform:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;			// (x, y) => x.GetType().InvokeMember(y, bindingFlags, binder, x, new Object[0])
+			symbolFor("perform:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;			// (x, y, z) => x.GetType().InvokeMember(y, bindingFlags, binder, x, new object[] {z})
+			symbolFor("perform:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
+			symbolFor("perform:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:with:").CanonicalSemantics			= CanonicalSelectorSemantics.Perform;
 
 		}
 

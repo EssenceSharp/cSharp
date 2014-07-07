@@ -52,13 +52,22 @@ namespace EssenceSharp.Exceptions {
 			if (message == null) {
 				ClassName = receiver == null ? "UndefinedObject" : receiver.GetType().AssemblyQualifiedName;
 				tag = "MessageNotUnderstood";
+				messageText = ClassName + " instances do not know how to respond to an unknown message.";
 			} else {
-				objectSpace = message.Class.ObjectSpace;
-				var selector = message.Selector;
-				MemberName = selector == null ? "<nil selector>" : selector.PrimitiveValue;
-				ClassName = objectSpace.classOf(receiver).PathnameString;
-				tag = objectSpace.symbolFor("MessageNotUnderstood");
-				messageText = ClassName + " instances do not know how to respond to the message '" + MemberName + "'";
+				var messageClass = message.Class;
+				if (messageClass == null) {
+					ClassName = receiver == null ? "UndefinedObject" : receiver.GetType().AssemblyQualifiedName;
+					MemberName = "<nil selector>";
+					tag = "MessageNotUnderstood";
+					messageText = ClassName + " instances do not know how to respond to an unknown message.";
+				} else { 
+					objectSpace = messageClass.ObjectSpace;
+					var selector = message.Selector;
+					MemberName = selector == null ? "<nil selector>" : selector.PrimitiveValue;
+					ClassName = objectSpace.classOf(receiver).PathnameString;
+					tag = objectSpace.symbolFor("MessageNotUnderstood");
+					messageText = ClassName + " instances do not know how to respond to the message '" + MemberName + "'";
+				}
 			}
 		}
 
@@ -84,7 +93,7 @@ namespace EssenceSharp.Exceptions {
 			get { return ToString();}
 		}
 
-		public virtual Object defaultAction() {
+		public virtual Object defaultAction() {                      
 			return null;
 		}
 

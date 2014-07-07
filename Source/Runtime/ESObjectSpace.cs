@@ -79,6 +79,7 @@ namespace EssenceSharp.Runtime {
 		protected ESClass			canonicalAssociationClass		= new ESClass(ObjectStateArchitecture.Association);
 		protected ESClass			canonicalBindingReferenceClass		= new ESClass(ObjectStateArchitecture.BindingReference);
 		protected ESClass			canonicalMessageClass			= new ESClass(ObjectStateArchitecture.Message);
+		protected ESClass			canonicalMessageSendClass		= new ESClass(ObjectStateArchitecture.MessageSend);
 		protected ESClass			canonicalMagnitudeClass			= new ESClass(ObjectStateArchitecture.Abstract);
 
 		#endregion
@@ -132,6 +133,7 @@ namespace EssenceSharp.Runtime {
 
 		protected ESNamespace			rootNamespace 				= null;
 		protected ESNamespace			smalltalkNamespace 			= null;
+		protected ESNamespace			universalNamespace 			= null;
 		protected ESNamespace			undeclaredNamespace 			= null;
 		protected ESNamespace			clrNamespace	 			= null;
 
@@ -235,6 +237,10 @@ namespace EssenceSharp.Runtime {
 
 		public ESClass MessageClass {
 			get {return canonicalMessageClass;}
+		}
+
+		public ESClass MessageSendClass {
+			get {return canonicalMessageSendClass;}
 		}
 
 		public ESClass MagnitudeClass {
@@ -391,6 +397,10 @@ namespace EssenceSharp.Runtime {
 
 		public ESNamespace SmalltalkNamespace {
 			get {return smalltalkNamespace;}
+		}
+
+		public ESNamespace UniversalNamespace {
+			get {return universalNamespace;}
 		}
 
 		public ESNamespace UndeclaredNamespace {
@@ -558,7 +568,7 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Compiled Code
+		#region Blocks
 
 		public ESBlock newBlock() {
 			return new ESBlock(canonicalBlockClass);
@@ -567,6 +577,41 @@ namespace EssenceSharp.Runtime {
 		public ESBlock newBlock(Delegate function, long numArgs) {
 			return new ESBlock(canonicalBlockClass, function, numArgs);
 		}
+
+		public ESBlock newBlockToSend(ESSymbol selector) {
+			var arity = selector.NumArgs;
+			var blockDeclarationBuilder = new StringBuilder();
+			blockDeclarationBuilder.Append(blockDeclarationHeaderWithNumArgs(selector.NumArgs + 1)); // " + 1" because the receiver will be the first argument
+			blockDeclarationBuilder.AppendLine("a1 ");
+			switch (selector.Type) {
+				case SymbolType.Identifier:
+					blockDeclarationBuilder.Append(selector.PrimitiveValue);
+					break;
+				case SymbolType.BinaryMessageSelector:
+					blockDeclarationBuilder.Append(selector.PrimitiveValue);
+					blockDeclarationBuilder.Append(" a2");
+					break;
+				case SymbolType.Keyword:
+					var argIndex = 2;
+					selector.keywordsDo(keyword => {
+						blockDeclarationBuilder.Append(keyword); 
+						blockDeclarationBuilder.Append(": a"); 
+						blockDeclarationBuilder.Append(argIndex++); 
+						blockDeclarationBuilder.Append(" ");});
+					break;
+				default:
+					throw new InvalidArgumentException("The symbol #'" + selector.PrimitiveValue + "' is not a valid method name.");
+			}
+			ESBlock block;
+			if (!compile(new StringReader(blockDeclarationBuilder.ToString()), null, null, null, out block)) {
+				throw new InternalSystemError("Unexpected compilation error in ESObjectSpace.newBlockToSend() -- probably not user or programmer error");
+			}
+			return block;
+		}
+
+		#endregion
+
+		#region Methods
 
 		public ESMethod newMethod() {
 			return new ESMethod(canonicalMethodClass);
@@ -613,32 +658,9 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ESMethod newMethodToSendDoesNotUnderstand(BehavioralObject homeClass, ESSymbol selector) {
-			var methodHeaderBuilder = new StringBuilder();
-			long arity = 0;
-			switch (selector.Type) {
-				case SymbolType.Identifier:
-					methodHeaderBuilder.Append(selector.PrimitiveValue);
-					break;
-				case SymbolType.BinaryMessageSelector:
-					arity = 1;
-					methodHeaderBuilder.Append(selector.PrimitiveValue);
-					methodHeaderBuilder.Append(" a1");
-					break;
-				case SymbolType.Keyword:
-					arity = selector.NumArgs;
-					var argIndex = 1;
-					selector.keywordsDo(keyword => {
-						methodHeaderBuilder.Append(keyword); 
-						methodHeaderBuilder.Append(": a"); 
-						methodHeaderBuilder.Append(argIndex++); 
-						methodHeaderBuilder.Append(" ");});
-					break;
-				default:
-					throwInvalidArgumentException(homeClass, "bindMethod:toSystemSelector:", "essenceSelector", selector);
-					break;
-			}
+			var arity = selector.NumArgs;
 			var methodDeclarationBuilder = new StringBuilder();
-			methodDeclarationBuilder.AppendLine(methodHeaderBuilder.ToString());
+			methodDeclarationBuilder.AppendLine(methodDeclaratorHeader(selector));
 			methodDeclarationBuilder.AppendLine();
 			methodDeclarationBuilder.Append("        ^self doesNotUnderstand: (Message selector: #");
 			methodDeclarationBuilder.Append(selector.PrimitiveValue);
@@ -649,11 +671,11 @@ namespace EssenceSharp.Runtime {
 				if (arity - i > 1) methodDeclarationBuilder.Append(". ");
 			}
 			methodDeclarationBuilder.AppendLine("})");
-			ESMethod mappedMethod;
-			if (!compileMethod(new StringReader(methodDeclarationBuilder.ToString()), homeClass, symbolFor("error handling"), out mappedMethod)) {
-				throw new InternalSystemError("Unexpected compilation error in ESBehavior.bindMethodToSystemSelector() -- probably not user or programmer error");
+			ESMethod method;
+			if (!compileMethod(new StringReader(methodDeclarationBuilder.ToString()), homeClass, symbolFor("error handling"), null, out method)) {
+				throw new InternalSystemError("Unexpected compilation error in ESObjectSpace.newMethodToSendDoesNotUnderstand() -- probably not user or programmer error");
 			}
-			return mappedMethod;
+			return method;
 		}
 
 		#endregion
@@ -702,6 +724,46 @@ namespace EssenceSharp.Runtime {
 
 		public ESMessage newMessage(ESSymbol selector, Object[] arguments) {
 			return new ESMessage(canonicalMessageClass, selector, arguments);
+		}
+
+		#endregion
+
+		#region MessageSends
+
+		public ESMessageSend newMessageSend() {
+			return new ESMessageSend(canonicalMessageSendClass);
+		}
+
+		public ESMessageSend newMessageSend(ESMethod method) {
+			return new ESMessageSend(canonicalMessageSendClass, method);
+		}
+
+		public ESMessageSend newMessageSend(ESMethod method, Object[] arguments) {
+			return new ESMessageSend(canonicalMessageSendClass, method, arguments);
+		}
+
+		public ESMessageSend newMessageSend(Object receiver, ESMethod method) {
+			return new ESMessageSend(canonicalMessageSendClass, receiver, method);
+		}
+
+		public ESMessageSend newMessageSend(Object receiver, ESMethod method, Object[] arguments) {
+			return new ESMessageSend(canonicalMessageSendClass, receiver, method, arguments);
+		}
+
+		public ESMessageSend newMessageSend(ESSymbol selector) {
+			return new ESMessageSend(canonicalMessageSendClass, selector);
+		}
+
+		public ESMessageSend newMessageSend(ESSymbol selector, Object[] arguments) {
+			return new ESMessageSend(canonicalMessageSendClass, selector, arguments);
+		}
+
+		public ESMessageSend newMessageSend(Object receiver, ESSymbol selector) {
+			return new ESMessageSend(canonicalMessageSendClass, receiver, selector);
+		}
+
+		public ESMessageSend newMessageSend(Object receiver, ESSymbol selector, Object[] arguments) {
+			return new ESMessageSend(canonicalMessageSendClass, receiver, selector, arguments);
 		}
 
 		#endregion
@@ -1662,6 +1724,54 @@ namespace EssenceSharp.Runtime {
 			return new ESCompiler(this, sourceStream, parsingOptions);
 		}
 
+		public String blockInvocationMessageFor(IList<String> argExpressions) {
+			var numArgs = argExpressions == null ? 0 : argExpressions.Count;
+			if (numArgs == 0) return "value";
+			var blockParameterListBuilder = new StringBuilder();
+			for (var index = 0; index < numArgs; index++) {
+				blockParameterListBuilder.Append("value:"); 
+				blockParameterListBuilder.Append(argExpressions[index]); 
+				blockParameterListBuilder.Append(" ");
+			}
+			return blockParameterListBuilder.ToString();	
+		}
+
+		public String blockDeclarationHeaderWithNumArgs(long numArgs) {
+			if (numArgs == 0) return "";
+			var blockParameterListBuilder = new StringBuilder();
+			for (var index = 1; index <= numArgs; index++) {
+				blockParameterListBuilder.Append(":a"); 
+				blockParameterListBuilder.Append(index); 
+				blockParameterListBuilder.Append(" ");
+			}
+			blockParameterListBuilder.Append("| ");
+			return blockParameterListBuilder.ToString();	
+		}
+
+		public String methodDeclaratorHeader(ESSymbol selector) {
+			var methodHeaderBuilder = new StringBuilder();
+			switch (selector.Type) {
+				case SymbolType.Identifier:
+					methodHeaderBuilder.Append(selector.PrimitiveValue);
+					break;
+				case SymbolType.BinaryMessageSelector:
+					methodHeaderBuilder.Append(selector.PrimitiveValue);
+					methodHeaderBuilder.Append(" a1");
+					break;
+				case SymbolType.Keyword:
+					var argIndex = 1;
+					selector.keywordsDo(keyword => {
+						methodHeaderBuilder.Append(keyword); 
+						methodHeaderBuilder.Append(": a"); 
+						methodHeaderBuilder.Append(argIndex++); 
+						methodHeaderBuilder.Append(" ");});
+					break;
+				default:
+					throw new InvalidArgumentException("The symbol #'" + selector.PrimitiveValue + "' is not a valid method name.");
+			}
+			return methodHeaderBuilder.ToString();
+		}
+
 		#region Compiling
 
 		#region Self Expressions
@@ -1681,7 +1791,7 @@ namespace EssenceSharp.Runtime {
 		public virtual bool compileSelfExpression(SourceUnit sourceUnit, NamespaceObject environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream);
-				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
+				if (errorSink != null) compiler.HandleError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
 				return compiler.compileSelfExpression(environment, selfValue, null, out block);
 			}
 		}
@@ -1689,7 +1799,7 @@ namespace EssenceSharp.Runtime {
 		public virtual bool compileSelfExpression(SourceUnit sourceUnit, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream, parsingOptions);
-				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
+				if (errorSink != null) compiler.HandleError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
 				return compiler.compileSelfExpression(environment, selfValue, null, out block);
 			}
 		}
@@ -1706,24 +1816,24 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Executable Code
+		#region Block Declarations / Executable Code
 
-		public virtual bool compile(FileInfo file, NamespaceObject environment, Object selfValue, out ESBlock block) {
+		public virtual bool compile(FileInfo file, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out ESBlock block) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
-				return compile(sourceStream,  environment, selfValue, out block);
+				return compile(sourceStream,  environment, selfValue, handleError, out block);
 			}
 		}
 
-		public virtual bool compile(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, out ESBlock block) {
+		public virtual bool compile(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out ESBlock block) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
-				return compile(sourceStream, parsingOptions,  environment, selfValue, out block);
+				return compile(sourceStream, parsingOptions,  environment, selfValue, handleError, out block);
 			}
 		}
 
 		public virtual bool compile(SourceUnit sourceUnit, NamespaceObject environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream);
-				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
+				if (errorSink != null) compiler.HandleError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
 				return compiler.compile(environment, selfValue, out block);
 			}
 		}
@@ -1731,19 +1841,21 @@ namespace EssenceSharp.Runtime {
 		public virtual bool compile(SourceUnit sourceUnit, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, ErrorSink errorSink, out ESBlock block) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream, parsingOptions);
-				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
+				if (errorSink != null) compiler.HandleError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
 				return compiler.compile(environment, selfValue, out block);
 			}
 		}
 
-		public virtual bool compile(TextReader sourceStream, NamespaceObject environment, Object selfValue, out ESBlock block) {
+		public virtual bool compile(TextReader sourceStream, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out ESBlock block) {
 			var compiler = newCompiler(sourceStream);
+			if (handleError != null) compiler.HandleError = handleError;
 			return compiler.compile(environment, selfValue, out block);
 		}
 
 
-		public virtual bool compile(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, out ESBlock block) {
+		public virtual bool compile(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out ESBlock block) {
 			var compiler = newCompiler(sourceStream, parsingOptions);
+			if (handleError != null) compiler.HandleError = handleError;
 			return compiler.compile(environment, selfValue, out block);
 		}
 
@@ -1751,22 +1863,22 @@ namespace EssenceSharp.Runtime {
 
 		#region Method Declarations
 
-		public virtual bool compileMethod(FileInfo file, BehavioralObject methodClass, ESSymbol protocol, out ESMethod method) {
+		public virtual bool compileMethod(FileInfo file, BehavioralObject methodClass, ESSymbol protocol, System.Action<String, SourceSpan, int, Severity> handleError, out ESMethod method) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
-				return compileMethod(sourceStream, methodClass, protocol, out method);
+				return compileMethod(sourceStream, methodClass, protocol, handleError, out method);
 			}
 		}
 
-		public virtual bool compileMethod(FileInfo file, ParsingOptions parsingOptions, BehavioralObject methodClass, ESSymbol protocol, out ESMethod method) {
+		public virtual bool compileMethod(FileInfo file, ParsingOptions parsingOptions, BehavioralObject methodClass, ESSymbol protocol, System.Action<String, SourceSpan, int, Severity> handleError, out ESMethod method) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
-				return compileMethod(sourceStream, parsingOptions, methodClass, protocol, out method);
+				return compileMethod(sourceStream, parsingOptions, methodClass, protocol, handleError, out method);
 			}
 		}
 
 		public virtual bool compileMethod(SourceUnit sourceUnit, BehavioralObject methodClass, ESSymbol protocol, ErrorSink errorSink, out ESMethod method) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream);
-				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
+				if (errorSink != null) compiler.HandleError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
 				return compiler.compileMethod(methodClass, protocol, out method);
 			}
 		}
@@ -1774,19 +1886,21 @@ namespace EssenceSharp.Runtime {
 		public virtual bool compileMethod(SourceUnit sourceUnit, ParsingOptions parsingOptions, BehavioralObject methodClass, ESSymbol protocol, ErrorSink errorSink, out ESMethod method) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream, parsingOptions);
-				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
+				if (errorSink != null) compiler.HandleError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
 				return compiler.compileMethod(methodClass, protocol, out method);
 			}
 		}
 		
-		public virtual bool compileMethod(TextReader sourceStream, BehavioralObject methodClass, ESSymbol protocol, out ESMethod method) {
+		public virtual bool compileMethod(TextReader sourceStream, BehavioralObject methodClass, ESSymbol protocol, System.Action<String, SourceSpan, int, Severity> handleError, out ESMethod method) {
 			var compiler = newCompiler(sourceStream);
+			if (handleError != null) compiler.HandleError = handleError;
 			return compiler.compileMethod(methodClass, protocol, out method);
 		}
 
 
-		public virtual bool compileMethod(TextReader sourceStream, ParsingOptions parsingOptions, BehavioralObject methodClass, ESSymbol protocol, out ESMethod method) {
+		public virtual bool compileMethod(TextReader sourceStream, ParsingOptions parsingOptions, BehavioralObject methodClass, ESSymbol protocol, System.Action<String, SourceSpan, int, Severity> handleError, out ESMethod method) {
 			var compiler = newCompiler(sourceStream, parsingOptions);
+			if (handleError != null) compiler.HandleError = handleError;
 			return compiler.compileMethod(methodClass, protocol, out method);
 		}
 
@@ -1798,22 +1912,22 @@ namespace EssenceSharp.Runtime {
 
 		#region Self Expressions
 
-		public virtual bool evaluateAsSelfExpression(FileInfo file, NamespaceObject environment, Object selfValue, out Object value) {
+		public virtual bool evaluateAsSelfExpression(FileInfo file, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
-				return evaluateAsSelfExpression(sourceStream, environment, selfValue, out value);
+				return evaluateAsSelfExpression(sourceStream, environment, selfValue, handleError, out value);
 			}
 		}
 
-		public virtual bool evaluateAsSelfExpression(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, out Object value) {
+		public virtual bool evaluateAsSelfExpression(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
-				return evaluateAsSelfExpression(sourceStream, parsingOptions, environment, selfValue, out value);
+				return evaluateAsSelfExpression(sourceStream, parsingOptions, environment, selfValue, handleError, out value);
 			}
 		}
 
 		public virtual bool evaluateAsSelfExpression(SourceUnit sourceUnit, NamespaceObject environment, ErrorSink errorSink, Object selfValue, out Object value) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream);
-				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
+				if (errorSink != null) compiler.HandleError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
 				return compiler.evaluateSelfExpression(environment, selfValue, null, out value);
 			}
 		}
@@ -1821,18 +1935,20 @@ namespace EssenceSharp.Runtime {
 		public virtual bool evaluateAsSelfExpression(SourceUnit sourceUnit, ParsingOptions parsingOptions, NamespaceObject environment, ErrorSink errorSink, Object selfValue, out Object value) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream, parsingOptions);
-				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
+				if (errorSink != null) compiler.HandleError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
 				return compiler.evaluateSelfExpression(environment, selfValue, null, out value);
 			}
 		}
 
-		public virtual bool evaluateAsSelfExpression(TextReader sourceStream, NamespaceObject environment, Object selfValue, out Object value) {
+		public virtual bool evaluateAsSelfExpression(TextReader sourceStream, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			var compiler = newCompiler(sourceStream);
+			if (handleError != null) compiler.HandleError = handleError;
 			return compiler.evaluateSelfExpression(environment, selfValue, null, out value);
 		}
 
-		public virtual bool evaluateAsSelfExpression(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, out Object value) {
+		public virtual bool evaluateAsSelfExpression(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			var compiler = newCompiler(sourceStream, parsingOptions);
+			if (handleError != null) compiler.HandleError = handleError;
 			return compiler.evaluateSelfExpression(environment, selfValue, null, out value);
 		}
 
@@ -1841,22 +1957,22 @@ namespace EssenceSharp.Runtime {
 
 		#region Executable Code
 
-		public virtual bool evaluate(FileInfo file, NamespaceObject environment, out Object value) {
+		public virtual bool evaluate(FileInfo file, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
-				return evaluate(sourceStream, environment, out value);
+				return evaluate(sourceStream, environment, null, handleError, out value);
 			}
 		}
 
-		public virtual bool evaluate(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, out Object value) {
+		public virtual bool evaluate(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
-				return evaluate(sourceStream, parsingOptions, environment, out value);
+				return evaluate(sourceStream, parsingOptions, environment, null, handleError, out value);
 			}
 		}
 
 		public virtual bool evaluate(SourceUnit sourceUnit, NamespaceObject environment, ErrorSink errorSink, out Object value) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream);
-				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
+				if (errorSink != null) compiler.HandleError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
 				return compiler.evaluate(environment, environment is ESBehavior, null, out value);
 			}
 		}
@@ -1864,18 +1980,20 @@ namespace EssenceSharp.Runtime {
 		public virtual bool evaluate(SourceUnit sourceUnit, ParsingOptions parsingOptions, NamespaceObject environment, ErrorSink errorSink, out Object value) {
 			using (var sourceStream = sourceUnit.GetReader()) {
 				var compiler = newCompiler(sourceStream, parsingOptions);
-				if (errorSink != null) compiler.ReportError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
+				if (errorSink != null) compiler.HandleError = (description, span, errorCode, severity) => errorSink.Add(sourceUnit, description, span, errorCode, severity);
 				return compiler.evaluate(environment, environment is ESBehavior, null, out value);
 			}
 		}
 
-		public virtual bool evaluate(TextReader sourceStream, NamespaceObject environment, out Object value) {
+		public virtual bool evaluate(TextReader sourceStream, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			var compiler = newCompiler(sourceStream);
+			if (handleError != null) compiler.HandleError = handleError;
 			return compiler.evaluate(environment, environment is ESBehavior, null, out value);
 		}
 
-		public virtual bool evaluate(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, out Object value) {
+		public virtual bool evaluate(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			var compiler = newCompiler(sourceStream, parsingOptions);
+			if (handleError != null) compiler.HandleError = handleError;
 			return compiler.evaluate(environment, environment is ESBehavior, null, out value);
 		}
 
@@ -2008,6 +2126,7 @@ namespace EssenceSharp.Runtime {
 			canonicalAssociationClass.setClass(newMetaclass());
 			canonicalBindingReferenceClass.setClass(newMetaclass());
 			canonicalMessageClass.setClass(newMetaclass());
+			canonicalMessageSendClass.setClass(newMetaclass());
 			canonicalMagnitudeClass.setClass(newMetaclass());
 
 			canonicalCollectionClass.setClass(newMetaclass());
@@ -2067,6 +2186,7 @@ namespace EssenceSharp.Runtime {
 			canonicalAssociationClass.setName(SymbolRegistry.symbolFor("Association"));
 			canonicalBindingReferenceClass.setName(SymbolRegistry.symbolFor("BindingReference"));
 			canonicalMessageClass.setName(SymbolRegistry.symbolFor("Message"));
+			canonicalMessageSendClass.setName(SymbolRegistry.symbolFor("MessageSend"));
 			canonicalMagnitudeClass.setName(SymbolRegistry.symbolFor("Magnitude"));
 
 			canonicalCollectionClass.setName(SymbolRegistry.symbolFor("Collection"));
@@ -2126,6 +2246,7 @@ namespace EssenceSharp.Runtime {
 			canonicalAssociationClass.setSuperclass(canonicalObjectClass);
 			canonicalBindingReferenceClass.setSuperclass(canonicalObjectClass);
 			canonicalMessageClass.setSuperclass(canonicalObjectClass);
+			canonicalMessageSendClass.setSuperclass(canonicalMessageClass);
 			canonicalMagnitudeClass.setSuperclass(canonicalObjectClass);
 
 			canonicalCollectionClass.setSuperclass(canonicalObjectClass);
@@ -2168,6 +2289,7 @@ namespace EssenceSharp.Runtime {
 		protected virtual void createCanonicalNamespaces() {
 			rootNamespace		= newNamespace(null, SymbolRegistry.symbolFor("Root"));
 			smalltalkNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Smalltalk"));
+			universalNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Universal"));
 			undeclaredNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Undeclared"));
 			clrNamespace		= newNamespace(rootNamespace, SymbolRegistry.symbolFor("CLR"), true);
 			clrNamespace.Assembly	= TypeGuru.objectType.Assembly;
@@ -2178,6 +2300,7 @@ namespace EssenceSharp.Runtime {
 			rootNamespace.declareInSelfAs(SymbolRegistry.symbolFor("EssenceSharp"), true);
 			clrNamespace.declareInSelfAs(SymbolRegistry.symbolFor("HostSystem"), true);
 			rootNamespace.addImport(new ESImportSpec(smalltalkNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
+			rootNamespace.addImport(new ESImportSpec(universalNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
 			rootNamespace.addImport(new ESImportSpec(undeclaredNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
 			rootNamespace.addImport(new ESImportSpec(clrNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
 		}
@@ -2202,6 +2325,7 @@ namespace EssenceSharp.Runtime {
 			canonicalAssociationClass.setEnvironment(SmalltalkNamespace);
 			canonicalBindingReferenceClass.setEnvironment(SmalltalkNamespace);
 			canonicalMessageClass.setEnvironment(SmalltalkNamespace);
+			canonicalMessageSendClass.setEnvironment(SmalltalkNamespace);
 			canonicalMagnitudeClass.setEnvironment(SmalltalkNamespace);
 
 			canonicalCollectionClass.setEnvironment(SmalltalkNamespace);
@@ -2261,6 +2385,7 @@ namespace EssenceSharp.Runtime {
 			addPrimitiveDomain(new ESAssociation.Primitives());
 			addPrimitiveDomain(new ESBindingReference.Primitives());
 			addPrimitiveDomain(new ESMessage.Primitives());
+			addPrimitiveDomain(new ESMessageSend.Primitives());
 			addPrimitiveDomain(new ESIdentityDictionary.Primitives());
 			addPrimitiveDomain(new ESArray.Primitives());
 			addPrimitiveDomain(new ESByteArray.Primitives());
@@ -2288,7 +2413,7 @@ namespace EssenceSharp.Runtime {
 
 		}
 
-		public void registerAdoptedHostSystemClasses() {
+		public virtual void registerAdoptedHostSystemClasses() {
 
 			typeToClassMap[TypeGuru.charType] = CharacterClass;
 

@@ -58,7 +58,7 @@ namespace EssenceSharp.CompilationServices {
 		protected ASTGenerator								abstractSyntaxTreeGenerator			= null;
 
 		protected int									errorCount					= 0;
-		protected System.Action<String, SourceSpan, int, Severity> 			reportError 					= null;
+		protected System.Action<String, SourceSpan, int, Severity> 			handleError 					= null;
 		protected System.Action<String, SourceSpan>					parameterNameCollisionAction			= null;
 		protected System.Action<String, SourceSpan>					variableNameCollisionAction			= null;
 		protected System.Action<NamedValueOccurrence, SourceSpan>			illegalAssignmentAction				= null;
@@ -88,10 +88,10 @@ namespace EssenceSharp.CompilationServices {
 
 		protected virtual void bindToParser() {
 			if (parser == null) return;
-			if (reportError == null) {
-				reportError = parser.ReportError;
+			if (handleError == null) {
+				handleError = parser.HandleError;
 			} else {
-				parser.ReportError = reportError;
+				parser.HandleError = handleError;
 			}
 		}
 
@@ -150,9 +150,9 @@ namespace EssenceSharp.CompilationServices {
 			get {return errorCount + Parser.ErrorCount;}
 		}
 
-		public System.Action<String, SourceSpan, int, Severity> ReportError {
-			get {return reportError;}
-			set {	reportError = value;
+		public System.Action<String, SourceSpan, int, Severity> HandleError {
+			get {return handleError;}
+			set {	handleError = value;
 				bindToParser();}
 		}	
 
@@ -360,7 +360,7 @@ namespace EssenceSharp.CompilationServices {
 			StringBuilder sb = new StringBuilder();
 			sb.Append("Parameter name collision: ");
 			sb.Append(parameterName);
-			ReportError(sb.ToString(), span, 0, Severity.Error);
+			HandleError(sb.ToString(), span, 0, Severity.Error);
 		}
 
 		public virtual void handleVariableNameCollision(String variableName, SourceSpan span) {
@@ -372,7 +372,7 @@ namespace EssenceSharp.CompilationServices {
 			StringBuilder sb = new StringBuilder();
 			sb.Append("Variable name collision: ");
 			sb.Append(variableName);
-			ReportError(sb.ToString(), span, 0, Severity.Error);
+			HandleError(sb.ToString(), span, 0, Severity.Error);
 		}
 
 		public virtual void handleIllegalAssignment(NamedValueOccurrence unassignableIdentifier, SourceSpan span) {
@@ -384,7 +384,7 @@ namespace EssenceSharp.CompilationServices {
 			StringBuilder sb = new StringBuilder();
 			sb.Append("Attempt to assign a value to a constant: ");
 			sb.Append(unassignableIdentifier.NameString);
-			ReportError(sb.ToString(), span, 0, Severity.Error);
+			HandleError(sb.ToString(), span, 0, Severity.Error);
 		}
 
 		public virtual void handlePrimitiveSpeficationError(String errorMessage, SourceSpan span) {
@@ -396,7 +396,7 @@ namespace EssenceSharp.CompilationServices {
 			StringBuilder sb = new StringBuilder();
 			sb.Append("Primitive specification error: ");
 			sb.Append(errorMessage);
-			ReportError(sb.ToString(), span, 0, Severity.Error);
+			HandleError(sb.ToString(), span, 0, Severity.Error);
 		}
 
 		public virtual void handleUndeclaredVariableReferences(System.Collections.Generic.HashSet<ESSymbol> undeclaredVariables, SourceSpan span) {
@@ -411,7 +411,7 @@ namespace EssenceSharp.CompilationServices {
 				sb.Append("\t");
 				sb.AppendLine(varName.PrimitiveValue);
 			}
-			ReportError(sb.ToString(), span, 0, Severity.Error);
+			HandleError(sb.ToString(), span, 0, Severity.Error);
 		}
 
 		#endregion

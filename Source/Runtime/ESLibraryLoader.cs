@@ -31,10 +31,110 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using Microsoft.Scripting;
 using EssenceSharp.UtilityServices;
 #endregion
 
 namespace EssenceSharp.Runtime {
+
+	public class LibraryCompilationError {
+		protected FileInfo sourceFile;
+		protected NamespaceObject environment;
+		protected String errorDescription;
+		protected SourceSpan errorSpan;
+		protected int errorCode;
+		protected Severity severity;
+
+		public LibraryCompilationError(
+			FileInfo sourceFile,
+			NamespaceObject environment,
+			String errorDescription,
+			SourceSpan errorSpan,
+			int errorCode,
+			Severity severity) {
+
+			this.sourceFile		= sourceFile;
+			this.environment	= environment;
+			this.errorDescription	= errorDescription;
+			this.errorSpan		= errorSpan;
+			this.errorCode		= errorCode;
+			this.severity		= severity;
+		}
+
+		public String Key {
+			get {return sourceFile.FullName;}
+		}
+
+		public FileInfo SourceFile {
+			get {return sourceFile;}
+		}
+
+		public NamespaceObject Environment {
+			get {return environment;}
+		}
+
+		public String ErrorDescription {
+			get {return errorDescription;}
+		}
+
+		public SourceSpan ErrorSpan {
+			get {return errorSpan;}
+		}
+
+		public int ErrorCode {
+			get {return errorCode;}
+		}
+
+		public Severity Severity {
+			get {return severity;}
+		}
+
+		public void addTo(IDictionary<String, List<LibraryCompilationError>> compilationErrors) {
+			List<LibraryCompilationError> errorList;
+			if (!compilationErrors.TryGetValue(Key, out errorList)) {
+				errorList = new List<LibraryCompilationError>();
+				compilationErrors[Key] = errorList;
+			}
+			errorList.Add(this);
+		}
+
+		public void printOn(TextWriter stream) {
+			stream.WriteLine("");
+			stream.Write(Environment.PathnameString);
+			stream.Write(": ");
+			switch (Severity) {
+				case Severity.Ignore:
+					stream.Write("Note: [");
+					break;
+				case Severity.Warning:
+					stream.Write("Warning: [");
+					break;
+				case Severity.Error:
+					stream.Write("Error: [");
+					break;
+				case Severity.FatalError:
+					stream.Write("Fatal error: [");
+					break;
+			}
+			stream.Write(ErrorSpan.ToString());
+			stream.Write("] ");
+			stream.Write(ErrorDescription);
+			if (errorCode > 0) {
+				stream.Write(" (error code = " + ErrorCode);
+				stream.Write(")");
+			}
+			stream.WriteLine();
+		}
+
+		public override string ToString() {
+			var sb = new StringBuilder();
+			var stream = new StringWriter(sb);
+			printOn(stream);
+			return sb.ToString();
+		}
+
+	}
 
 	public class ESLibraryLoader {
 
@@ -56,32 +156,33 @@ namespace EssenceSharp.Runtime {
 			return libraryLoader.load(out rootNamespaces);
 		}
 
-		protected bool						isVerbose			= false;
-		protected ESObjectSpace					objectSpace			= null;
-		protected NamespaceObject				baseEnvironment			= null;
-		protected DirectoryInfo					baseDirectory			= null;
-		protected bool						recurseIntoNestedNamespaces	= false;
-		protected List<NamespaceFactory>			namespaceFactories		= null; 
-		protected List<TraitFactory>				traitFactories			= null; 
-		protected List<ClassFactory>				classFactories			= null; 
+		protected bool							isVerbose			= false;
+		protected ESObjectSpace						objectSpace			= null;
+		protected NamespaceObject					baseEnvironment			= null;
+		protected DirectoryInfo						baseDirectory			= null;
+		protected bool							recurseIntoNestedNamespaces	= false;
+		protected List<NamespaceFactory>				namespaceFactories		= null; 
+		protected List<TraitFactory>					traitFactories			= null; 
+		protected List<ClassFactory>					classFactories			= null; 
+		protected IDictionary<String, List<LibraryCompilationError>>	compilationErrors		= new Dictionary<String, List<LibraryCompilationError>>();
 
 
 		public ESLibraryLoader(ESObjectSpace objectSpace) {
-			this.objectSpace				= objectSpace;
-			baseEnvironment					= objectSpace.RootNamespace;
+			this.objectSpace					= objectSpace;
+			baseEnvironment						= objectSpace.RootNamespace;
 		}
 
 		public ESLibraryLoader(ESObjectSpace objectSpace, DirectoryInfo baseDirectory) : this(objectSpace) {
-			this.baseDirectory				= baseDirectory;
+			this.baseDirectory					= baseDirectory;
 		}
 
 		public ESLibraryLoader(ESObjectSpace objectSpace, DirectoryInfo baseDirectory, bool recurseIntoNestedNamespaces) : this(objectSpace, baseDirectory) {
-			this.baseDirectory				= baseDirectory;
-			this.recurseIntoNestedNamespaces		= recurseIntoNestedNamespaces;
+			this.baseDirectory					= baseDirectory;
+			this.recurseIntoNestedNamespaces			= recurseIntoNestedNamespaces;
 		}
 
 		public ESLibraryLoader(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, DirectoryInfo baseDirectory, bool recurseIntoNestedNamespaces) : this(objectSpace, baseDirectory, recurseIntoNestedNamespaces) {
-			this.baseEnvironment				= baseEnvironment ?? objectSpace.RootNamespace;
+			this.baseEnvironment					= baseEnvironment ?? objectSpace.RootNamespace;
 		}
 
 		#region Public protocol
@@ -163,12 +264,32 @@ namespace EssenceSharp.Runtime {
 			foreach (var factory in namespaceFactories) 
 				if (!factory.initializeAll()) return false;
 
+			if (compilationErrors.Count > 0) {
+				Console.WriteLine("Class library compilation error report:");
+				Console.WriteLine("");
+				foreach (var kvp in compilationErrors) {
+					var pathname = kvp.Key;
+					var errorList = kvp.Value;
+					Console.Write("Location: ");
+					Console.WriteLine(pathname);
+					foreach (var error in errorList) {
+						Console.Write("\t");
+						Console.WriteLine(error);
+					}
+				}
+				Console.Write(compilationErrors.Count);
+				Console.WriteLine(" compilation errors.");
+				Console.WriteLine("");
+			}
+
 			foreach (var factory in traitFactories) 
 				factory.reportUndeclaredVariables();
 			foreach (var factory in classFactories) 
 				factory.reportUndeclaredVariables();
 
-			return true;
+			Console.WriteLine("");
+
+			return compilationErrors.Count < 1;
 
 		}
 
@@ -311,7 +432,7 @@ namespace EssenceSharp.Runtime {
 			var nameSymbol = objectSpace.SymbolRegistry.symbolFor(name);
 			switch (type) {
 				case DeclarationType.Trait:
-					namespaceFactory = traitFactory = new TraitFactory(objectSpace, baseEnvironment, nameSymbol);
+					namespaceFactory = traitFactory = new TraitFactory(objectSpace, baseEnvironment, nameSymbol, compilationErrors);
 					traitFactories.Add(traitFactory);
 					traitFactory.ClassConfigurationFile = (FileInfo)classConfigurationFile;
 					traitFactory.MetaclassConfigurationFile = (FileInfo)metaclassConfigurationFile;
@@ -319,7 +440,7 @@ namespace EssenceSharp.Runtime {
 					traitFactory.ClassMethodsFile = (FileInfo)classMethodsFile;
 					break;
 				case DeclarationType.Class:
-					namespaceFactory = behaviorFactory = new ClassFactory(objectSpace, baseEnvironment, nameSymbol);
+					namespaceFactory = behaviorFactory = new ClassFactory(objectSpace, baseEnvironment, nameSymbol, compilationErrors);
 					classFactories.Add(behaviorFactory);
 					behaviorFactory.ClassConfigurationFile = (FileInfo)classConfigurationFile;
 					behaviorFactory.MetaclassConfigurationFile = (FileInfo)metaclassConfigurationFile;
@@ -330,7 +451,7 @@ namespace EssenceSharp.Runtime {
 					break;
 				default:
 				case DeclarationType.Namespace:
-					namespaceFactory = new NamespaceFactory(objectSpace, baseEnvironment, nameSymbol);
+					namespaceFactory = new NamespaceFactory(objectSpace, baseEnvironment, nameSymbol, compilationErrors);
 					namespaceFactories.Add(namespaceFactory);
 					break;
 
@@ -397,12 +518,14 @@ namespace EssenceSharp.Runtime {
 		protected ESNamespace						thisNamespace;
 		protected List<Association<ESBindingReference, FileInfo>>	constants			= new List<Association<ESBindingReference, FileInfo>>();
 		protected List<Association<ESBindingReference, FileInfo>>	variables			= new List<Association<ESBindingReference, FileInfo>>();
+		protected IDictionary<String, List<LibraryCompilationError>>	compilationErrors;
 
 
-		public NamespaceFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) {
+		public NamespaceFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name, IDictionary<String, List<LibraryCompilationError>> compilationErrors) {
 			this.objectSpace	= objectSpace;
 			this.baseEnvironment	= baseEnvironment;
 			this.name		= name;
+			this.compilationErrors	= compilationErrors;
 		}
 
 		public bool IsVerbose {
@@ -554,7 +677,16 @@ namespace EssenceSharp.Runtime {
 
 		protected virtual bool evaluateAsSelfExpression(NamespaceObject environment, Object selfValue, FileInfo file) {
 			Object value;
-			return objectSpace.evaluateAsSelfExpression(file, environment, selfValue, out value);
+			objectSpace.evaluateAsSelfExpression(
+				file, 
+				environment, 
+				selfValue, 
+				(errorDescription, span, code, severity) => {
+					var error = new LibraryCompilationError(file, environment, errorDescription, span, code, severity);
+					error.addTo(compilationErrors);
+				},
+				out value);
+			return true;
 		}
 
 	}
@@ -566,7 +698,7 @@ namespace EssenceSharp.Runtime {
 		protected FileInfo instanceMethodsFile;
 		protected FileInfo classMethodsFile;
 
-		protected BehavioralObjectFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) : base(objectSpace, baseEnvironment, name) {
+		protected BehavioralObjectFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name, IDictionary<String, List<LibraryCompilationError>> compilationErrors) : base(objectSpace, baseEnvironment, name, compilationErrors) {
 		}
 
 		public abstract BehavioralObject ClassObject {get;}
@@ -645,7 +777,7 @@ namespace EssenceSharp.Runtime {
 		protected FileInfo classInitializationFile;
 		protected FileInfo metaclassInitializationFile;
 
-		public ClassFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) : base(objectSpace, baseEnvironment, name) {
+		public ClassFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name, IDictionary<String, List<LibraryCompilationError>> compilationErrors) : base(objectSpace, baseEnvironment, name, compilationErrors) {
 		}
 
 		public override BehavioralObject ClassObject {
@@ -739,7 +871,7 @@ namespace EssenceSharp.Runtime {
 		protected ESInstanceTrait thisClass;
 		protected ESClassTrait thisMetaclass;
 
-		public TraitFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name) : base(objectSpace, baseEnvironment, name) {
+		public TraitFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name, IDictionary<String, List<LibraryCompilationError>> compilationErrors) : base(objectSpace, baseEnvironment, name, compilationErrors) {
 		}
 
 		public override BehavioralObject ClassObject {

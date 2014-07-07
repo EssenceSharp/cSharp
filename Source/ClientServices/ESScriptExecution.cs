@@ -265,7 +265,7 @@ namespace EssenceSharp.ClientServices {
 					FileInfo scriptPath;
 					if (argSpec.SpecifiesPathname) {
 						if (objectSpace.pathForScript(argSpec.Value, out scriptPath)) {
-							if (objectSpace.evaluate(scriptPath, environment, out value)) {
+							if (objectSpace.evaluate(scriptPath, environment, null, null, out value)) {
 								argList.Add(value);
 							} else {
 								errors.Add("Syntax error in script used as argument, pathname = " + argSpec.Value);
@@ -273,7 +273,7 @@ namespace EssenceSharp.ClientServices {
 						} else {
 							errors.Add("Script path (used as argument to base script) not found: " + argSpec.Value);
 						}
-					} else if (objectSpace.evaluate(new StringReader(argSpec.Value), environment, out value)) {
+					} else if (objectSpace.evaluate(new StringReader(argSpec.Value), environment, null, null, out value)) {
 						argList.Add(value);
 					} else {
 						errors.Add("Syntax error in argument: " + argSpec.Value);

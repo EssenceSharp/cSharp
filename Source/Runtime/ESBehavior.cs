@@ -736,7 +736,7 @@ namespace EssenceSharp.Runtime {
 
 		public ESMethod compileMethod(ESSymbol protocol, TextReader sourceStream) {
 			ESMethod method;
-			if (objectSpace.compileMethod(sourceStream, this, protocol, out method)) {
+			if (objectSpace.compileMethod(sourceStream, this, protocol, null, out method)) {
 				addMethod(method);
 				return method;
 			} else {
@@ -1276,6 +1276,7 @@ namespace EssenceSharp.Runtime {
 				case ObjectStateArchitecture.Association:
 				case ObjectStateArchitecture.BindingReference:
 				case ObjectStateArchitecture.Message:
+				case ObjectStateArchitecture.MessageSend:
 				case ObjectStateArchitecture.Block:
 				case ObjectStateArchitecture.Method:
 				case ObjectStateArchitecture.HostSystemObject:
@@ -1297,7 +1298,7 @@ namespace EssenceSharp.Runtime {
 						case ObjectStateArchitecture.Stateless:
 							return true;
 						default:
-							return false;
+							return instancesArchitectureForbidsNamedSlots(superclassInstanceArchitecture);
 					}
 
 				case ObjectStateArchitecture.NamedSlots:
@@ -1371,6 +1372,16 @@ namespace EssenceSharp.Runtime {
 					switch (superclassInstanceArchitecture) {
 						case ObjectStateArchitecture.Abstract:
 						case ObjectStateArchitecture.Stateless:
+							return true;
+						default:
+							return inheritingInstanceArchitecture == superclassInstanceArchitecture;
+					}
+
+				case ObjectStateArchitecture.MessageSend:
+					switch (superclassInstanceArchitecture) {
+						case ObjectStateArchitecture.Abstract:
+						case ObjectStateArchitecture.Stateless:
+						case ObjectStateArchitecture.Message:
 							return true;
 						default:
 							return inheritingInstanceArchitecture == superclassInstanceArchitecture;
@@ -1613,6 +1624,7 @@ namespace EssenceSharp.Runtime {
 					case ObjectStateArchitecture.Association:
 					case ObjectStateArchitecture.BindingReference:
 					case ObjectStateArchitecture.Message:
+					case ObjectStateArchitecture.MessageSend:
 					case ObjectStateArchitecture.Block:
 					case ObjectStateArchitecture.Method:
 					case ObjectStateArchitecture.HostSystemObject:
@@ -1631,6 +1643,7 @@ namespace EssenceSharp.Runtime {
 					case ObjectStateArchitecture.Association:
 					case ObjectStateArchitecture.BindingReference:
 					case ObjectStateArchitecture.Message:
+					case ObjectStateArchitecture.MessageSend:
 					case ObjectStateArchitecture.Block:
 					case ObjectStateArchitecture.Method:
 					case ObjectStateArchitecture.HostSystemObject:
@@ -1776,8 +1789,7 @@ namespace EssenceSharp.Runtime {
 				case ObjectStateArchitecture.Message:
 					return TypeGuru.esMessageType;		
 				case ObjectStateArchitecture.MessageSend:
-					// return TypeGuru.esMessageSendType;		
-					return null;
+					return TypeGuru.esMessageSendType;		
 				case ObjectStateArchitecture.Association:
 					return TypeGuru.esAssociationType;		
 				case ObjectStateArchitecture.BindingReference:
@@ -2167,7 +2179,8 @@ namespace EssenceSharp.Runtime {
 					return new ESMessage(this);
 
 				case ObjectStateArchitecture.MessageSend:
-					throw new UnimplementedPrimitiveException("MessageSend objects are not yet implemented.");
+					isInstanceArchitectureLocked = true;
+					return new ESMessageSend(this);
 
 				case ObjectStateArchitecture.Association:
 					isInstanceArchitectureLocked = true;
@@ -2532,6 +2545,10 @@ namespace EssenceSharp.Runtime {
 				return receiver;
 			}
 
+			public Object _objectIdentityComparer_(Object receiver) {
+				return ((ESBehavior)receiver).ObjectSpace.ObjectIdentityComparator;
+			}
+
 			public Object _instanceEqualityComparer_(Object receiver) {
 				return ((ESBehavior)receiver).InstanceEqualityComparator;
 			}
@@ -2591,6 +2608,8 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("addSubclass:",					new FuncNs.Func<Object, Object, Object>(_addSubclass_));
 				publishPrimitive("removeSubclass:",					new FuncNs.Func<Object, Object, Object>(_removeSubclass_));
 
+				
+				publishPrimitive("objectIdentityComparer",				new FuncNs.Func<Object, Object>(_objectIdentityComparer_));
 				publishPrimitive("instanceEqualityComparer",				new FuncNs.Func<Object, Object>(_instanceEqualityComparer_));
 				publishPrimitive("newObjectEqualityComparer",				new FuncNs.Func<Object, Object>(_newObjectEqualityComparer_));
 
@@ -3426,11 +3445,15 @@ namespace EssenceSharp.Runtime {
 
 			#region Primitive Definitions
 
+			public Object _classTrait_(Object receiver) {
+				return ((ESInstanceTrait)receiver).ClassTrait;
+			}
+
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
 
-				// publishPrimitive("superclass:",						new FuncNs.Func<Object, Object, Object>(_setSuperclass_));
+				publishPrimitive("classTrait",						new FuncNs.Func<Object, Object>(_classTrait_));
 
 			}
 
@@ -3448,6 +3471,7 @@ namespace EssenceSharp.Runtime {
 		public override ObjectStateArchitecture Architecture {
 			get {return ObjectStateArchitecture.ClassTrait;}
 		}
+
 		public ESInstanceTrait InstanceTrait {
 			get {return instanceTrait;}
 			set {setInstanceTrait(value);}
@@ -3484,11 +3508,15 @@ namespace EssenceSharp.Runtime {
 
 			#region Primitive Definitions
 
+			public Object _instanceTrait_(Object receiver) {
+				return ((ESClassTrait)receiver).InstanceTrait;
+			}
+
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
 
-				// publishPrimitive("superclass:",						new FuncNs.Func<Object, Object, Object>(_setSuperclass_));
+				publishPrimitive("instanceTrait",						new FuncNs.Func<Object, Object>(_instanceTrait_));
 
 			}
 

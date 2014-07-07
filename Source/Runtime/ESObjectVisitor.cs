@@ -57,6 +57,7 @@ namespace EssenceSharp.Runtime {
 		T applyToIndexedQuadPrecisionSlotsObject(ESQuadArray operand);
 		T applyToSymbol(ESSymbol operand);
 		T applyToMessage(Runtime.ESMessage operand);
+		T applyToMessageSend(Runtime.ESMessageSend operand);
 		T applyToAssociation(ESAssociation operand);
 		T applyToBindingReference(ESBindingReference operand);
 		T applyToIdentityDictionary(ESIdentityDictionary operand);
@@ -145,6 +146,10 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual T applyToMessage(ESMessage operand) {
+			return applyToESObject(operand);
+		}
+
+		public virtual T applyToMessageSend(ESMessageSend operand) {
 			return applyToESObject(operand);
 		}
 
@@ -280,6 +285,10 @@ namespace EssenceSharp.Runtime {
 
 		public override T applyToMessage(ESMessage operand) {
 			return operation.applyToMessage(operand);
+		}
+
+		public override T applyToMessageSend(ESMessageSend operand) {
+			return operation.applyToMessageSend(operand);
 		}
 
 		public override T applyToAssociation(ESAssociation operand) {

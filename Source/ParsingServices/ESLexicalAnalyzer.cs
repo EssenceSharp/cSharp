@@ -1415,18 +1415,20 @@ namespace EssenceSharp.ParsingServices {
 									prefix.Append(QualifiedNameSeparatorChar);
 									qualifiedPathElementSeparatorCount++;
 									parseAnotherKeywordOrPathElement = true;
-								} else if (QualifiedNameSeparatorChar == '.') {
-									advanceChar();
+								} else {
+									parseAnotherKeywordOrPathElement = false;
 									enqueueBufferedToken(newStatementEndToken(nextTokenLineNumber, nextTokenColumnNumber));
 								}
 								break;
 							case ':':
-								if  (nextMatches(QualifiedNameSeparatorChar)) {
+								if  (nextMatches(':')) {
 									prefix.Append(QualifiedNameSeparatorChar);
 									prefix.Append(QualifiedNameSeparatorChar);
 									parseAnotherKeywordOrPathElement = true;
 								} else if (nextMatches('=')) {
 									enqueueBufferedToken(newAssignOpToken(nextTokenLineNumber, nextTokenColumnNumber));
+								} else {
+									parseAnotherKeywordOrPathElement = false;
 								}
 								break;
 						}

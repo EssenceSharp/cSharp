@@ -110,7 +110,6 @@ namespace EssenceSharp.Runtime.Binding {
 		protected void doAllButFinalBinding(Object[] args, System.Action<BindingHandle> bindNSResidentVariable) {
 
 			var bindingRef = Name.bindingInNamespaceIfAbsent(environment, accessPrivilege, ImportTransitivity.Transitive, addToUndeclared);
-			if (bindingRef == null) objectSpace.UndeclaredNamespace.add(bindingRef = objectSpace.newBindingReference(NameString, new DirectBindingHandle(null)));
 			bindNSResidentVariable(bindingRef.Value);
 
 		}

@@ -149,6 +149,8 @@ namespace EssenceSharp.Runtime.Binding {
 		public static readonly Type			esAssociationType		= typeof(ESAssociation);
 		public static readonly Type			esBindingReferenceType		= typeof(ESBindingReference);
 		public static readonly Type			esMessageType			= typeof(ESMessage);
+		public static readonly Type			esMessageSendType		= typeof(ESMessageSend);
+
 
 		public static readonly Type			esIdentityDictionaryType	= typeof(ESIdentityDictionary);
 		public static readonly Type			esDictionaryType		= typeof(ESDictionary);
@@ -191,6 +193,8 @@ namespace EssenceSharp.Runtime.Binding {
 			essenceSharpTypes.Add(esClassTraitType);
 			essenceSharpTypes.Add(esTraitTransformationType);
 			essenceSharpTypes.Add(esTraitCompositionType);
+			essenceSharpTypes.Add(esMessageType);
+			essenceSharpTypes.Add(esMessageSendType);
 			essenceSharpTypes.Add(esAssociationType);
 			essenceSharpTypes.Add(esBindingReferenceType);
 			essenceSharpTypes.Add(esIdentityDictionaryType);
@@ -599,33 +603,33 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#region BindingRestriction expressions
 
-		public static  Expression expressionToGetClassOfESObject(Expression self) {
+		public static  Expression expressionToGetClassOfESObject(this Expression self) {
 			if (!TypeGuru.esObjectType.IsAssignableFrom(self.Type)) self = self.withType(TypeGuru.esObjectType);
 			return Expression.Field(self, TypeGuru.esObjectType, "class");
 			// return Expression.Property(self, TypeGuru.esObjectType, "Class");
 		}
 
-		public static  Expression expressionToGetVersionIdOfESClass(Expression esClass) {
+		public static  Expression expressionToGetVersionIdOfESClass(this Expression esClass) {
 			return Expression.Field(esClass, TypeGuru.esBehaviorType, "versionId");
 		}
 
-		public static  Expression expressionToGetVersionIdOfESClass(ESBehavior esClass) {
+		public static  Expression expressionToGetVersionIdOfESClass(this ESBehavior esClass) {
 			return expressionToGetVersionIdOfESClass(Expression.Constant(esClass));
 		}
 
-		public static  Expression expressionToTestThatESObjectHasSameClassVersion(Expression self, ESBehavior esClass) {
+		public static  Expression expressionToTestThatESObjectHasSameClassVersion(this Expression self, ESBehavior esClass) {
 			var getVersionIdOfESClass = expressionToGetVersionIdOfESClass(expressionToGetClassOfESObject(self));
 			return Expression.Equal(getVersionIdOfESClass, Expression.Constant(esClass.VersionId));
 			// var getClass = expressionToGetClassOfESObject(self);
 			// return Expression.ReferenceEqual(getClass, Expression.Constant(esClass));
 		}
 
-		public static  Expression expressionToTestThatClassHasSameClassVersion(ESBehavior esClass) {
+		public static  Expression expressionToTestThatClassHasSameClassVersion(this ESBehavior esClass) {
 			var getVersionIdOfESClass = expressionToGetVersionIdOfESClass(esClass);
 			return Expression.Equal(getVersionIdOfESClass, Expression.Constant(esClass.VersionId));
 		}
 
-		public static  Expression expressionToTestThatNilHasSameClassVersion(Expression self, ESClass undefinedObjectClass) {
+		public static  Expression expressionToTestThatNilHasSameClassVersion(this Expression self, ESClass undefinedObjectClass) {
 			var valueIsNull = Expression.ReferenceEqual(self, ExpressionTreeGuru.nilConstant);
 			var classHasSameVersionId = expressionToTestThatClassHasSameClassVersion(undefinedObjectClass);
 			return Expression.AndAlso(valueIsNull, classHasSameVersionId);
@@ -799,7 +803,7 @@ namespace EssenceSharp.Runtime.Binding {
 				body = Expression.Block(TypeGuru.voidType, Expression.Invoke(functorExpression, innerParameters));
 			} else {
 				body = Expression.Invoke(functorExpression, innerParameters);
-				var typeBinder = new TypeBindingGuru(objectSpace, body);
+				var typeBinder = new ArgumentBindingGuru(objectSpace, body);
 				body = typeBinder.metaObjectToConvertTo(methodInfo.ReturnType).Expression;
 			}
 			return Expression.Lambda(targetType, body, false, outerParameters);
@@ -839,6 +843,27 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#region Operational expressions
 
+		public static Expression expressionToInvokeESBlock(Expression blockExpression, Expression[] arguments) {
+			return 
+				Expression.Invoke(
+					Expression.Field(blockExpression, "function").withType(ESCompiledCode.blockFunctionTypeForNumArgs(arguments.Length)), 
+					arguments);
+		}
+
+		public static Expression expressionToInvokeESBlock(ESBlock block, Expression[] arguments) {
+			return 
+				Expression.Invoke(
+					Expression.Constant(block.Function).withType(ESCompiledCode.blockFunctionTypeForNumArgs(block.NumArgs)), 
+					arguments);
+		}
+
+		public static Expression expressionToInvokeESMethod(Expression methodExpression, Expression[] argumentsWithReceiver) {
+			return 
+				Expression.Invoke(
+					Expression.Field(methodExpression, "function").withType(ESCompiledCode.methodFunctionTypeForNumArgs(argumentsWithReceiver.Length)), 
+					argumentsWithReceiver);
+		}
+
 		public static Expression expressionToInvokeESMethod(ESMethod method, Expression[] argumentsWithReceiver) {
 			return 
 				Expression.Invoke(
@@ -846,9 +871,9 @@ namespace EssenceSharp.Runtime.Binding {
 					argumentsWithReceiver);
 		}
 
-		public static Expression expressionToSendDoesNotUnderstand(Expression self, ESBehavior esClass, SymbolRegistry symbolRegistry, Expression createMessageAction) {
+		public static Expression expressionToSendDoesNotUnderstand(Expression self, BehavioralObject esClass, SymbolRegistry symbolRegistry, Expression createMessageAction) {
 
-			var method = esClass.compiledMethodAt(symbolRegistry.DoesNotUnderstandSelector);
+			var method = esClass == null ? null : esClass.compiledMethodAt(symbolRegistry.DoesNotUnderstandSelector);
 			if (method == null) {
 				return
 					Expression.Call(
@@ -867,7 +892,7 @@ namespace EssenceSharp.Runtime.Binding {
 		
 		}
 
-		public static Expression expressionToSendDoesNotUnderstand(Expression self, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] args) {
+		public static Expression expressionToSendDoesNotUnderstand(Expression self, BehavioralObject esClass, ESSymbol selector, DynamicMetaObject[] args) {
 			var objectSpace = esClass.ObjectSpace;
 			var message = expressionToCreateMessage(objectSpace.MessageClass, selector, args);
 			return expressionToSendDoesNotUnderstand(self, esClass, objectSpace.SymbolRegistry, message);
@@ -1419,712 +1444,93 @@ namespace EssenceSharp.Runtime.Binding {
 					metaObject.Value);
 		}
 
-		public static DynamicMetaObject withFormalTypeAndTypeRestriction(this DynamicMetaObject metaObject) {
+		public static DynamicMetaObject argumentWithFormalTypeAndTypeRestriction(this DynamicMetaObject metaObject) {
+			var self = metaObject.Expression;
+			var formalType = metaObject.LimitType;
+			Expression restrictionExpression = Expression.TypeEqual(self, formalType);
+			if (formalType.IsClass || formalType.IsInterface || formalType.isNullable())
+				restrictionExpression = Expression.OrElse(restrictionExpression, Expression.ReferenceEqual(self, ExpressionTreeGuru.nilConstant));
 			return new DynamicMetaObject(
 					metaObject.asExpressionWithFormalType(), 
-					metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
+					metaObject.Restrictions.Merge(restrictionExpression.asBindingRestriction()), 
+					// metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(self, formalType)), 
 					metaObject.Value);
 		}
 
-		public static DynamicMetaObject withInstanceRestrictionConvertingTo(this DynamicMetaObject metaObject, Type targetType) {
+		public static DynamicMetaObject argumentWithInstanceRestrictionConvertingTo(this DynamicMetaObject metaObject, Type targetType) {
 			return new DynamicMetaObject(
 					metaObject.asExpressionWithType(targetType), 
 					metaObject.Restrictions.Merge(BindingRestrictions.GetInstanceRestriction(metaObject.Expression, metaObject.Value)), 
 					metaObject.Value);
 		}
 
-		public static DynamicMetaObject withTypeRestrictionConvertingTo(this DynamicMetaObject metaObject, Type targetType) {
+		public static DynamicMetaObject argumentWithTypeRestrictionConvertingTo(this DynamicMetaObject metaObject, Type targetType) {
+			var self = metaObject.Expression;
+			var formalType = metaObject.LimitType;
+			Expression restrictionExpression = Expression.TypeEqual(self, formalType);
+			if (formalType.IsClass || formalType.IsInterface || formalType.isNullable())
+				restrictionExpression = Expression.OrElse(restrictionExpression, Expression.ReferenceEqual(self, ExpressionTreeGuru.nilConstant));
 			return new DynamicMetaObject(
 					metaObject.asExpressionWithType(targetType), 
-					metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
+					metaObject.Restrictions.Merge(restrictionExpression.asBindingRestriction()), 
+					// metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
 					metaObject.Value);
 		}
 
-		public static DynamicMetaObject withTypeRestrictionConvertingTo(this DynamicMetaObject metaObject, Type targetType, MethodInfo conversionOperator) {
+		public static DynamicMetaObject argumentWithTypeRestrictionConvertingTo(this DynamicMetaObject metaObject, Type targetType, MethodInfo conversionOperator) {
+			var self = metaObject.Expression;
+			var formalType = metaObject.LimitType;
+			Expression restrictionExpression = Expression.TypeEqual(self, formalType);
+			if (formalType.IsClass || formalType.IsInterface || formalType.isNullable())
+				restrictionExpression = Expression.OrElse(restrictionExpression, Expression.ReferenceEqual(self, ExpressionTreeGuru.nilConstant));
 			return new DynamicMetaObject(
 					metaObject.asExpressionWithType(targetType, conversionOperator), 
-					metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
+					metaObject.Restrictions.Merge(restrictionExpression.asBindingRestriction()), 
+					// metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
 					metaObject.Value);
 		}
 
-		public static DynamicMetaObject withExpressionAndTypeRestriction(this DynamicMetaObject metaObject, Expression expression) {
+		public static DynamicMetaObject argumentWithExpressionAndTypeRestriction(this DynamicMetaObject metaObject, Expression expression) {
+			var self = metaObject.Expression;
+			var formalType = metaObject.LimitType;
+			Expression restrictionExpression = Expression.TypeEqual(self, formalType);
+			if (formalType.IsClass || formalType.IsInterface || formalType.isNullable())
+				restrictionExpression = Expression.OrElse(restrictionExpression, Expression.ReferenceEqual(self, ExpressionTreeGuru.nilConstant));
 			return new DynamicMetaObject(
 					expression, 
-					metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
+					metaObject.Restrictions.Merge(restrictionExpression.asBindingRestriction()), 
+					// metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
 					metaObject.Value);
 		}
 
-		public static DynamicMetaObject withExpressionAndTypeRestrictionConvertingTo(this DynamicMetaObject metaObject, Expression expression, Type targetType) {
+		public static DynamicMetaObject argumentWithExpressionAndTypeRestrictionConvertingTo(this DynamicMetaObject metaObject, Expression expression, Type targetType) {
+			var self = metaObject.Expression;
+			var formalType = metaObject.LimitType;
+			Expression restrictionExpression = Expression.TypeEqual(self, formalType);
+			if (formalType.IsClass || formalType.IsInterface || formalType.isNullable())
+				restrictionExpression = Expression.OrElse(restrictionExpression, Expression.ReferenceEqual(self, ExpressionTreeGuru.nilConstant));
 			return new DynamicMetaObject(
 					expression.withType(targetType), 
-					metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
+					metaObject.Restrictions.Merge(restrictionExpression.asBindingRestriction()), 
+					// metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
 					metaObject.Value);
 		}
 
-		public static DynamicMetaObject withExpressionAndTypeRestrictionConvertingTo(this DynamicMetaObject metaObject, Expression expression, Type targetType, MethodInfo conversionOperator) {
+		public static DynamicMetaObject argumentWithExpressionAndTypeRestrictionConvertingTo(this DynamicMetaObject metaObject, Expression expression, Type targetType, MethodInfo conversionOperator) {
+			var self = metaObject.Expression;
+			var formalType = metaObject.LimitType;
+			Expression restrictionExpression = Expression.TypeEqual(self, formalType);
+			if (formalType.IsClass || formalType.IsInterface || formalType.isNullable())
+				restrictionExpression = Expression.OrElse(restrictionExpression, Expression.ReferenceEqual(self, ExpressionTreeGuru.nilConstant));
 			return new DynamicMetaObject(
 					expression.withType(targetType, conversionOperator), 
-					metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
+					metaObject.Restrictions.Merge(restrictionExpression.asBindingRestriction()), 
+					// metaObject.Restrictions.Merge(BindingRestrictions.GetTypeRestriction(metaObject.Expression, metaObject.LimitType)), 
 					metaObject.Value);
 		}
 
-		public static TypeBindingGuru typeBindingGuru(this DynamicMetaObject metaObject, ESObjectSpace objectSpace) {
-			return new TypeBindingGuru(objectSpace, metaObject);
-		}
-
-	}
-
-	public class TypeBindingGuru {
-
-		protected ESObjectSpace			objectSpace;
-		protected DynamicMetaObject		metaObject;
-		protected Object			model;
-		protected ESObject			esModel;
-		protected Type				modelType;
-		protected TypeCode			modelTypeCode;
-		protected ObjectStateArchitecture	modelArchitecture;
-		protected HashSet<Type>			preferredTargetTypes;
-		protected HashSet<Type>			disfavoredTargetTypes;
-
-		public TypeBindingGuru(ESObjectSpace objectSpace, Expression expression) : this (objectSpace, expression.asDynamicMetaObject(BindingRestrictions.Empty)) {
-		}
-
-		public TypeBindingGuru(ESObjectSpace objectSpace, Expression expression, Object model) : this (objectSpace, expression.asDynamicMetaObject(BindingRestrictions.Empty, model)) {
-		}
-
-		public TypeBindingGuru(ESObjectSpace objectSpace, Expression expression, BindingRestrictions restrictions, Object model) : this (objectSpace, expression.asDynamicMetaObject(restrictions, model)) {
-		}
-
-		public TypeBindingGuru(ESObjectSpace objectSpace, DynamicMetaObject metaObject) {
-			this.objectSpace	= objectSpace;
-			this.metaObject	= metaObject;
-			model		= metaObject.Value;
-			modelType	= metaObject.LimitType;
-			modelTypeCode	= Type.GetTypeCode(modelType);
-			esModel = model as ESObject;
-			switch (modelTypeCode) {
-				case TypeCode.Empty:
-				case TypeCode.DBNull:
-					modelArchitecture = ObjectStateArchitecture.Nil;
-					break;
-				case TypeCode.Boolean:
-					modelArchitecture =  (bool)model ? ObjectStateArchitecture.True : ObjectStateArchitecture.False;
-					break;
-				case TypeCode.Char:
-					modelArchitecture =  ObjectStateArchitecture.Char;
-					break;
-				case TypeCode.Byte:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					break;
-				case TypeCode.SByte:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					break;
-				case TypeCode.UInt16:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					break;
-				case TypeCode.Int16:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					break;
-				case TypeCode.UInt32:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					break;
-				case TypeCode.Int32:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					break;
-				case TypeCode.UInt64:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					break;
-				case TypeCode.Int64:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					break;
-				case TypeCode.Single:
-					modelArchitecture =  ObjectStateArchitecture.SinglePrecision;
-					break;
-				case TypeCode.Double:
-					modelArchitecture =  ObjectStateArchitecture.DoublePrecision;
-					break;
-				case TypeCode.Decimal:
-					modelArchitecture =  ObjectStateArchitecture.QuadPrecision;
-					break;
-				case TypeCode.String:
-					modelArchitecture =  ObjectStateArchitecture.HostSystemObject;
-					break;
-				case TypeCode.DateTime:
-					modelArchitecture =  ObjectStateArchitecture.HostSystemObject;
-					break;
-				default:
-				case TypeCode.Object:
-					if (metaObject.HasValue && model == null) {
-						modelArchitecture = ObjectStateArchitecture.Nil;
-						return;
-					} else if (esModel == null) {
-						modelArchitecture = ObjectStateArchitecture.HostSystemObject;
-						return;
-					}
-					modelArchitecture = esModel.Architecture;
-					break;
-			}
-		}
-
-		public ESObjectSpace ObjectSpace {
-			get {return objectSpace;}
-		}
-
-		public DynamicMetaObject MetaObject {
-			get {return metaObject;}
-		}
-
-		public bool HasModel {
-			get {return metaObject.HasValue;}
-		}
-
-		public Object Model {
-			get {return model;}
-		}
-
-		public ESObject ESModel {
-			get {return esModel;}
-		}
-
-		public Type ModelType {
-			get {return modelType;}
-		}
-
-		public TypeCode ModelTypeCode {
-			get {return modelTypeCode;}
-		}
-
-		public ObjectStateArchitecture ModelArchitecture {
-			get {return modelArchitecture;}
-		}
-
-		public int PreferredTargetTypesCount {
-			get {return PreferredTargetTypes.Count;}
-		}
-
-		public int DisfavoredTargetTypesCount {
-			get {return DisfavoredTargetTypes.Count;}
-		}
-
-		public HashSet<Type> PreferredTargetTypes {
-			get {	if (preferredTargetTypes == null) computePotentialTargetTypes();
-				return preferredTargetTypes;}
-		}
-
-		public HashSet<Type> DisfavoredTargetTypes {
-			get {	if (disfavoredTargetTypes == null) computePotentialTargetTypes();
-				return disfavoredTargetTypes;}
-		}
-
-		public void potentialTargetTypesDo(Action<Type> enumerator1) {
-			enumerator1(ModelType);
-			foreach (var type in PreferredTargetTypes) enumerator1(type);
-			foreach (var type in DisfavoredTargetTypes) enumerator1(type);
-		}
-
-		protected void computePotentialTargetTypes() {
-
-			preferredTargetTypes = new HashSet<Type>();
-			disfavoredTargetTypes = new HashSet<Type>();
-			preferredTargetTypes.Add(TypeGuru.esObjectType);			
-			switch (ModelTypeCode) {
-				case TypeCode.Byte:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					preferredTargetTypes.Add(TypeGuru.floatType);
-					preferredTargetTypes.Add(TypeGuru.doubleType);
-					preferredTargetTypes.Add(TypeGuru.decimalType);
-					preferredTargetTypes.Add(TypeGuru.ushortType);
-					preferredTargetTypes.Add(TypeGuru.shortType);
-					preferredTargetTypes.Add(TypeGuru.uintType);
-					preferredTargetTypes.Add(TypeGuru.intType);
-					preferredTargetTypes.Add(TypeGuru.ulongType);
-					preferredTargetTypes.Add(TypeGuru.longType);
-					disfavoredTargetTypes.Add(TypeGuru.sbyteType);
-					return;
-				case TypeCode.SByte:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					preferredTargetTypes.Add(TypeGuru.floatType);
-					preferredTargetTypes.Add(TypeGuru.doubleType);
-					preferredTargetTypes.Add(TypeGuru.decimalType);
-					preferredTargetTypes.Add(TypeGuru.shortType);
-					preferredTargetTypes.Add(TypeGuru.intType);
-					preferredTargetTypes.Add(TypeGuru.longType);
-					disfavoredTargetTypes.Add(TypeGuru.byteType);
-					return;
-				case TypeCode.UInt16:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					preferredTargetTypes.Add(TypeGuru.floatType);
-					preferredTargetTypes.Add(TypeGuru.doubleType);
-					preferredTargetTypes.Add(TypeGuru.decimalType);
-					preferredTargetTypes.Add(TypeGuru.uintType);
-					preferredTargetTypes.Add(TypeGuru.intType);
-					preferredTargetTypes.Add(TypeGuru.ulongType);
-					preferredTargetTypes.Add(TypeGuru.longType);
-					disfavoredTargetTypes.Add(TypeGuru.byteType);
-					disfavoredTargetTypes.Add(TypeGuru.sbyteType);
-					disfavoredTargetTypes.Add(TypeGuru.shortType);
-					return;
-				case TypeCode.Int16:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					preferredTargetTypes.Add(TypeGuru.floatType);
-					preferredTargetTypes.Add(TypeGuru.doubleType);
-					preferredTargetTypes.Add(TypeGuru.decimalType);
-					preferredTargetTypes.Add(TypeGuru.intType);
-					preferredTargetTypes.Add(TypeGuru.longType);
-					disfavoredTargetTypes.Add(TypeGuru.byteType);
-					disfavoredTargetTypes.Add(TypeGuru.sbyteType);
-					disfavoredTargetTypes.Add(TypeGuru.ushortType);
-					return;
-				case TypeCode.UInt32:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					preferredTargetTypes.Add(TypeGuru.floatType);
-					preferredTargetTypes.Add(TypeGuru.doubleType);
-					preferredTargetTypes.Add(TypeGuru.decimalType);
-					preferredTargetTypes.Add(TypeGuru.ulongType);
-					preferredTargetTypes.Add(TypeGuru.longType);
-					disfavoredTargetTypes.Add(TypeGuru.byteType);
-					disfavoredTargetTypes.Add(TypeGuru.sbyteType);
-					disfavoredTargetTypes.Add(TypeGuru.ushortType);
-					disfavoredTargetTypes.Add(TypeGuru.shortType);
-					disfavoredTargetTypes.Add(TypeGuru.intType);
-					return;
-				case TypeCode.Int32:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					preferredTargetTypes.Add(TypeGuru.floatType);
-					preferredTargetTypes.Add(TypeGuru.doubleType);
-					preferredTargetTypes.Add(TypeGuru.decimalType);
-					preferredTargetTypes.Add(TypeGuru.longType);
-					disfavoredTargetTypes.Add(TypeGuru.byteType);
-					disfavoredTargetTypes.Add(TypeGuru.sbyteType);
-					disfavoredTargetTypes.Add(TypeGuru.ushortType);
-					disfavoredTargetTypes.Add(TypeGuru.shortType);
-					disfavoredTargetTypes.Add(TypeGuru.uintType);
-					return;
-				case TypeCode.UInt64:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					preferredTargetTypes.Add(TypeGuru.floatType);
-					preferredTargetTypes.Add(TypeGuru.doubleType);
-					preferredTargetTypes.Add(TypeGuru.decimalType);
-					disfavoredTargetTypes.Add(TypeGuru.byteType);
-					disfavoredTargetTypes.Add(TypeGuru.sbyteType);
-					disfavoredTargetTypes.Add(TypeGuru.ushortType);
-					disfavoredTargetTypes.Add(TypeGuru.shortType);
-					disfavoredTargetTypes.Add(TypeGuru.uintType);
-					disfavoredTargetTypes.Add(TypeGuru.intType);
-					disfavoredTargetTypes.Add(TypeGuru.longType);
-					return;
-				case TypeCode.Int64:
-					modelArchitecture =  ObjectStateArchitecture.SmallInteger;
-					preferredTargetTypes.Add(TypeGuru.floatType);
-					preferredTargetTypes.Add(TypeGuru.doubleType);
-					preferredTargetTypes.Add(TypeGuru.decimalType);
-					disfavoredTargetTypes.Add(TypeGuru.byteType);
-					disfavoredTargetTypes.Add(TypeGuru.sbyteType);
-					disfavoredTargetTypes.Add(TypeGuru.ushortType);
-					disfavoredTargetTypes.Add(TypeGuru.shortType);
-					disfavoredTargetTypes.Add(TypeGuru.uintType);
-					disfavoredTargetTypes.Add(TypeGuru.intType);
-					disfavoredTargetTypes.Add(TypeGuru.ulongType);
-					return;
-				case TypeCode.Single:
-					modelArchitecture =  ObjectStateArchitecture.SinglePrecision;
-					preferredTargetTypes.Add(TypeGuru.doubleType);
-					preferredTargetTypes.Add(TypeGuru.decimalType);
-					disfavoredTargetTypes.Add(TypeGuru.byteType);
-					disfavoredTargetTypes.Add(TypeGuru.sbyteType);
-					disfavoredTargetTypes.Add(TypeGuru.ushortType);
-					disfavoredTargetTypes.Add(TypeGuru.shortType);
-					disfavoredTargetTypes.Add(TypeGuru.uintType);
-					disfavoredTargetTypes.Add(TypeGuru.intType);
-					disfavoredTargetTypes.Add(TypeGuru.ulongType);
-					disfavoredTargetTypes.Add(TypeGuru.longType);
-					return;
-				case TypeCode.Double:
-					modelArchitecture =  ObjectStateArchitecture.DoublePrecision;
-					disfavoredTargetTypes.Add(TypeGuru.byteType);
-					disfavoredTargetTypes.Add(TypeGuru.sbyteType);
-					disfavoredTargetTypes.Add(TypeGuru.ushortType);
-					disfavoredTargetTypes.Add(TypeGuru.shortType);
-					disfavoredTargetTypes.Add(TypeGuru.uintType);
-					disfavoredTargetTypes.Add(TypeGuru.intType);
-					disfavoredTargetTypes.Add(TypeGuru.ulongType);
-					disfavoredTargetTypes.Add(TypeGuru.longType);
-					disfavoredTargetTypes.Add(TypeGuru.floatType);
-					disfavoredTargetTypes.Add(TypeGuru.decimalType);
-					return;
-				case TypeCode.Decimal:
-					modelArchitecture =  ObjectStateArchitecture.QuadPrecision;
-					disfavoredTargetTypes.Add(TypeGuru.byteType);
-					disfavoredTargetTypes.Add(TypeGuru.sbyteType);
-					disfavoredTargetTypes.Add(TypeGuru.ushortType);
-					disfavoredTargetTypes.Add(TypeGuru.shortType);
-					disfavoredTargetTypes.Add(TypeGuru.uintType);
-					disfavoredTargetTypes.Add(TypeGuru.intType);
-					disfavoredTargetTypes.Add(TypeGuru.ulongType);
-					disfavoredTargetTypes.Add(TypeGuru.longType);
-					disfavoredTargetTypes.Add(TypeGuru.floatType);
-					disfavoredTargetTypes.Add(TypeGuru.doubleType);
-					return;
-				case TypeCode.String:
-					preferredTargetTypes.Add(TypeGuru.charArrayType);			
-					return;
-				case TypeCode.Object:
-					if (metaObject.HasValue && model == null) {
-						modelArchitecture = ObjectStateArchitecture.Nil;
-						return;
-					} else {
-						if (esModel == null) {
-							modelArchitecture = ObjectStateArchitecture.HostSystemObject;
-							return;
-						}
-						modelArchitecture = esModel.Architecture;
-					}
-					break;
-				default:
-				case TypeCode.DateTime:
-				case TypeCode.Empty:
-				case TypeCode.DBNull:
-				case TypeCode.Boolean:
-				case TypeCode.Char:
-					return;
-			}
-
-			switch (modelArchitecture) {
-				case ObjectStateArchitecture.IndexedByteSlots:
-					preferredTargetTypes.Add(TypeGuru.byteArrayType);			
-					break;
-				case ObjectStateArchitecture.IndexedCharSlots:
-					preferredTargetTypes.Add(TypeGuru.charArrayType);			
-					preferredTargetTypes.Add(TypeGuru.stringType);			
-					break;
-				case ObjectStateArchitecture.IndexedHalfWordSlots:
-					preferredTargetTypes.Add(TypeGuru.ushortArrayType);			
-					break;
-				case ObjectStateArchitecture.IndexedWordSlots:
-					preferredTargetTypes.Add(TypeGuru.uintArrayType);			
-					break;
-				case ObjectStateArchitecture.IndexedLongWordSlots:
-					preferredTargetTypes.Add(TypeGuru.ulongArrayType);			
-					break;
-				case ObjectStateArchitecture.IndexedSinglePrecisionSlots:
-					preferredTargetTypes.Add(TypeGuru.floatArrayType);			
-					break;
-				case ObjectStateArchitecture.IndexedDoublePrecisionSlots:
-					preferredTargetTypes.Add(TypeGuru.doubleArrayType);			
-					break;
-				case ObjectStateArchitecture.IndexedQuadPrecisionSlots:
-					preferredTargetTypes.Add(TypeGuru.decimalArrayType);			
-					break;
-				case ObjectStateArchitecture.Pathname:
-					preferredTargetTypes.Add(TypeGuru.stringArrayType);			
-					break;
-				case ObjectStateArchitecture.IndexedObjectSlots:
-					preferredTargetTypes.Add(TypeGuru.objectArrayType);			
-					break;
-				case ObjectStateArchitecture.Symbol:
-					preferredTargetTypes.Add(TypeGuru.charArrayType);			
-					preferredTargetTypes.Add(TypeGuru.stringType);			
-					break;
-				case ObjectStateArchitecture.Message:
-					break;
-				case ObjectStateArchitecture.MessageSend:
-					break;
-				case ObjectStateArchitecture.Association:
-					preferredTargetTypes.Add(TypeGuru.keyValuePairForObjectKeyObjectValueType);			
-					break;
-				case ObjectStateArchitecture.BindingReference:
-					preferredTargetTypes.Add(TypeGuru.keyValuePairForStringKeyBindingHandleValueType);			
-					break;
-				case ObjectStateArchitecture.IdentityDictionary:
-				case ObjectStateArchitecture.Dictionary:
-					preferredTargetTypes.Add(TypeGuru.iDictionaryObjectKeyObjectValueType);			
-					preferredTargetTypes.Add(TypeGuru.dictionaryObjectKeyObjectValueType);			
-					break;
-				case ObjectStateArchitecture.Namespace:
-					preferredTargetTypes.Add(TypeGuru.iDictionaryStringKeyBindingHandleValueType);			
-					preferredTargetTypes.Add(TypeGuru.dictionaryStringKeyBindingHandleValueType);			
-					break;
-				case ObjectStateArchitecture.Block:
-					var block = model as ESBlock;
-					preferredTargetTypes.Add(ESCompiledCode.blockFunctionTypeForNumArgs(block.NumArgs));			
-					break;
-				case ObjectStateArchitecture.Method:
-					var method = model as ESMethod;
-					preferredTargetTypes.Add(ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs));			
-					break;
-				case ObjectStateArchitecture.Behavior:
-				case ObjectStateArchitecture.Class:
-				case ObjectStateArchitecture.Metaclass:
-					preferredTargetTypes.Add(TypeGuru.typeType);			
-					break;
-				case ObjectStateArchitecture.LargeInteger:
-					break;
-				case ObjectStateArchitecture.ScaledDecimal:
-					break;
-				default:
-					break;
-			}
-
-		}
-
-		public long compatibilityIndexForTargetType(Type targetType) {
-			if (targetType == ModelType) return 0;
-			if (ModelArchitecture == ObjectStateArchitecture.Nil) return targetType.nullIsAssignable() ? 0 : -1;
-			var methodInfo = CompilerHelpers.GetImplicitConverter(ModelType, targetType);
-			if (methodInfo != null) return 0;
-			if (targetType.IsAssignableFrom(ModelType)) return 1;
-			if (ModelArchitecture == ObjectStateArchitecture.Symbol && targetType.IsEnum) return 1;
-			bool isAssignable = false;
-			foreach (var type in PreferredTargetTypes) {
-				if (targetType == type) return 2;
-				methodInfo = CompilerHelpers.GetImplicitConverter(type, targetType);
-				if (methodInfo != null) return 2;
-				if (targetType.IsAssignableFrom(type)) isAssignable = true;
-			}
-			if (isAssignable) return 4;
-			methodInfo = CompilerHelpers.GetExplicitConverter(ModelType, targetType);
-			if (methodInfo != null) return 16;
-			foreach (var type in PreferredTargetTypes) {
-				methodInfo = CompilerHelpers.GetExplicitConverter(type, targetType);
-				if (methodInfo != null) return 32;
-			}
-			isAssignable = false;
-			var hasExplicitConverter = false;
-			foreach (var type in DisfavoredTargetTypes) {
-				if (targetType == type) return 64;
-				methodInfo = CompilerHelpers.GetImplicitConverter(type, targetType);
-				if (methodInfo != null) return 64;
-				if (targetType.IsAssignableFrom(type)) isAssignable = true;
-				methodInfo = CompilerHelpers.GetExplicitConverter(type, targetType);
-				if (methodInfo != null) hasExplicitConverter = true;
-			}
-			return isAssignable ? 128 : hasExplicitConverter ? 256 : -1;
-		}
-
-		public DynamicMetaObject metaObjectToConvertTo(Type targetType) {
-			if (targetType == ModelType) return metaObject.withFormalTypeAndTypeRestriction();
-			var methodInfo = CompilerHelpers.GetImplicitConverter(ModelType, targetType);
-			if (methodInfo != null) return metaObject.withTypeRestrictionConvertingTo(targetType, methodInfo);
-			if (targetType.IsAssignableFrom(ModelType)) return metaObject.withTypeRestrictionConvertingTo(targetType);
-
-			Expression expression, asCharArrayExpression, asStringExpression;
-			switch (ModelArchitecture) {
-				case ObjectStateArchitecture.Nil:
-					return metaObject.withInstanceRestrictionConvertingTo(targetType);
-				case ObjectStateArchitecture.IndexedByteSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESByteArrayToByteArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.byteArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.byteArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.byteArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.IndexedCharSlots:
-					var asSymbolExpression = ExpressionTreeGuru.expressionToCreateESSymbolFromESString(objectSpace.SymbolRegistry, metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.esSymbolType) return metaObject.withExpressionAndTypeRestriction(asSymbolExpression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.esSymbolType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asSymbolExpression, targetType, methodInfo);
-
-					asCharArrayExpression = ExpressionTreeGuru.expressionToConvertESStringToCharArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.charArrayType) return metaObject.withExpressionAndTypeRestriction(asCharArrayExpression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.charArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
-
-					asStringExpression = ExpressionTreeGuru.expressionToConvertESStringToString(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.stringType) return metaObject.withExpressionAndTypeRestriction(asStringExpression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.stringType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
-
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.esSymbolType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asSymbolExpression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.charArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.stringType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
-
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.Symbol:
-
-					if (targetType.IsEnum) return metaObject.withExpressionAndTypeRestriction(ExpressionTreeGuru.expressionToConvertSymbolToEnumerationConstant(metaObject.asExpressionWithFormalType(), targetType));
-
-					asStringExpression = ExpressionTreeGuru.expressionToConvertESSymbolToString(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.stringType) return metaObject.withExpressionAndTypeRestriction(asStringExpression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.stringType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
-
-					asCharArrayExpression = ExpressionTreeGuru.expressionToConvertESSymbolToCharArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.charArrayType) return metaObject.withExpressionAndTypeRestriction(asCharArrayExpression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.charArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
-
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.stringType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asStringExpression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.charArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(asCharArrayExpression, targetType, methodInfo);
-
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.IndexedHalfWordSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESHalfWordArrayToHalfWordArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.ushortArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.ushortArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.ushortArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.IndexedWordSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESWordArrayToWordArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.uintArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.uintArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.uintArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.IndexedLongWordSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESLongWordArrayToLongWordArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.ulongArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.ulongArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.ulongArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.IndexedSinglePrecisionSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESFloatArrayToFloatArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.floatArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.floatArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.floatArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.IndexedDoublePrecisionSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESDoubleArrayToDoubleArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.doubleArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.doubleArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.doubleArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.IndexedQuadPrecisionSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESQuadArrayToDecimalArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.decimalArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.decimalArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.decimalArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.Pathname:
-					expression = ExpressionTreeGuru.expressionToConvertESPathnameToStringArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.stringArrayType) metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.stringArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.stringArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.IndexedObjectSlots:
-					expression = ExpressionTreeGuru.expressionToConvertESArrayToObjectArray(metaObject.asExpressionWithFormalType());
-					if (targetType == TypeGuru.objectArrayType) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.objectArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.objectArrayType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.Association:
-					expression = ExpressionTreeGuru.expressionToConvertAssociationToKeyValuePair(metaObject.asExpressionWithFormalType(), TypeGuru.objectType, TypeGuru.objectType);
-					if (targetType == TypeGuru.keyValuePairForObjectKeyObjectValueType) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.keyValuePairForObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.keyValuePairForObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.BindingReference:
-					expression = ExpressionTreeGuru.expressionToConvertAssociationToKeyValuePair(metaObject.asExpressionWithFormalType(), TypeGuru.stringType, TypeGuru.esBindingReferenceType);
-					if (targetType == TypeGuru.keyValuePairForStringKeyBindingHandleValueType) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.keyValuePairForStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.keyValuePairForStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.IdentityDictionary:
-				case ObjectStateArchitecture.Dictionary:
-					expression = metaObject.asExpressionWithFormalType();
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.iDictionaryObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.dictionaryObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.iDictionaryObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.dictionaryObjectKeyObjectValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.Namespace:
-					expression = metaObject.asExpressionWithFormalType();
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.iDictionaryStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.dictionaryStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.iDictionaryStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.dictionaryStringKeyBindingHandleValueType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				case ObjectStateArchitecture.Block:
-					var block = Model as ESBlock;
-					return metaObject.withExpressionAndTypeRestriction(
-						ExpressionTreeGuru.expressionToCreateBridgeFunctorForBlockOrDelegate(objectSpace, metaObject, block.NumArgs, targetType));
-				case ObjectStateArchitecture.Method:
-					var method = Model as ESMethod;
-					return metaObject.withExpressionAndTypeRestriction(
-						ExpressionTreeGuru.expressionToCreateBridgeFunctorForMethodOrDelegate(objectSpace, metaObject, method.NumArgs, targetType));
-				case ObjectStateArchitecture.Behavior:
-				case ObjectStateArchitecture.Class:
-				case ObjectStateArchitecture.Metaclass:
-					expression = ExpressionTreeGuru.expressionToConvertESClassToInstanceType(metaObject.asExpressionWithFormalType());
-					if (TypeGuru.typeType.IsAssignableFrom(targetType)) return metaObject.withExpressionAndTypeRestriction(expression);
-					methodInfo = CompilerHelpers.GetImplicitConverter(TypeGuru.typeType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					methodInfo = CompilerHelpers.GetExplicitConverter(TypeGuru.typeType, targetType);
-					if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-					break;
-				case ObjectStateArchitecture.SmallInteger:
-				case ObjectStateArchitecture.SinglePrecision:
-				case ObjectStateArchitecture.DoublePrecision:
-				case ObjectStateArchitecture.QuadPrecision:
-					if (targetType.isNumeric()) return metaObject.withTypeRestrictionConvertingTo(targetType);
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-				default:
-				case ObjectStateArchitecture.False:
-				case ObjectStateArchitecture.True:
-				case ObjectStateArchitecture.Char:
-				case ObjectStateArchitecture.Stateless:
-				case ObjectStateArchitecture.NamedSlots:
-				case ObjectStateArchitecture.Message:
-				case ObjectStateArchitecture.MessageSend:
-				case ObjectStateArchitecture.LargeInteger:
-				case ObjectStateArchitecture.ScaledDecimal:
-				case ObjectStateArchitecture.HostSystemObject:
-					expression = metaObject.asExpressionWithFormalType();
-					break;
-			}
-
-			methodInfo = CompilerHelpers.GetExplicitConverter(ModelType, targetType);
-			if (methodInfo != null) return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType, methodInfo);
-			return metaObject.withExpressionAndTypeRestrictionConvertingTo(expression, targetType);
-
+		public static ArgumentBindingGuru typeBindingGuru(this DynamicMetaObject metaObject, ESObjectSpace objectSpace) {
+			return new ArgumentBindingGuru(objectSpace, metaObject);
 		}
 
 	}

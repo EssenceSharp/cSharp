@@ -107,14 +107,10 @@ namespace EssenceSharp.CompilationServices {
 				var nonLocalVar = kvp.Value;
 				var nonLocalName = nonLocalVar.NameSymbol;
 				if (instVarNames == null || !instVarNames.Contains(nonLocalName)) {
-					ESBindingReference binding;
-					if (environment == null) { 
-						binding = null;
-					} else {
-						var nsResidentVar = declareNamespaceVariable(environment, nonLocalName, null);
-						nonLocalVar.occurrencesDo(occurrence => occurrence.Declaration = nsResidentVar);
-						binding = nonLocalName.bindingInNamespaceIfAbsent(environment, AccessPrivilegeLevel.Local, ImportTransitivity.Transitive, null);
-					}
+					var ns = environment ?? Context.ObjectSpace.UndeclaredNamespace;
+					var nsResidentVar = declareNamespaceVariable(ns, nonLocalName, null);
+					nonLocalVar.occurrencesDo(occurrence => occurrence.Declaration = nsResidentVar);
+					var binding = nonLocalName.bindingInNamespaceIfAbsent(ns, AccessPrivilegeLevel.Local, ImportTransitivity.Transitive, null);
 					if (binding == null) {
 						if (undeclared == null) undeclared = new HashSet<ESSymbol>();
 						var nameInContext = Context.symbolFor(nameContext + nonLocalName);

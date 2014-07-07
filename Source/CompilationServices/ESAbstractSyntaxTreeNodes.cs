@@ -1558,7 +1558,6 @@ namespace EssenceSharp.CompilationServices {
  		public Expression onFailCodeAsCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
 			if (StatementCount > 0) return base.bodyAsCLRExpression(environment, behavior);
 			var objectSpace = Context.ObjectSpace;
-			var homeClass = environment as ESBehavior;
 			var parameters = ParmeterExpressions;
 			var parametersArray = new Expression[parameters.Count];
 			for (var i = 0; i < parametersArray.Length; i++) parametersArray[i] = parameters[i];
@@ -1566,7 +1565,7 @@ namespace EssenceSharp.CompilationServices {
 			return Expression.Block(
 				new ParameterExpression[]{Context.SelfParameter},
 				Expression.Assign(Context.SelfParameter, Expression.Constant(Context.SelfValue)),
-				ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, homeClass, objectSpace.SymbolRegistry, message));
+				ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, behavior, objectSpace.SymbolRegistry, message));
 		}
 
 	}

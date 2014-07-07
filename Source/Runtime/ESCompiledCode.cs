@@ -355,15 +355,15 @@ namespace EssenceSharp.Runtime {
 
 			#region Primitive Definitions
 		
-			public Object _numArgs_(Object receiver) {
+			public static Object _numArgs_(Object receiver) {
 				return ((ESCompiledCode)receiver).NumArgs;
 			}
 		
-			public Object _homeMethod_(Object receiver) {
+			public static Object _homeMethod_(Object receiver) {
 				return ((ESCompiledCode)receiver).HomeMethod;
 			}
 		
-			public Object _homeClass_(Object receiver) {
+			public static Object _homeClass_(Object receiver) {
 				return ((ESCompiledCode)receiver).HomeClass;
 			}
 
@@ -1106,135 +1106,333 @@ namespace EssenceSharp.Runtime {
 			}
 
 			public static Object _value0_(Object receiver) {
-				return ((ESBlock)receiver).value0();
+				FuncNs.Func<Object> functor;
+				try {
+					functor = (FuncNs.Func<Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value0()", ((ESBlock)receiver).NumArgs, 0, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(0), invalidCastEx);
+				}
+				return functor();
 			}
 
 			public static Object _value1_(Object receiver, Object a1) {
-				return ((ESBlock)receiver).value1(a1);
+				FuncNs.Func<Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value1()", ((ESBlock)receiver).NumArgs, 1, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(1), invalidCastEx);
+				}
+				return functor(a1);
 			}
 
 			public static Object _value2_(Object receiver, Object a1, Object a2) {
-				return ((ESBlock)receiver).value2(a1, a2);
+				FuncNs.Func<Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value2()", ((ESBlock)receiver).NumArgs, 2, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(2), invalidCastEx);
+				}
+				return functor(a1, a2);
 			}
 
 			public static Object _value3_(Object receiver, Object a1, Object a2, Object a3) {
-				return ((ESBlock)receiver).value3(a1, a2, a3);
+				FuncNs.Func<Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value3()", ((ESBlock)receiver).NumArgs, 3, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(3), invalidCastEx);
+				}
+				return functor(a1, a2, a3);
 			}
 
 			public static Object _value4_(Object receiver, Object a1, Object a2, Object a3, Object a4) {
-				return ((ESBlock)receiver).value4(a1, a2, a3, a4);
+				FuncNs.Func<Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value4()", ((ESBlock)receiver).NumArgs, 4, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(4), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4);
 			}
 
 			public static Object _value5_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5) {
-				return ((ESBlock)receiver).value5(a1, a2, a3, a4, a5);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value5()", ((ESBlock)receiver).NumArgs, 5, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(5), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5);
 			}
 
 			public static Object _value6_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6) {
-				return ((ESBlock)receiver).value6(a1, a2, a3, a4, a5, a6);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value6()", ((ESBlock)receiver).NumArgs, 6, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(6), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6);
 			}
 
 			public static Object _value7_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7) {
-				return ((ESBlock)receiver).value7(a1, a2, a3, a4, a5, a6, a7);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value7()", ((ESBlock)receiver).NumArgs, 7, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(7), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7);
 			}
 
 			public static Object _value8_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8) {
-				return ((ESBlock)receiver).value8(a1, a2, a3, a4, a5, a6, a7, a8);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value8()", ((ESBlock)receiver).NumArgs, 8, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(8), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8);
 			}
 
 			public static Object _value9_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9) {
-				return ((ESBlock)receiver).value9(a1, a2, a3, a4, a5, a6, a7, a8, a9);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value9()", ((ESBlock)receiver).NumArgs, 9, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(9), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9);
 			}
 
 			public static Object _value10_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10) {
-				return ((ESBlock)receiver).value10(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value10()", ((ESBlock)receiver).NumArgs, 10, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(10), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
 			}
 
 			public static Object _value11_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11) {
-				return ((ESBlock)receiver).value11(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value11()", ((ESBlock)receiver).NumArgs, 11, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(11), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
 			}
 
 			public static Object _value12_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12) {
-				return ((ESBlock)receiver).value12(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value12()", ((ESBlock)receiver).NumArgs, 12, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(12), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
 			}
 
 			public static Object _value13_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13) {
-				return ((ESBlock)receiver).value13(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value13()", ((ESBlock)receiver).NumArgs, 13, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(13), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
 			}
 
 			public static Object _value14_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14) {
-				return ((ESBlock)receiver).value14(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value14()", ((ESBlock)receiver).NumArgs, 14, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(14), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
 			}
 
 			public static Object _value15_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15) {
-				return ((ESBlock)receiver).value15(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value15()", ((ESBlock)receiver).NumArgs, 15, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(15), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15);
 			}
 
 			public static Object _value16_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16) {
-				return ((ESBlock)receiver).value16(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16);
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value16()", ((ESBlock)receiver).NumArgs, 16, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(16), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16);
 			}
 
 			public static Object _value17_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17) {
-				return ((ESBlock)receiver).value17(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value17()", ((ESBlock)receiver).NumArgs, 17, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(17), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17);
 			}
 
 			public static Object _value18_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18) {
-				return ((ESBlock)receiver).value18(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value18()", ((ESBlock)receiver).NumArgs, 18, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(18), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18);
 			}
 
 			public static Object _value19_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19) {
-				return ((ESBlock)receiver).value19(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value19()", ((ESBlock)receiver).NumArgs, 19, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(19), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19);
 			}
 
 			public static Object _value20_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20) {
-				return ((ESBlock)receiver).value20(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value20()", ((ESBlock)receiver).NumArgs, 20, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(20), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20);
 			}
 
 			public static Object _value21_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21) {
-				return ((ESBlock)receiver).value21(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value21()", ((ESBlock)receiver).NumArgs, 21, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(21), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21);
 			}
 
 			public static Object _value22_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22) {
-				return ((ESBlock)receiver).value22(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value22()", ((ESBlock)receiver).NumArgs, 22, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(22), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22);
 			}
 
 			public static Object _value23_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23) {
-				return ((ESBlock)receiver).value23(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value23()", ((ESBlock)receiver).NumArgs, 23, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(23), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23);
 			}
 
 			public static Object _value24_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24) {
-				return ((ESBlock)receiver).value24(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value24()", ((ESBlock)receiver).NumArgs, 24, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(24), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24);
 			}
 
 			public static Object _value25_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25) {
-				return ((ESBlock)receiver).value25(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value25()", ((ESBlock)receiver).NumArgs, 25, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(25), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25);
 			}
 
 			public static Object _value26_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26) {
-				return ((ESBlock)receiver).value26(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value26()", ((ESBlock)receiver).NumArgs, 26, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(26), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26);
 			}
 
 			public static Object _value27_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27) {
-				return ((ESBlock)receiver).value27(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value27()", ((ESBlock)receiver).NumArgs, 27, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(27), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27);
 			}
 
 			public static Object _value28_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28) {
-				return ((ESBlock)receiver).value28(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value28()", ((ESBlock)receiver).NumArgs, 28, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(28), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28);
 			}
 
 			public static Object _value29_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29) {
-				return ((ESBlock)receiver).value29(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value29()", ((ESBlock)receiver).NumArgs, 29, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(29), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29);
 			}
 
 			public static Object _value30_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29, Object a30) {
-				return ((ESBlock)receiver).value30(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value30()", ((ESBlock)receiver).NumArgs, 30, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(30), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30);
 			}
 
 			public static Object _value31_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29, Object a30, Object a31) {
-				return ((ESBlock)receiver).value31(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value31()", ((ESBlock)receiver).NumArgs, 31, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(31), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31);
 			}
 
 			public static Object _value32_(Object receiver, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29, Object a30, Object a31, Object a32) {
-				return ((ESBlock)receiver).value32(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32);
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESBlock)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Block.value32()", ((ESBlock)receiver).NumArgs, 32, ((ESBlock)receiver).function.GetType(), blockFunctionTypeForNumArgs(32), invalidCastEx);
+				}
+				return functor(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32);
 			}
 
 			#endregion
@@ -1778,7 +1976,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value0()", NumArgs, 0, function.GetType(), blockFunctionTypeForNumArgs(0), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver0()", NumArgs, 0, function.GetType(), methodFunctionTypeForNumArgs(0), invalidCastEx);
 				functor = null;
 			}
 			return functor(self);
@@ -1789,7 +1987,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value1()", NumArgs, 1, function.GetType(), blockFunctionTypeForNumArgs(1), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver1()", NumArgs, 1, function.GetType(), methodFunctionTypeForNumArgs(1), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1);
@@ -1800,7 +1998,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value2()", NumArgs, 2, function.GetType(), blockFunctionTypeForNumArgs(2), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver2()", NumArgs, 2, function.GetType(), methodFunctionTypeForNumArgs(2), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2);
@@ -1811,7 +2009,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value3()", NumArgs, 3, function.GetType(), blockFunctionTypeForNumArgs(3), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver3()", NumArgs, 3, function.GetType(), methodFunctionTypeForNumArgs(3), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3);
@@ -1822,7 +2020,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value4()", NumArgs, 4, function.GetType(), blockFunctionTypeForNumArgs(4), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver4()", NumArgs, 4, function.GetType(), methodFunctionTypeForNumArgs(4), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4);
@@ -1833,7 +2031,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value5()", NumArgs, 5, function.GetType(), blockFunctionTypeForNumArgs(5), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver5()", NumArgs, 5, function.GetType(), methodFunctionTypeForNumArgs(5), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5);
@@ -1844,7 +2042,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value6()", NumArgs, 6, function.GetType(), blockFunctionTypeForNumArgs(6), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver6()", NumArgs, 6, function.GetType(), methodFunctionTypeForNumArgs(6), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6);
@@ -1855,7 +2053,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value7()", NumArgs, 7, function.GetType(), blockFunctionTypeForNumArgs(7), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver7()", NumArgs, 7, function.GetType(), methodFunctionTypeForNumArgs(7), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7);
@@ -1866,7 +2064,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value8()", NumArgs, 8, function.GetType(), blockFunctionTypeForNumArgs(8), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver8()", NumArgs, 8, function.GetType(), methodFunctionTypeForNumArgs(8), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8);
@@ -1877,7 +2075,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value9()", NumArgs, 9, function.GetType(), blockFunctionTypeForNumArgs(9), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver9()", NumArgs, 9, function.GetType(), methodFunctionTypeForNumArgs(9), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9);
@@ -1888,7 +2086,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value10()", NumArgs, 10, function.GetType(), blockFunctionTypeForNumArgs(10), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver10()", NumArgs, 10, function.GetType(), methodFunctionTypeForNumArgs(10), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
@@ -1899,7 +2097,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value11()", NumArgs, 11, function.GetType(), blockFunctionTypeForNumArgs(11), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver11()", NumArgs, 11, function.GetType(), methodFunctionTypeForNumArgs(11), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
@@ -1910,7 +2108,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value12()", NumArgs, 12, function.GetType(), blockFunctionTypeForNumArgs(12), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver12()", NumArgs, 12, function.GetType(), methodFunctionTypeForNumArgs(12), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
@@ -1921,7 +2119,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value13()", NumArgs, 13, function.GetType(), blockFunctionTypeForNumArgs(13), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver13()", NumArgs, 13, function.GetType(), methodFunctionTypeForNumArgs(13), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
@@ -1932,7 +2130,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value14()", NumArgs, 14, function.GetType(), blockFunctionTypeForNumArgs(14), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver14()", NumArgs, 14, function.GetType(), methodFunctionTypeForNumArgs(14), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
@@ -1943,7 +2141,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value15()", NumArgs, 15, function.GetType(), blockFunctionTypeForNumArgs(15), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver15()", NumArgs, 15, function.GetType(), methodFunctionTypeForNumArgs(15), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15);
@@ -1954,7 +2152,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value16()", NumArgs, 16, function.GetType(), blockFunctionTypeForNumArgs(16), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver16()", NumArgs, 16, function.GetType(), methodFunctionTypeForNumArgs(16), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16);
@@ -1965,7 +2163,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value17()", NumArgs, 17, function.GetType(), blockFunctionTypeForNumArgs(17), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver17()", NumArgs, 17, function.GetType(), methodFunctionTypeForNumArgs(17), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17);
@@ -1976,7 +2174,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value18()", NumArgs, 18, function.GetType(), blockFunctionTypeForNumArgs(18), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver18()", NumArgs, 18, function.GetType(), methodFunctionTypeForNumArgs(18), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18);
@@ -1987,7 +2185,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value19()", NumArgs, 19, function.GetType(), blockFunctionTypeForNumArgs(19), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver19()", NumArgs, 19, function.GetType(), methodFunctionTypeForNumArgs(19), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19);
@@ -1998,7 +2196,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value20()", NumArgs, 20, function.GetType(), blockFunctionTypeForNumArgs(20), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver20()", NumArgs, 20, function.GetType(), methodFunctionTypeForNumArgs(20), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20);
@@ -2009,7 +2207,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value21()", NumArgs, 21, function.GetType(), blockFunctionTypeForNumArgs(21), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver21()", NumArgs, 21, function.GetType(), methodFunctionTypeForNumArgs(21), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21);
@@ -2020,7 +2218,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value22()", NumArgs, 22, function.GetType(), blockFunctionTypeForNumArgs(22), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver22()", NumArgs, 22, function.GetType(), methodFunctionTypeForNumArgs(22), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22);
@@ -2031,7 +2229,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value23()", NumArgs, 23, function.GetType(), blockFunctionTypeForNumArgs(23), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver23()", NumArgs, 23, function.GetType(), methodFunctionTypeForNumArgs(23), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23);
@@ -2042,7 +2240,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value24()", NumArgs, 24, function.GetType(), blockFunctionTypeForNumArgs(24), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver24()", NumArgs, 24, function.GetType(), methodFunctionTypeForNumArgs(24), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24);
@@ -2053,7 +2251,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value25()", NumArgs, 25, function.GetType(), blockFunctionTypeForNumArgs(25), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver25()", NumArgs, 25, function.GetType(), methodFunctionTypeForNumArgs(25), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25);
@@ -2064,7 +2262,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value26()", NumArgs, 26, function.GetType(), blockFunctionTypeForNumArgs(26), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver26()", NumArgs, 26, function.GetType(), methodFunctionTypeForNumArgs(26), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26);
@@ -2075,7 +2273,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value27()", NumArgs, 27, function.GetType(), blockFunctionTypeForNumArgs(27), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver27()", NumArgs, 27, function.GetType(), methodFunctionTypeForNumArgs(27), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27);
@@ -2086,7 +2284,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value28()", NumArgs, 28, function.GetType(), blockFunctionTypeForNumArgs(28), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver28()", NumArgs, 28, function.GetType(), methodFunctionTypeForNumArgs(28), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28);
@@ -2097,7 +2295,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value29()", NumArgs, 29, function.GetType(), blockFunctionTypeForNumArgs(29), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver29()", NumArgs, 29, function.GetType(), methodFunctionTypeForNumArgs(29), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29);
@@ -2108,7 +2306,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value30()", NumArgs, 30, function.GetType(), blockFunctionTypeForNumArgs(30), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver30()", NumArgs, 30, function.GetType(), methodFunctionTypeForNumArgs(30), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30);
@@ -2119,7 +2317,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value31()", NumArgs, 31, function.GetType(), blockFunctionTypeForNumArgs(31), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver31()", NumArgs, 31, function.GetType(), methodFunctionTypeForNumArgs(31), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31);
@@ -2130,7 +2328,7 @@ namespace EssenceSharp.Runtime {
 			try {
 				functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)function;
 			} catch (InvalidCastException invalidCastEx) {
-				ESObjectSpace.throwInvalidFunctionCallException("Block.value32()", NumArgs, 32, function.GetType(), blockFunctionTypeForNumArgs(32), invalidCastEx);
+				ESObjectSpace.throwInvalidFunctionCallException("Method.valueWithReceiver32()", NumArgs, 32, function.GetType(), methodFunctionTypeForNumArgs(32), invalidCastEx);
 				functor = null;
 			}
 			return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32);
@@ -2150,35 +2348,35 @@ namespace EssenceSharp.Runtime {
 		
 			#region Primitive Definitions
 		
-			public Object _environment_(Object receiver) {
+			public static Object _environment_(Object receiver) {
 				return ((ESMethod)receiver).Environment;
 			}
 		
-			public Object _homeMethod_(Object receiver) {
+			public static Object _homeMethod_(Object receiver) {
 				return ((ESMethod)receiver).HomeMethod;
 			}
 		
-			public Object _hasHomeClass_(Object receiver) {
+			public static Object _hasHomeClass_(Object receiver) {
 				return ((ESMethod)receiver).HasHomeClass;
 			}
 		
-			public Object _homeClass_(Object receiver) {
+			public static Object _homeClass_(Object receiver) {
 				return ((ESMethod)receiver).HomeClass;
 			}
 		
-			public Object _selector_(Object receiver) {
+			public static Object _selector_(Object receiver) {
 				return ((ESMethod)receiver).Selector;
 			}
 		
-			public Object _numArgs_(Object receiver) {
+			public static Object _numArgs_(Object receiver) {
 				return ((ESMethod)receiver).NumArgs;
 			}
 		
-			public Object _protocolCount_(Object receiver) {
+			public static Object _protocolCount_(Object receiver) {
 				return ((ESMethod)receiver).ProtocolCount;
 			}
 
-			public Object _protocolsDo_(Object receiver, Object enumerator1) {
+			public static Object _protocolsDo_(Object receiver, Object enumerator1) {
 				((ESMethod)receiver).protocolsDo(asFunctor1(enumerator1));
 				return receiver;
 			}
@@ -2193,169 +2391,375 @@ namespace EssenceSharp.Runtime {
 				return receiver;
 			}
 
-			public Object _removeFromAllProtocols_(Object receiver) {
+			public static Object _removeFromAllProtocols_(Object receiver) {
 				((ESMethod)receiver).removeFromAllProtocols();
 				return receiver;
 			}
 
-			public Object _messagesSent_(Object receiver) {
+			public static Object _messagesSent_(Object receiver) {
 				return ((ESMethod)receiver).MessagesSent;
 			}
 
-			public Object _messagesSentToSelf_(Object receiver) {
+			public static Object _messagesSentToSelf_(Object receiver) {
 				return ((ESMethod)receiver).MessagesSentToSelf;
 			}
 
-			public Object _messagesSentToSuper_(Object receiver) {
+			public static Object _messagesSentToSuper_(Object receiver) {
 				return ((ESMethod)receiver).MessagesSentToSuper;
 			}
 
-			public Object _messagesSentToThisContext_(Object receiver) {
+			public static Object _messagesSentToThisContext_(Object receiver) {
 				return ((ESMethod)receiver).MessagesSentToThisContext;
 			}
 
-			public Object _withUndeclaredVariablesDo_(Object receiver, Object enumerator1) {
+			public static Object _withUndeclaredVariablesDo_(Object receiver, Object enumerator1) {
 				var functor1 = asFunctor1(enumerator1);
 				((ESMethod)receiver).withUndeclaredVariablesDo(undeclaredVar => functor1(undeclaredVar));
 				return receiver;
 			}
 
-			public Object _valueWithReceiverWithArguments_(Object receiver, Object self, Object arguments) {
+			public Object _asMessageSend_(Object receiver) {
+				return objectSpace.newMessageSend((ESMethod)receiver);
+			}
+
+			public Object _asMessageSendWithReceiver_(Object receiver, Object messageSendReceiver) {
+				return objectSpace.newMessageSend(messageSendReceiver, (ESMethod)receiver);
+			}
+
+			public static Object _valueWithReceiverWithArguments_(Object receiver, Object self, Object arguments) {
 				ESObject esObject = arguments as ESObject;
 				Object[] argArray = esObject == null ? (Object[])arguments : esObject.asHostArray<Object>();
 				return ((ESMethod)receiver).valueWithReceiverWithArguments(self, argArray);
 			}
 
-			public Object _valueWithReceiver_(Object receiver, Object self) {
-				return ((ESMethod)receiver).value0(self);
+			public static Object _valueWithReceiver_(Object receiver, Object self) {
+				FuncNs.Func<Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value0()", ((ESMethod)receiver).NumArgs, 0, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(0), invalidCastEx);
+				}
+				return functor(self);
 			}
 
-			public Object _valueWithReceiver1_(Object receiver, Object self, Object a1) {
-				return ((ESMethod)receiver).value1(self, a1);
+			public static Object _valueWithReceiver1_(Object receiver, Object self, Object a1) {
+				FuncNs.Func<Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value1()", ((ESMethod)receiver).NumArgs, 1, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(1), invalidCastEx);
+				}
+				return functor(self, a1);
 			}
 
-			public Object _valueWithReceiver2_(Object receiver, Object self, Object a1, Object a2) {
-				return ((ESMethod)receiver).value2(self, a1, a2);
+			public static Object _valueWithReceiver2_(Object receiver, Object self, Object a1, Object a2) {
+				FuncNs.Func<Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value2()", ((ESMethod)receiver).NumArgs, 2, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(2), invalidCastEx);
+				}
+				return functor(self, a1, a2);
 			}
 
-			public Object _valueWithReceiver3_(Object receiver, Object self, Object a1, Object a2, Object a3) {
-				return ((ESMethod)receiver).value3(self, a1, a2, a3);
+			public static Object _valueWithReceiver3_(Object receiver, Object self, Object a1, Object a2, Object a3) {
+				FuncNs.Func<Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value3()", ((ESMethod)receiver).NumArgs, 3, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(3), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3);
 			}
 
-			public Object _valueWithReceiver4_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4) {
-				return ((ESMethod)receiver).value4(self, a1, a2, a3, a4);
+			public static Object _valueWithReceiver4_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value4()", ((ESMethod)receiver).NumArgs, 4, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(4), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4);
 			}
 
-			public Object _valueWithReceiver5_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5) {
-				return ((ESMethod)receiver).value5(self, a1, a2, a3, a4, a5);
+			public static Object _valueWithReceiver5_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value5()", ((ESMethod)receiver).NumArgs, 5, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(5), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5);
 			}
 
-			public Object _valueWithReceiver6_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6) {
-				return ((ESMethod)receiver).value6(self, a1, a2, a3, a4, a5, a6);
+			public static Object _valueWithReceiver6_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value6()", ((ESMethod)receiver).NumArgs, 6, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(6), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6);
 			}
 
-			public Object _valueWithReceiver7_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7) {
-				return ((ESMethod)receiver).value7(self, a1, a2, a3, a4, a5, a6, a7);
+			public static Object _valueWithReceiver7_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value7()", ((ESMethod)receiver).NumArgs, 7, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(7), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7);
 			}
 
-			public Object _valueWithReceiver8_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8) {
-				return ((ESMethod)receiver).value8(self, a1, a2, a3, a4, a5, a6, a7, a8);
+			public static Object _valueWithReceiver8_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value8()", ((ESMethod)receiver).NumArgs, 8, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(8), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8);
 			}
 
-			public Object _valueWithReceiver9_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9) {
-				return ((ESMethod)receiver).value9(self, a1, a2, a3, a4, a5, a6, a7, a8, a9);
+			public static Object _valueWithReceiver9_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value9()", ((ESMethod)receiver).NumArgs, 9, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(9), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9);
 			}
 
-			public Object _valueWithReceiver10_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10) {
-				return ((ESMethod)receiver).value10(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
+			public static Object _valueWithReceiver10_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value10()", ((ESMethod)receiver).NumArgs, 10, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(10), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
 			}
 
-			public Object _valueWithReceiver11_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11) {
-				return ((ESMethod)receiver).value11(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
+			public static Object _valueWithReceiver11_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value11()", ((ESMethod)receiver).NumArgs, 11, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(11), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
 			}
 
-			public Object _valueWithReceiver12_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12) {
-				return ((ESMethod)receiver).value12(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
+			public static Object _valueWithReceiver12_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value12()", ((ESMethod)receiver).NumArgs, 12, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(12), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
 			}
 
-			public Object _valueWithReceiver13_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13) {
-				return ((ESMethod)receiver).value13(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
+			public static Object _valueWithReceiver13_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value13()", ((ESMethod)receiver).NumArgs, 13, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(13), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
 			}
 
-			public Object _valueWithReceiver14_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14) {
-				return ((ESMethod)receiver).value14(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+			public static Object _valueWithReceiver14_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value14()", ((ESMethod)receiver).NumArgs, 14, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(14), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
 			}
 
-			public Object _valueWithReceiver15_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15) {
-				return ((ESMethod)receiver).value15(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15);
+			public static Object _valueWithReceiver15_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15) {
+				FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (FuncNs.Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value15()", ((ESMethod)receiver).NumArgs, 15, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(15), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15);
 			}
 
-			public Object _valueWithReceiver16_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16) {
-				return ((ESMethod)receiver).value16(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16);
+			public static Object _valueWithReceiver16_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value16()", ((ESMethod)receiver).NumArgs, 16, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(16), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16);
 			}
 
-			public Object _valueWithReceiver17_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17) {
-				return ((ESMethod)receiver).value17(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17);
+			public static Object _valueWithReceiver17_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value17()", ((ESMethod)receiver).NumArgs, 17, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(17), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17);
 			}
 
-			public Object _valueWithReceiver18_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18) {
-				return ((ESMethod)receiver).value18(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18);
+			public static Object _valueWithReceiver18_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value18()", ((ESMethod)receiver).NumArgs, 18, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(18), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18);
 			}
 
-			public Object _valueWithReceiver19_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19) {
-				return ((ESMethod)receiver).value19(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19);
+			public static Object _valueWithReceiver19_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value19()", ((ESMethod)receiver).NumArgs, 19, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(19), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19);
 			}
 
-			public Object _valueWithReceiver20_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20) {
-				return ((ESMethod)receiver).value20(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20);
+			public static Object _valueWithReceiver20_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value20()", ((ESMethod)receiver).NumArgs, 20, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(20), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20);
 			}
 
-			public Object _valueWithReceiver21_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21) {
-				return ((ESMethod)receiver).value21(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21);
+			public static Object _valueWithReceiver21_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value21()", ((ESMethod)receiver).NumArgs, 21, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(21), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21);
 			}
 
-			public Object _valueWithReceiver22_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22) {
-				return ((ESMethod)receiver).value22(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22);
+			public static Object _valueWithReceiver22_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value22()", ((ESMethod)receiver).NumArgs, 22, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(22), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22);
 			}
 
-			public Object _valueWithReceiver23_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23) {
-				return ((ESMethod)receiver).value23(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23);
+			public static Object _valueWithReceiver23_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value23()", ((ESMethod)receiver).NumArgs, 23, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(23), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23);
 			}
 
-			public Object _valueWithReceiver24_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24) {
-				return ((ESMethod)receiver).value24(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24);
+			public static Object _valueWithReceiver24_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value24()", ((ESMethod)receiver).NumArgs, 24, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(24), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24);
 			}
 
-			public Object _valueWithReceiver25_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25) {
-				return ((ESMethod)receiver).value25(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25);
+			public static Object _valueWithReceiver25_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value25()", ((ESMethod)receiver).NumArgs, 25, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(25), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25);
 			}
 
-			public Object _valueWithReceiver26_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26) {
-				return ((ESMethod)receiver).value26(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26);
+			public static Object _valueWithReceiver26_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value26()", ((ESMethod)receiver).NumArgs, 26, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(26), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26);
 			}
 
-			public Object _valueWithReceiver27_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27) {
-				return ((ESMethod)receiver).value27(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27);
+			public static Object _valueWithReceiver27_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value27()", ((ESMethod)receiver).NumArgs, 27, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(27), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27);
 			}
 
-			public Object _valueWithReceiver28_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28) {
-				return ((ESMethod)receiver).value28(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28);
+			public static Object _valueWithReceiver28_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value28()", ((ESMethod)receiver).NumArgs, 28, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(28), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28);
 			}
 
-			public Object _valueWithReceiver29_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29) {
-				return ((ESMethod)receiver).value29(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29);
+			public static Object _valueWithReceiver29_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value29()", ((ESMethod)receiver).NumArgs, 29, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(29), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29);
 			}
 
-			public Object _valueWithReceiver30_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29, Object a30) {
-				return ((ESMethod)receiver).value30(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30);
+			public static Object _valueWithReceiver30_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29, Object a30) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value30()", ((ESMethod)receiver).NumArgs, 30, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(30), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30);
 			}
 
-			public Object _valueWithReceiver31_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29, Object a30, Object a31) {
-				return ((ESMethod)receiver).value31(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31);
+			public static Object _valueWithReceiver31_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29, Object a30, Object a31) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value31()", ((ESMethod)receiver).NumArgs, 31, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(31), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31);
 			}
 
-			public Object _valueWithReceiver32_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29, Object a30, Object a31, Object a32) {
-				return ((ESMethod)receiver).value32(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32);
+			public static Object _valueWithReceiver32_(Object receiver, Object self, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9, Object a10, Object a11, Object a12, Object a13, Object a14, Object a15, Object a16, Object a17, Object a18, Object a19, Object a20, Object a21, Object a22, Object a23, Object a24, Object a25, Object a26, Object a27, Object a28, Object a29, Object a30, Object a31, Object a32) {
+				Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object> functor;
+				try {
+					functor = (Func<Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object>)((ESMethod)receiver).function;
+				} catch (InvalidCastException invalidCastEx) {
+					throw new InvalidFunctionCallException("Method.value32()", ((ESMethod)receiver).NumArgs, 32, ((ESMethod)receiver).function.GetType(), ESCompiledCode.methodFunctionTypeForNumArgs(32), invalidCastEx);
+				}
+				return functor(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32);
 			}
 
 			#endregion
@@ -2383,6 +2787,8 @@ namespace EssenceSharp.Runtime {
 
 				publishPrimitive("withUndeclaredVariablesDo:",			new FuncNs.Func<Object, Object, Object>(_withUndeclaredVariablesDo_));
 
+				publishPrimitive("asMessageSend",				new FuncNs.Func<Object, Object>(_asMessageSend_));
+				publishPrimitive("asMessageSendWithReceiver:",			new FuncNs.Func<Object, Object, Object>(_asMessageSendWithReceiver_));
 				
 				publishPrimitive("valueWithReceiver:withArguments:",		new FuncNs.Func<Object, Object, Object, Object>(_valueWithReceiverWithArguments_));
 

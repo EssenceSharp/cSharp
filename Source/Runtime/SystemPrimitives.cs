@@ -156,7 +156,7 @@ namespace EssenceSharp.Runtime {
 			installPublishedPrimitivesInClass(protocol, DomainClass);
 		}
 
-		public void installPublishedPrimitivesInClass(ESSymbol protocol, ESBehavior targetClass) {
+		public virtual void installPublishedPrimitivesInClass(ESSymbol protocol, ESBehavior targetClass) {
 			publishedPrimitivesDo((PrimitiveDomainType domain, String name, Delegate function) => {
 				targetClass.addMethod(objectSpace.newMethod(SymbolRegistry.symbolFor(name), function));
 			});

@@ -1938,7 +1938,7 @@ namespace EssenceSharp.Runtime {
 
 			ESBlock equalsBlock;
 			var objectSpace = Class.ObjectSpace;
-			objectSpace.compile(new StringReader(":left :right | left = right"), objectSpace.SmalltalkNamespace, null, out equalsBlock);
+			objectSpace.compile(new StringReader(":left :right | left = right"), objectSpace.SmalltalkNamespace, null, null, out equalsBlock);
 			areEqual = equalsBlock.F2;
 
 		}
