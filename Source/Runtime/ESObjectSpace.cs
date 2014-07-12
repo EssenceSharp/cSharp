@@ -1392,16 +1392,16 @@ namespace EssenceSharp.Runtime {
 
 		}
 
-		public virtual void generateDefaultPrimitiveMethodSource(DirectoryInfo basePath) {
+		public virtual void generatePrimitiveMethodSource(DirectoryInfo basePath) {
 
 			primitiveDomainsDo((PrimitiveDomain domain) => {
-				domain.generateDefaultPrimitiveMethodSource(basePath);
+				domain.generatePrimitiveMethodSource(basePath);
 			});
 	
 		}
 
-		public virtual void generateDefaultPrimitiveMethodSource() {
-			generateDefaultPrimitiveMethodSource(StandardLibraryPath);
+		public virtual void generatePrimitiveMethodSource() {
+			generatePrimitiveMethodSource(StandardLibraryPath);
 		}
 
 		#endregion

@@ -569,8 +569,11 @@ namespace EssenceSharp.Runtime {
 			public Object _asBindingReferenceKeyWithValue_ (Object receiver, Object value) {
 				return objectSpace.newBindingReference(asHostString(receiver), value);
 			}
-
-
+					
+			public Object _asHostSystemString_(Object receiver) {
+				var esString = (ESString)receiver;
+				return esString.asHostString();
+			}
 					
 			public Object _asHostSystemType_(Object receiver) {
 				var esString = (ESString)receiver;
@@ -623,6 +626,7 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("asPathname",							new FuncNs.Func<Object, Object>(_asPathname_));
 				publishPrimitive("asPathname:",							new FuncNs.Func<Object, Object, Object>(_asPathnameUsingSeparator_));
 				publishPrimitive("asNamespace",							new FuncNs.Func<Object, Object>(_asNamespace_));
+				publishPrimitive("asHostSystemString",						new FuncNs.Func<Object, Object>(_asHostSystemString_));
 				publishPrimitive("asHostSystemType",						new FuncNs.Func<Object, Object>(_asHostSystemType_));
 
 				publishPrimitive("=>",								new FuncNs.Func<Object, Object, Object>(_asBindingReferenceKeyWithValue_));

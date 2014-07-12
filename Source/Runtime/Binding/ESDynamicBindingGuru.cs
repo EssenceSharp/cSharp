@@ -215,6 +215,7 @@ namespace EssenceSharp.Runtime.Binding {
 			} else {
 				FieldInfo field;
 				PropertyInfo property;
+				EventInfo @event;
 				MethodInfo methodInfo;
 				DynamicMetaObject arg;
 				ArgumentBindingGuru argGuru;
@@ -293,6 +294,37 @@ namespace EssenceSharp.Runtime.Binding {
 							} else {
 								expression = expression.withCanonicalReturnType();
 							}
+						}
+						break;
+					case MethodOperationType.InvokeEvent:
+						var eventName = operation.Operand; 
+						@event = esClass.getEvent(eventName);
+						if (@event == null) break;
+						var eventHandlerType = @event.EventHandlerType;
+						Expression eventExpression = null;
+						methodInfo = null;
+						esClass.getReadablePropertyOrElseField(
+								eventName, 
+								(p) => {
+									methodInfo = p.PropertyType.GetMethod("Invoke");
+									eventExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), p);
+								}, 
+								(f) => {
+									methodInfo = f.FieldType.GetMethod("Invoke");
+									eventExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), f);
+								});
+						dynamicBindingGuru = objectSpace.DynamicBindingGuru;
+						var eventArgGurus = dynamicBindingGuru.dynamicMetaObjectArgumentGurusFor(argumentsWithoutReceiver);
+						typedArguments = typeCompatibleArgumentsFor(methodInfo, eventArgGurus);
+						expression = Expression.Condition(
+								Expression.ReferenceNotEqual(eventExpression, ExpressionTreeGuru.nilConstant),
+									Expression.Invoke(eventExpression, expressionArrayFor(typedArguments.ToArray())),
+									Expression.Empty());
+						foreach(var argMo in typedArguments) bindingRestrictions = bindingRestrictions.Merge(argMo.Restrictions);
+						if (methodInfo.ReturnType == TypeGuru.voidType) {
+							expression = Expression.Block(TypeGuru.objectType, expression, self);
+						} else {
+							expression = expression.withCanonicalReturnType();
 						}
 						break;
 					case MethodOperationType.InvokeMethod:
@@ -610,7 +642,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#endregion
 
-		#region DynamicMetaObject Construction
+		#region Constructing DynamicMetaObjects for specific functions
 
 		public DynamicMetaObject metaObjectForInvariantOperation(Expression invariantRestrictionOperation, Object value) {
 			return new DynamicMetaObject(invariantRestrictionOperation.withCanonicalReturnType(), BindingRestrictionsGuru.invariantRestriction, value);
@@ -643,7 +675,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var operand = operandMO.asExpressionWithType(TypeGuru.boolType);
 			return new DynamicMetaObject(
 				Expression.AndAlso(self, operand).withCanonicalReturnType(), 
-				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(operandMO.addingInstanceRestriction()), 
+				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(operandMO.asInstanceRestriction()), 
 				model);
 		}
 
@@ -654,7 +686,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var operand = operandMO.asExpressionWithType(TypeGuru.boolType);
 			return new DynamicMetaObject(
 				Expression.OrElse(self, operand).withCanonicalReturnType(), 
-				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(operandMO.addingInstanceRestriction()), 
+				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(operandMO.asInstanceRestriction()), 
 				model);
 		}
 
@@ -668,8 +700,8 @@ namespace EssenceSharp.Runtime.Binding {
 					actionFunction.Expression, 
 					testFailResult).withCanonicalReturnType(), 
 				(model == null ?
-					receiver.addingRestrictions(ExpressionTreeGuru.expressionToTestThatNilHasSameClassVersion(self, objectSpace.UndefinedObjectClass)).Merge(actionToInvoke.addingInstanceRestriction()) :
-					receiver.bindingRestrictionsForForeignObjectReceiver(esClass)).Merge(actionToInvoke.addingInstanceRestriction()), 
+					receiver.addingRestrictions(ExpressionTreeGuru.expressionToTestThatNilHasSameClassVersion(self, objectSpace.UndefinedObjectClass)).Merge(actionToInvoke.asInstanceRestriction()) :
+					receiver.bindingRestrictionsForForeignObjectReceiver(esClass)).Merge(actionToInvoke.asInstanceRestriction()), 
 				model);
 		}
 
@@ -683,8 +715,8 @@ namespace EssenceSharp.Runtime.Binding {
 					testFailResult, 
 					actionFunction.Expression).withCanonicalReturnType(), 
 				(model == null ?
-					receiver.addingRestrictions(ExpressionTreeGuru.expressionToTestThatNilHasSameClassVersion(self, objectSpace.UndefinedObjectClass)).Merge(actionToInvoke.addingInstanceRestriction()) :
-					receiver.bindingRestrictionsForForeignObjectReceiver(esClass)).Merge(actionToInvoke.addingInstanceRestriction()), 
+					receiver.addingRestrictions(ExpressionTreeGuru.expressionToTestThatNilHasSameClassVersion(self, objectSpace.UndefinedObjectClass)).Merge(actionToInvoke.asInstanceRestriction()) :
+					receiver.bindingRestrictionsForForeignObjectReceiver(esClass)).Merge(actionToInvoke.asInstanceRestriction()), 
 				model);
 		}
 
@@ -699,8 +731,8 @@ namespace EssenceSharp.Runtime.Binding {
 					ifTrueAction.Expression, 
 					ifFalseAction.Expression).withCanonicalReturnType(), 
 				(model == null ?
-					receiver.addingRestrictions(ExpressionTreeGuru.expressionToTestThatNilHasSameClassVersion(self, objectSpace.UndefinedObjectClass)).Merge(actionToInvokeIfTrue.addingInstanceRestriction()).Merge(actionToInvokeIfFalse.addingInstanceRestriction()) :
-					receiver.bindingRestrictionsForForeignObjectReceiver(esClass)).Merge(actionToInvokeIfTrue.addingInstanceRestriction()).Merge(actionToInvokeIfFalse.addingInstanceRestriction()), 
+					receiver.addingRestrictions(ExpressionTreeGuru.expressionToTestThatNilHasSameClassVersion(self, objectSpace.UndefinedObjectClass)).Merge(actionToInvokeIfTrue.asInstanceRestriction()).Merge(actionToInvokeIfFalse.asInstanceRestriction()) :
+					receiver.bindingRestrictionsForForeignObjectReceiver(esClass)).Merge(actionToInvokeIfTrue.asInstanceRestriction()).Merge(actionToInvokeIfFalse.asInstanceRestriction()), 
 				model);
 		}
 
@@ -982,7 +1014,7 @@ namespace EssenceSharp.Runtime.Binding {
 									Expression.Block(Expression.AddAssign(induction, step), actionFunction.Expression),
 									Expression.Break(exit, self)),
 						       exit)).withCanonicalReturnType();
-				restrictions = receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(actionToRepeat.addingInstanceRestriction());
+				restrictions = receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(actionToRepeat.asInstanceRestriction());
 			} else {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(self, esClass, selector, new DynamicMetaObject[]{actionToRepeat});
 				restrictions = receiver.bindingRestrictionsForForeignObjectReceiver(esClass);
@@ -1091,11 +1123,88 @@ namespace EssenceSharp.Runtime.Binding {
 					startingValueMO.bindingRestrictionsForForeignObjectReceiver(esClass)
 						.Merge(endingValueMO.addingFormalTypeRestriction())
 						.Merge(stepValueMO.addingFormalTypeRestriction())
-						.Merge(enumeratorMO.addingInstanceRestriction());
+						.Merge(enumeratorMO.asInstanceRestriction());
 			}
 
 			return new DynamicMetaObject(expression, restrictions, model);
 
+		}
+
+		public DynamicMetaObject metaObjectToInvoke_OnEventDo(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject eventNameMO, DynamicMetaObject actionMO) {
+			var model = receiver.Value;
+			var self = receiver.asExpressionWithFormalType();
+			var receiverType = receiver.LimitType;
+			var eventNameString = ESObject.asHostString(eventNameMO.Value);
+			var @event = receiverType.GetEvent(eventNameString, esClass.HostObjectMethodInvokeBindingFlags);
+			var handlerType = @event.EventHandlerType;
+			var addMethod = @event.GetAddMethod(true);
+			Expression expression;
+			Expression action;
+			var actionIsBlock = actionMO.isBlock();
+			if (actionIsBlock) { 
+				var block = (ESBlock)actionMO.Value;
+				var avatar = block.avatarWithType(handlerType);
+				if (avatar == null) { 
+					var argGuru = actionMO.typeBindingGuru(objectSpace);
+					var typedActionMO = argGuru.metaObjectToConvertTo(handlerType);
+					action = typedActionMO.Expression;
+					var actionVar = Expression.Parameter(handlerType, "$action");
+					expression = Expression.Block(
+							new ParameterExpression[]{actionVar},
+							Expression.Assign(actionVar, action),
+							Expression.Call(actionMO.asExpressionWithFormalType(), "addAvatar", null, actionVar),
+							Expression.Call(self, addMethod, new Expression[]{actionVar}), 
+							self.withCanonicalReturnType());
+				} else {
+					action = Expression.Constant(avatar);
+					expression = Expression.Block(
+							Expression.Call(self, addMethod, new Expression[]{action}), 
+							self.withCanonicalReturnType());
+				}
+			} else {
+				action = actionMO.asExpressionWithType(handlerType);
+				expression = Expression.Block(
+						Expression.Call(self, addMethod, action), 
+						self.withCanonicalReturnType());
+			}
+
+			return expression.asDynamicMetaObject(
+					receiver.restrictionThatForeignObjectHasSameClassVersion(esClass).Merge(eventNameMO.asInstanceRestriction()).Merge(actionMO.asInstanceRestriction()),
+					model);
+		}
+
+		public DynamicMetaObject metaObjectToInvoke_OnEventDoNotDo(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject eventNameMO, DynamicMetaObject actionMO) {
+			var model = receiver.Value;
+			var self = receiver.asExpressionWithFormalType();
+			var receiverType = receiver.LimitType;
+			var eventNameString = ESObject.asHostString(eventNameMO.Value);
+			var @event = receiverType.GetEvent(eventNameString, esClass.HostObjectMethodInvokeBindingFlags);
+			var eventField = receiverType.GetField(eventNameString, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+			var invocationArray = ((Delegate)eventField.GetValue(model)).GetInvocationList();
+			var handlerType = @event.EventHandlerType;
+			var removeMethod = @event.GetRemoveMethod(true);
+			Expression expression;
+			Expression action;
+			var actionIsBlock = actionMO.isBlock();
+			if (actionIsBlock) { 
+				var block = (ESBlock)actionMO.Value;
+				var avatar = block.avatarWithType(handlerType);
+				if (avatar == null) {
+					action = actionMO.Expression;
+				} else { 
+					action = Expression.Constant(avatar);
+				}
+			} else {
+				action = actionMO.Expression;
+			}
+
+			expression = Expression.Block(
+					Expression.Call(self, removeMethod, action), 
+					self.withCanonicalReturnType());
+
+			return expression.asDynamicMetaObject(
+					receiver.restrictionThatForeignObjectHasSameClassVersion(esClass).Merge(eventNameMO.asInstanceRestriction()).Merge(actionMO.asInstanceRestriction()),
+					model);
 		}
 
 		public DynamicMetaObject metaObjectToInvokeWithEnsureBlock(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject ensureBlockMO) {
@@ -1107,7 +1216,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression, 
 				(esClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
 					receiver.bindingRestrictionsForForeignObjectReceiver(esClass) :
-					receiver.bindingRestrictionsForESObjectReceiver(esClass)).Merge(ensureBlockMO.addingInstanceRestriction()), 
+					receiver.bindingRestrictionsForESObjectReceiver(esClass)).Merge(ensureBlockMO.asInstanceRestriction()), 
 				receiver.Value);
 		}
 
@@ -1121,7 +1230,7 @@ namespace EssenceSharp.Runtime.Binding {
 				expression, 
 				(esClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
 					receiver.bindingRestrictionsForForeignObjectReceiver(esClass) :
-					receiver.bindingRestrictionsForESObjectReceiver(esClass)).Merge(ifCurtailedBlockMO.addingInstanceRestriction()), 
+					receiver.bindingRestrictionsForESObjectReceiver(esClass)).Merge(ifCurtailedBlockMO.asInstanceRestriction()), 
 				receiver.Value);
 		}
 
@@ -1166,9 +1275,9 @@ namespace EssenceSharp.Runtime.Binding {
 				(esClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
 					receiver.bindingRestrictionsForForeignObjectReceiver(esClass) :
 					receiver.bindingRestrictionsForESObjectReceiver(esClass))
-							.Merge(handleExceptionBlockMO.addingInstanceRestriction())
-							.Merge(exceptionSelectorMO.addingInstanceRestriction())
-							.Merge(handleExceptionBlockMO.addingInstanceRestriction()), 
+							.Merge(handleExceptionBlockMO.asInstanceRestriction())
+							.Merge(exceptionSelectorMO.asInstanceRestriction())
+							.Merge(handleExceptionBlockMO.asInstanceRestriction()), 
 				receiver.Value);
 
 
@@ -1192,7 +1301,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			return new DynamicMetaObject(
 				loop.withCanonicalReturnType(), 
-				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(actionToRepeat.addingInstanceRestriction()), 
+				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(actionToRepeat.asInstanceRestriction()), 
 				model);
 		}
 
@@ -1214,7 +1323,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			return new DynamicMetaObject(
 				loop.withCanonicalReturnType(), 
-				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(actionToRepeat.addingInstanceRestriction()), 
+				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(actionToRepeat.asInstanceRestriction()), 
 				model);
 		}
 
@@ -1236,7 +1345,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			return new DynamicMetaObject(
 				loop.withCanonicalReturnType(), 
-				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(actionToRepeat.addingInstanceRestriction()), 
+				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(actionToRepeat.asInstanceRestriction()), 
 				model);
 		}
 
@@ -1258,7 +1367,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			return new DynamicMetaObject(
 				loop.withCanonicalReturnType(), 
-				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(actionToRepeat.addingInstanceRestriction()), 
+				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(actionToRepeat.asInstanceRestriction()), 
 				model);
 		}
 
@@ -1366,7 +1475,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			return new DynamicMetaObject(
 				block, 
-				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(enumeratorBlockMO.addingInstanceRestriction()), 
+				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(enumeratorBlockMO.asInstanceRestriction()), 
 				model);
 
 		}
@@ -1443,7 +1552,7 @@ namespace EssenceSharp.Runtime.Binding {
 						.Merge(startingValueMO.addingFormalTypeRestriction())
 						.Merge(endingValueMO.addingFormalTypeRestriction())
 						.Merge(stepValueMO.addingFormalTypeRestriction())
-						.Merge(enumeratorBlockMO.addingInstanceRestriction());
+						.Merge(enumeratorBlockMO.asInstanceRestriction());
 			}
 
 			return new DynamicMetaObject(expression, restrictions, model);
@@ -1494,7 +1603,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			return new DynamicMetaObject(
 				block, 
-				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(enumeratorBlockMO.addingInstanceRestriction()), 
+				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(enumeratorBlockMO.asInstanceRestriction()), 
 				model);
 
 		}
@@ -1551,7 +1660,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			return new DynamicMetaObject(
 				block, 
-				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(enumeratorBlockMO.addingInstanceRestriction()), 
+				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(enumeratorBlockMO.asInstanceRestriction()), 
 				model);
 
 		}
@@ -1618,7 +1727,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			return new DynamicMetaObject(
 				block, 
-				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(enumeratorBlockMO.addingInstanceRestriction()), 
+				receiver.bindingRestrictionsForForeignObjectReceiver(esClass).Merge(enumeratorBlockMO.asInstanceRestriction()), 
 				model);
 
 		}
@@ -1783,7 +1892,7 @@ namespace EssenceSharp.Runtime.Binding {
 		}
 
 		public DynamicMetaObject metaObjectToSendDoesNotUnderstandToNil(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] argumentsWithoutReceiver) {
-			return metaObjectToSendDoesNotUnderstand(receiver, objectSpace.UndefinedObjectClass, selector, argumentsWithoutReceiver, receiver.addingInstanceRestriction());
+			return metaObjectToSendDoesNotUnderstand(receiver, objectSpace.UndefinedObjectClass, selector, argumentsWithoutReceiver, receiver.asInstanceRestriction());
 		}
 
 		public DynamicMetaObject metaObjectToSendDoesNotUnderstand(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] argumentsWithoutReceiver, BindingRestrictions bindingRestrictions) {
@@ -1792,7 +1901,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#endregion
 
-		#region DynamicMetaObjects for general message sending
+		#region Sending messages--general
 
 		public DynamicMetaObject metaObjectToSendMessageToESObject(DynamicMetaObject receiver, ESObjectSpace objectSpace, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 
@@ -2028,7 +2137,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var esClass = objectSpace.classOfHostSystemValue(receiver.Value);
 			var method = esClass.compiledMethodAt(selector);
 			if (method == null) {
-				return metaObjectToSendSyntheticMessageToForeignObject(receiver, esClass, selector, metaObjectArgs);
+				return metaObjectToSendVirtualMessageToForeignObject(receiver, esClass, selector, metaObjectArgs);
 			} else {
 				return metaObjectToSendMessage(
 						receiver,
@@ -2094,7 +2203,7 @@ namespace EssenceSharp.Runtime.Binding {
 				}
 			}
 			if (method == null) {
-				return metaObjectToSendSyntheticMessageToForeignObject(receiver, esClass, selector, metaObjectArgs);
+				return metaObjectToSendVirtualMessageToForeignObject(receiver, esClass, selector, metaObjectArgs);
 			} else {
 				return metaObjectToSendMessage(
 						receiver, 
@@ -2125,7 +2234,9 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#endregion
 
-		#region Sending messages to foreign objects
+		#endregion
+
+		#region Sending messages--foreign object receivers
 
 		public DynamicMetaObject metaObjectToSendMessageToForeignObject(DynamicMetaObject receiver, Object model, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 			var receiverType = model.GetType();
@@ -2143,7 +2254,7 @@ namespace EssenceSharp.Runtime.Binding {
 			}
 			var method = esClass.compiledMethodAt(selector);
 			if (method == null) {
-				return metaObjectToSendSyntheticMessageToForeignObject(receiver, esClass, selector, metaObjectArgs);
+				return metaObjectToSendVirtualMessageToForeignObject(receiver, esClass, selector, metaObjectArgs);
 			} else {
 				return metaObjectToSendMessage(
 						receiver, 
@@ -2156,7 +2267,7 @@ namespace EssenceSharp.Runtime.Binding {
 			}
 		}
 
-		public DynamicMetaObject metaObjectToSendSyntheticMessageToForeignObject(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] args) {
+		public DynamicMetaObject metaObjectToSendVirtualMessageToForeignObject(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] args) {
 
 			switch (selector.CanonicalSemantics) {
 
@@ -2187,14 +2298,19 @@ namespace EssenceSharp.Runtime.Binding {
 				case CanonicalSelectorSemantics.AsBehavior:
 				case CanonicalSelectorSemantics.AsClass:
 					if (TypeGuru.typeType.IsAssignableFrom(receiver.LimitType)) { 
-						return Expression.Constant(objectSpace.classForHostSystemType((Type)receiver.Value)).asDynamicMetaObject(receiver.addingInstanceRestriction().Merge(receiver.restrictionThatForeignObjectHasSameClassVersion(esClass)), receiver.Value);
+						return Expression.Constant(objectSpace.classForHostSystemType((Type)receiver.Value)).asDynamicMetaObject(receiver.asInstanceRestriction().Merge(receiver.restrictionThatForeignObjectHasSameClassVersion(esClass)), receiver.Value);
 					}
 					break;
 				case CanonicalSelectorSemantics.AsMetaclass:
 					if (TypeGuru.typeType.IsAssignableFrom(receiver.LimitType)) { 
-						return Expression.Constant(objectSpace.classForHostSystemType((Type)receiver.Value).Class).asDynamicMetaObject(receiver.addingInstanceRestriction().Merge(receiver.restrictionThatForeignObjectHasSameClassVersion(esClass)), receiver.Value);
+						return Expression.Constant(objectSpace.classForHostSystemType((Type)receiver.Value).Class).asDynamicMetaObject(receiver.asInstanceRestriction().Merge(receiver.restrictionThatForeignObjectHasSameClassVersion(esClass)), receiver.Value);
 					}
 					break;
+
+				case CanonicalSelectorSemantics.OnEventDo:
+					return metaObjectToInvoke_OnEventDo(receiver, esClass, selector, args[0], args[1]);
+				case CanonicalSelectorSemantics.OnEventDoNotDo:
+					return metaObjectToInvoke_OnEventDoNotDo(receiver, esClass, selector, args[0], args[1]);
 
 				case CanonicalSelectorSemantics.Ensure:
 					return metaObjectToInvokeWithEnsureBlock(receiver, esClass, selector, args[0]);
@@ -2303,10 +2419,10 @@ namespace EssenceSharp.Runtime.Binding {
 					return metaObjectForForeignObjectOperation(receiver, esClass, ExpressionTreeGuru.expressionToCreateESSymbolFromNonESObject(objectSpace, receiver.Expression));
 
 				// InvokeBinder:
-				case CanonicalSelectorSemantics.InvokeBlock:
+				case CanonicalSelectorSemantics.Invoke:
 					return receiver.BindInvoke(canonicalInvokeBinderFor(esClass, selector), args);
 
-				case CanonicalSelectorSemantics.InvokeBlockWithArguments:
+				case CanonicalSelectorSemantics.InvokeWithArguments:
 					break;
 
 				// GetMemberBinder:
@@ -2569,11 +2685,7 @@ namespace EssenceSharp.Runtime.Binding {
 			return metaObjectToSendDoesNotUnderstandToForeignObject(receiver, esClass, selector, args);
 		}
 
-		#endregion
-
-		#endregion
-
-		#region Essence Sharp message sends to foreign/host-system target objects
+		#region Essence Sharp VIRTUAL message send binders
 
 		public class GetPropertyOrFieldOfForeignObjectBinder : GetMemberBinder {
 
@@ -3518,7 +3630,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 				if (methodInfo == null) {
 					switch (Selector.CanonicalSemantics) {
-						case CanonicalSelectorSemantics.InvokeBlock:
+						case CanonicalSelectorSemantics.Invoke:
 							if (Selector.NumArgs == 0) return dynamicBindingGuru.metaObjectForForeignObjectOperation(target, esClass, target.Expression);
 							break;
 						case CanonicalSelectorSemantics.Size:
@@ -3702,6 +3814,28 @@ namespace EssenceSharp.Runtime.Binding {
 		}
 
 		#endregion
+
+		#endregion
+
+	}
+
+	public abstract class BinderRegistry {
+
+		protected DynamicBindingGuru			dynamicBindingGuru	= null;
+		protected ESObjectSpace				objectSpace		= null;
+
+		protected BinderRegistry(DynamicBindingGuru dynamicBindingGuru) {
+			this.dynamicBindingGuru = dynamicBindingGuru;
+			objectSpace = dynamicBindingGuru.ObjectSpace;
+		}
+
+		public DynamicBindingGuru DynamicBindingGuru {
+			get {return dynamicBindingGuru;}
+		}
+
+		public ESObjectSpace ObjectSpace {
+			get {return objectSpace;}
+		}
 
 	}
 

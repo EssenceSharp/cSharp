@@ -14,7 +14,8 @@
     <EnableSecurityDebugging>false</EnableSecurityDebugging>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.35.Debug|x86'">
-    <StartArguments>-d "nil zork"</StartArguments>
+    <StartArguments>
+    </StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.40.Debug|x86'">
     <StartArguments>

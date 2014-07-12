@@ -1608,13 +1608,21 @@ namespace EssenceSharp.Runtime {
 
 		public virtual ObjectStateArchitecture InstanceArchitecture {
 			get {return instanceArchitecture;}
-			set {	if (instanceArchitecture == value) return;
-				if (isInstanceArchitectureLocked) throw new PrimitiveFailException("A Behavior's instance architecture cannot be changed after it has created instances.");
-				if (constraintsMustBeSatisfied && !canInheritFrom(value, Superclass)) throwIncompatibleSuperclassException(value, Superclass);
-				instanceArchitecture = value;
-				isBoundToHostSystemNamespace = instanceArchitecture == ObjectStateArchitecture.HostSystemObject;
-				invalidateInstanceType(); 
-			}
+			set {setInstanceArchitecture(value);}
+		}
+
+		protected void basicSetInstanceArchitecture(ObjectStateArchitecture newInstanceArchitecture) {
+			if (instanceArchitecture == newInstanceArchitecture) return;
+			if (isInstanceArchitectureLocked) throw new PrimitiveFailException("A Behavior's instance architecture cannot be changed after it has created instances.");
+			if (constraintsMustBeSatisfied && !canInheritFrom(newInstanceArchitecture, Superclass)) throwIncompatibleSuperclassException(newInstanceArchitecture, Superclass);
+			instanceArchitecture = newInstanceArchitecture;
+			isBoundToHostSystemNamespace = instanceArchitecture == ObjectStateArchitecture.HostSystemObject;
+		}
+
+		protected void setInstanceArchitecture(ObjectStateArchitecture newInstanceArchitecture) {
+			if (instanceArchitecture == newInstanceArchitecture) return;
+			basicSetInstanceArchitecture(newInstanceArchitecture);
+			invalidateInstanceType();
 		}
 
 		public override bool InstancesCanHaveNamedSlots {
@@ -1691,13 +1699,6 @@ namespace EssenceSharp.Runtime {
 			incrementVersion();
 		}
 
-		protected virtual void unbindFromInstanceType() {
-			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject && instanceType.IsGenericType) {
-				methodDictionary = newMethodDictionary();
-				hostSystemMethodDictionary = newHostSystemMethodDictionary();
-			}
-		}
-
 		protected void basicBindToInstanceType() {
 			if (instanceType == null) return;
 			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
@@ -1716,8 +1717,15 @@ namespace EssenceSharp.Runtime {
 			isBoundToHostSystemNamespace = instanceArchitecture == ObjectStateArchitecture.HostSystemObject;
 			if (instanceType == null) return;
 			assembly = instanceType.Assembly;
-			if (!isClassOfAdoptedType(InstanceArchitecture) && !instanceType.isEssenceSharpType()) InstanceArchitecture = ObjectStateArchitecture.HostSystemObject;
+			if (!isClassOfAdoptedType(InstanceArchitecture) && !instanceType.isEssenceSharpType()) basicSetInstanceArchitecture(ObjectStateArchitecture.HostSystemObject);
 			basicBindToInstanceType();
+		}
+
+		protected virtual void unbindFromInstanceType() {
+			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject && instanceType.IsGenericType) {
+				methodDictionary = newMethodDictionary();
+				hostSystemMethodDictionary = newHostSystemMethodDictionary();
+			}
 		}
 
 		protected void invalidateInstanceType() {
@@ -2438,6 +2446,10 @@ namespace EssenceSharp.Runtime {
 
 		public FieldInfo getField(String name) {
 			return InstanceType.GetField(name, HostObjectFieldGetBindingFlags);
+		}
+
+		public EventInfo getEvent(String name) {
+			return InstanceType.GetEvent(name, HostObjectFieldGetBindingFlags);
 		}
 
 		public bool getReadablePropertyOrElseField(String name, Action<PropertyInfo> propertyAction, Action<FieldInfo> fieldAction) {

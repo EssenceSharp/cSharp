@@ -224,6 +224,20 @@ namespace EssenceSharp.Runtime {
 		CLR_System_Exception,
 		CLR_System_Collections_Generic_List_1_Object		
 	}	
+	
+	public enum MethodOperationType {
+		Function,
+		Convert,
+		GetField,
+		SetField,
+		InvokeField,
+		GetProperty,
+		SetProperty,
+		InvokeProperty,
+		InvokeEvent,
+		InvokeMethod,
+		CreateInstance
+	}
 
 	public enum CanonicalSelectorSemantics {
 		None,
@@ -274,10 +288,12 @@ namespace EssenceSharp.Runtime {
 		RemoveAt,
 		RemoveKey,
 		RemoveKeyIfAbsent,
-		InvokeBlock,
-		InvokeBlockWithArguments,
+		Invoke,
+		InvokeWithArguments,
 		Perform,
 		PerformWithArguments,
+		OnEventDo,
+		OnEventDoNotDo,
 		OnDo,
 		Ensure,
 		IfCurtailed,

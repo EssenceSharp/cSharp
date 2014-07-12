@@ -169,6 +169,7 @@
     </Compile>
     <Compile Include="Source\ClientServices\ESScriptExecution.cs" />
     <Compile Include="Source\CompilationServices\ESNonLocalReturn.cs" />
+    <Compile Include="Source\Examples\Metronome.cs" />
     <Compile Include="Source\Exceptions\Error.cs" />
     <Compile Include="Source\Exceptions\ESException.cs" />
     <Compile Include="Source\Exceptions\EssenceSharpException.cs" />

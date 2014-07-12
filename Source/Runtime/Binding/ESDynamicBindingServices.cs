@@ -46,25 +46,7 @@ using EssenceSharp.Exceptions.System.PrimitiveFailures;
 
 namespace EssenceSharp.Runtime.Binding {
 
-	public abstract class BinderRegistry {
-
-		protected DynamicBindingGuru			dynamicBindingGuru	= null;
-		protected ESObjectSpace				objectSpace		= null;
-
-		protected BinderRegistry(DynamicBindingGuru dynamicBindingGuru) {
-			this.dynamicBindingGuru = dynamicBindingGuru;
-			objectSpace = dynamicBindingGuru.ObjectSpace;
-		}
-
-		public DynamicBindingGuru DynamicBindingGuru {
-			get {return dynamicBindingGuru;}
-		}
-
-		public ESObjectSpace ObjectSpace {
-			get {return objectSpace;}
-		}
-
-	}
+	public class TypeIdentityComparator : IdentityComparator<Type> {}
 
 	public static class TypeGuru {
 
@@ -781,7 +763,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var isBlock = compiledCodeOrDelegateMO.isBlock();
 			var compiledCodeOrDelegateExpression = compiledCodeOrDelegateMO.asExpressionWithFormalType();
 			var functorExpression = expressionToConvertCompiledCodeOrDelegateToFunctor(compiledCodeOrDelegateExpression, functorType);
-			if (!TypeGuru.delegateType.IsAssignableFrom(targetType)) return functorExpression;
+			if (targetType == TypeGuru.delegateType || !TypeGuru.delegateType.IsAssignableFrom(targetType)) return functorExpression;
 			var methodInfo = CompilerHelpers.GetImplicitConverter(functorType, targetType);
 			if (methodInfo != null) return (LambdaExpression)compiledCodeOrDelegateExpression.withType(targetType, methodInfo);
 			methodInfo = CompilerHelpers.GetExplicitConverter(functorType, targetType);
@@ -851,24 +833,30 @@ namespace EssenceSharp.Runtime.Binding {
 		}
 
 		public static Expression expressionToInvokeESBlock(ESBlock block, Expression[] arguments) {
+			return expressionToInvokeESBlock(Expression.Constant(block), arguments);
+			/*
 			return 
 				Expression.Invoke(
 					Expression.Constant(block.Function).withType(ESCompiledCode.blockFunctionTypeForNumArgs(block.NumArgs)), 
 					arguments);
+			*/
 		}
 
 		public static Expression expressionToInvokeESMethod(Expression methodExpression, Expression[] argumentsWithReceiver) {
 			return 
 				Expression.Invoke(
-					Expression.Field(methodExpression, "function").withType(ESCompiledCode.methodFunctionTypeForNumArgs(argumentsWithReceiver.Length)), 
+					Expression.Field(methodExpression, "function").withType(ESCompiledCode.methodFunctionTypeForNumArgs(argumentsWithReceiver.Length - 1)), 
 					argumentsWithReceiver);
 		}
 
 		public static Expression expressionToInvokeESMethod(ESMethod method, Expression[] argumentsWithReceiver) {
+			return expressionToInvokeESMethod(Expression.Constant(method), argumentsWithReceiver);
+			/*
 			return 
 				Expression.Invoke(
 					Expression.Constant(method.Function).withType(ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
 					argumentsWithReceiver);
+			*/
 		}
 
 		public static Expression expressionToSendDoesNotUnderstand(Expression self, BehavioralObject esClass, SymbolRegistry symbolRegistry, Expression createMessageAction) {
@@ -1296,7 +1284,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public static BindingRestrictions instanceRestrictionsFor(IEnumerable<DynamicMetaObject> dmoCollection) {
 			var restrictions = BindingRestrictions.Empty;
-			foreach (var dmo in dmoCollection) restrictions = restrictions.Merge(dmo.addingInstanceRestriction());
+			foreach (var dmo in dmoCollection) restrictions = restrictions.Merge(dmo.asInstanceRestriction());
 			return restrictions;
 		}
 
@@ -1331,7 +1319,7 @@ namespace EssenceSharp.Runtime.Binding {
 		}
 
 		public static BindingRestrictions addingInstanceRestrictionFor(this BindingRestrictions restrictions, DynamicMetaObject dmo) {
-			return restrictions.Merge(dmo.addingInstanceRestriction());
+			return restrictions.Merge(dmo.asInstanceRestriction());
 		}
 
 		public static BindingRestrictions addingFormalTypeRestrictionFor(this BindingRestrictions restrictions, DynamicMetaObject dmo) {
@@ -1377,16 +1365,16 @@ namespace EssenceSharp.Runtime.Binding {
 			return expression.withType(targetType);
 		}
 
+		public static BindingRestrictions asInstanceRestriction(this DynamicMetaObject metaObject) {
+			return BindingRestrictionsGuru.instanceRestrictionFor(metaObject);
+		}
+
 		public static BindingRestrictions addingRestrictions(this DynamicMetaObject metaObject, BindingRestrictions restrictions) {
 			return metaObject.Restrictions.Merge(restrictions);
 		}
 
 		public static BindingRestrictions addingRestrictions(this DynamicMetaObject metaObject, Expression restrictionExpression) {
-			return metaObject.Restrictions.Merge(restrictionExpression.asBindingRestriction());
-		}
-
-		public static BindingRestrictions addingInstanceRestriction(this DynamicMetaObject metaObject) {
-			return BindingRestrictionsGuru.instanceRestrictionFor(metaObject);
+			return BindingRestrictionsGuru.restrictionFor(metaObject.Expression, metaObject.Value);
 		}
 
 		public static BindingRestrictions addingFormalTypeRestriction(this DynamicMetaObject metaObject) {

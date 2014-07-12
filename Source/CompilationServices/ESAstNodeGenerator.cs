@@ -58,6 +58,7 @@ namespace EssenceSharp.CompilationServices {
 		protected static readonly String					getPropertyPrimitiveName	= "getProperty:";
 		protected static readonly String					setPropertyPrimitiveName	= "setProperty:";
 		protected static readonly String					invokePropertyPrimitiveName	= "invokeProperty:";
+		protected static readonly String					invokeEventPrimitiveName	= "invokeEvent:";
 		protected static readonly String					invokeMethodPrimitiveName	= "invokeMethod:";
 
 		protected static readonly IDictionary<String, MethodOperationType>	primitiveType			= new Dictionary<String, MethodOperationType>();
@@ -71,6 +72,7 @@ namespace EssenceSharp.CompilationServices {
 			primitiveType[getPropertyPrimitiveName]				= MethodOperationType.GetProperty;
 			primitiveType[setPropertyPrimitiveName]				= MethodOperationType.SetProperty;
 			primitiveType[invokePropertyPrimitiveName]			= MethodOperationType.InvokeProperty;
+			primitiveType[invokeEventPrimitiveName]				= MethodOperationType.InvokeEvent;
 			primitiveType[invokeMethodPrimitiveName]			= MethodOperationType.InvokeMethod;
 		}
 
@@ -496,6 +498,7 @@ namespace EssenceSharp.CompilationServices {
 						break;
 					case MethodOperationType.InvokeField:
 					case MethodOperationType.InvokeProperty:
+					case MethodOperationType.InvokeEvent:
 					case MethodOperationType.InvokeMethod:
 						requiredArity = methodSelector.NumArgs; // We can't know the actual required arity until run time.
 						break;

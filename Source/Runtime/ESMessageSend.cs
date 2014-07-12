@@ -82,6 +82,10 @@ namespace EssenceSharp.Runtime {
 			get {return ObjectStateArchitecture.MessageSend;}
 		}
 
+		public Delegate Function {
+			get {return function;}
+		}
+
 		public Object Receiver {
 			get {return receiver;}
 			set {receiver = value;}
@@ -664,6 +668,10 @@ namespace EssenceSharp.Runtime {
 		
 			#region Primitive Definitions
 
+			public static Object _function_(Object receiver) {
+				return ((ESMessageSend)receiver).Function;
+			}
+
 			public static Object _receiver_(Object receiver) {
 				return ((ESMessageSend)receiver).Receiver;
 			}
@@ -1011,6 +1019,8 @@ namespace EssenceSharp.Runtime {
 			#endregion
 
 			public override void publishCanonicalPrimitives() {
+
+				publishPrimitive("function",					new FuncNs.Func<Object, Object>(_function_));
 
 				publishPrimitive("receiver",					new FuncNs.Func<Object, Object>(_receiver_));
 				publishPrimitive("receiver:",					new FuncNs.Func<Object, Object, Object>(_setReceiver_));

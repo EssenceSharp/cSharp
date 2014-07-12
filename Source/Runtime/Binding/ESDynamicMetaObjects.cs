@@ -180,7 +180,7 @@ namespace EssenceSharp.Runtime.Binding {
 		}
 
 		public DynamicMetaObject metaObjectToThrowInvalidFunctionCallException(ESSymbol selector, DynamicMetaObject[] args, String messageText, Type expectedFunctionType, Type actualFunctionType) {
-			return ExpressionTreeGuru.expressionToThrowInvalidFunctionCallException(Expression, ValueClass, selector, messageText, (long)args.Length, expectedFunctionType, actualFunctionType).asDynamicMetaObject(DefaultBindingRestrictions, Value);
+			return ExpressionTreeGuru.expressionToThrowInvalidFunctionCallException(Expression, ValueClass, selector, messageText, (long)args.Length, expectedFunctionType, actualFunctionType).asDynamicMetaObject(BindingRestrictions.GetInstanceRestriction(Expression, Value), Value);
 		}
 
 		public override DynamicMetaObject BindGetMember(GetMemberBinder binder) {

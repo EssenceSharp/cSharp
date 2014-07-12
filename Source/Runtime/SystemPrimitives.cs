@@ -162,7 +162,7 @@ namespace EssenceSharp.Runtime {
 			});
 		}
 
-		public void generateDefaultPrimitiveMethodSource(DirectoryInfo basePath) {
+		public void generatePrimitiveMethodSource(DirectoryInfo basePath) {
 
 			var folderPath = basePath.FullName;
 			Pathname.elementsDo(name => folderPath = Path.Combine(folderPath, name));

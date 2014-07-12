@@ -314,6 +314,10 @@ namespace EssenceSharp.Runtime {
 			String namePrefix;
 			int genericArity;
 			if (!TypeName.parseUnqualifiedName(name, out namePrefix, out genericArity, (prefix, errorDescription) => {})) return true;
+			if (namePrefix.Length != name.Length) {
+				var extension = baseDirectory.Extension;
+				if (extension.Length > 0) return true;
+			}
 			if (genericArity > 0) {
 				name = namePrefix + "`" + genericArity.ToString();
 			}

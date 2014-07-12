@@ -179,10 +179,19 @@ namespace EssenceSharp.Runtime {
 
 		public Delegate Function {
 			get {return function;}
-			set {function = value;
-				if (function == null) setFunctionToDefault(out function); }
+			set {setFunction(value);}
 		}
-		
+
+		protected void setFunction(Delegate newFunction) {
+			if (function == newFunction) return;
+			function = newFunction;
+			changedFunction();
+		}
+
+		protected virtual void changedFunction() {
+			if (function == null) setFunctionToDefault(out function);
+		}
+
 		public abstract NamespaceObject Environment {
 			get;
 		}
@@ -355,6 +364,10 @@ namespace EssenceSharp.Runtime {
 
 			#region Primitive Definitions
 		
+			public static Object _function_(Object receiver) {
+				return ((ESCompiledCode)receiver).Function;
+			}
+		
 			public static Object _numArgs_(Object receiver) {
 				return ((ESCompiledCode)receiver).NumArgs;
 			}
@@ -371,6 +384,7 @@ namespace EssenceSharp.Runtime {
 
 			public override void publishCanonicalPrimitives() {
 
+				publishPrimitive("function",					new FuncNs.Func<Object, Object>(_function_));
 				publishPrimitive("numArgs",					new FuncNs.Func<Object, Object>(_numArgs_));
 				publishPrimitive("homeMethod",					new FuncNs.Func<Object, Object>(_homeMethod_));
 				publishPrimitive("homeClass",					new FuncNs.Func<Object, Object>(_homeClass_));
@@ -386,6 +400,11 @@ namespace EssenceSharp.Runtime {
 	public class ESBlock : ESCompiledCode {
 
 		protected ESCompiledCode 									lexicalContext;
+		protected IDictionary<Type, Delegate>								avatars; 
+		// An 'avatar' is a function with typed parameters that does nothing except to invoke this block's function.
+		// Note that the degenerate case is where the block's function is its own avatar.
+		// They key of the dictionary is the delegate type of the avatar (based on the parameter signature,) 
+		// and the value is the delegate having that parameter signature.
 		
 		public ESBlock(ESBehavior esClass) : base(esClass) {
 		}
@@ -429,7 +448,49 @@ namespace EssenceSharp.Runtime {
 		public bool asBoolean() {
 			return asBoolean(value0());
 		}
-		
+
+		protected override void changedFunction() {
+			base.changedFunction();
+			avatars = null;
+		}
+
+		public void addAvatar(Delegate avatar) {
+			var baseType = function.GetType();
+			var avatarType = avatar.GetType();
+			if (avatarType == baseType) return;
+			if (avatars == null) avatars = new Dictionary<Type, Delegate>();
+			avatars[avatarType] = avatar;
+		}
+
+		public void removeAvatar(Delegate avatar) {
+			if (avatars == null) return;
+			removeAvatar(avatar.GetType());
+		}
+
+		public void removeAvatar(Type avatarType) {
+			if (avatars == null) return;
+			var baseType = function.GetType();
+			if (avatarType == baseType) return;
+			if (avatars.Remove(avatarType)) {
+				if (avatars.Count < 1) avatars = null;
+			}
+		}
+
+		public Delegate avatarWithType(Type avatarType) {
+			if (avatars != null) {
+				Delegate avatar;
+				if (avatars.TryGetValue(avatarType, out avatar)) return avatar;
+			}
+			var baseType = function.GetType();
+			return avatarType == baseType ? function : null;
+		}
+
+		public void avatarsDo(Action<Delegate> enumerator1) {
+			enumerator1(function);
+			if (avatars == null) return;
+			foreach (var kvp in avatars) enumerator1(kvp.Value);
+		}
+
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
 			append("numArgs: ");
 			append(NumArgs.ToString());
@@ -1019,6 +1080,11 @@ namespace EssenceSharp.Runtime {
 		
 			#region Primitive Definitions
 
+			public static Object _setFunction_(Object receiver, Object functionObject) {
+				((ESBlock)receiver).Function = (Delegate)functionObject;
+				return receiver;
+			}
+
 			public static Object _numArgs_(Object receiver) {
 				return ((ESBlock)receiver).NumArgs;
 			}
@@ -1439,6 +1505,8 @@ namespace EssenceSharp.Runtime {
 		
 			public override void publishCanonicalPrimitives() {
 
+				publishPrimitive("function:",					new FuncNs.Func<Object, Object, Object>(_setFunction_));
+
 				publishPrimitive("numArgs",					new FuncNs.Func<Object, Object>(_numArgs_));
 
 				publishPrimitive("environment",					new FuncNs.Func<Object, Object>(_environment_));
@@ -1495,19 +1563,6 @@ namespace EssenceSharp.Runtime {
 
 		}
 		
-	}
-	
-	public enum MethodOperationType {
-		Function,
-		Convert,
-		GetField,
-		SetField,
-		InvokeField,
-		GetProperty,
-		SetProperty,
-		InvokeProperty,
-		InvokeMethod,
-		CreateInstance
 	}
 
 	public class InlineOperation {
