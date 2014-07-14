@@ -12,7 +12,6 @@ C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\bin\x86
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\bin\x86\35\Debug\Microsoft.Dynamic.xml
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\bin\x86\35\Debug\Microsoft.Scripting.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\bin\x86\35\Debug\Microsoft.Scripting.xml
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x86.35.Debug\EssenceSharp.csprojResolveAssemblyReference.cache
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x86.35.Debug\EssenceSharp.Properties.Resources.resources
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x86.35.Debug\EssenceSharp.csproj.GenerateResource.Cache
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x86.35.Debug\EssenceSharp.dll

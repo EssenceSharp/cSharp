@@ -1214,7 +1214,7 @@ namespace EssenceSharp.CompilationServices {
 			return clrParameterDeclarations;
 		}
 
-		protected List<ParameterExpression> ParmeterExpressions {
+		public List<ParameterExpression> ParameterExpressions {
 			get {	if (parmeterExpressions == null) parmeterExpressions = computeCLRParameterExpressions();
 				return parmeterExpressions;}
 		}
@@ -1258,8 +1258,16 @@ namespace EssenceSharp.CompilationServices {
 		}
 
 		protected override Expression bodyAsCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
-			var parameters = ParmeterExpressions;
-			if (StatementCount < 1) return parameters.Count > 0 ? parameters.Last() : (Scope.IsRoot ? (Expression)Context.SelfParameter : ExpressionTreeGuru.nilConstant);
+			var parameters = ParameterExpressions;
+			if (StatementCount < 1) {
+				if (parameters.Count > 0) {
+					return parameters.Last();
+				} else if (Scope.IsRoot) {
+					return Expression.Block(new []{Context.SelfParameter}, Context.SelfParameter);
+				} else {
+					return ExpressionTreeGuru.nilConstant;
+				}
+			}
 			var bodyExpression = body.asCLRExpression(environment, behavior);
 			if (Scope.IsRoot) {
 				var exception = Expression.Parameter(TypeGuru.nonLocalReturnExceptionType, "ex");
@@ -1288,7 +1296,7 @@ namespace EssenceSharp.CompilationServices {
 
  		public override Expression asCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
 			bindNonLocalVariablesToEnvironment(environment, behavior);
-			var parameters = ParmeterExpressions;
+			var parameters = ParameterExpressions;
 			var body = bodyAsCLRExpression(environment, behavior);
 			return Expression.Lambda(body, useTailCallOptimization, parameters);
 
@@ -1456,9 +1464,8 @@ namespace EssenceSharp.CompilationServices {
  		public override Expression asCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
 			if (environment == null) environment = behavior;
 			bindNonLocalVariablesToEnvironment(environment, behavior);
-			var parameters = ParmeterExpressions;
 			var body = bodyAsCLRExpression(environment, behavior);
-			return Expression.Lambda(body, useTailCallOptimization, parameters);
+			return Expression.Lambda(body, useTailCallOptimization, ParameterExpressions);
 			
 			#region Legacy implementation
 
@@ -1555,17 +1562,8 @@ namespace EssenceSharp.CompilationServices {
 			get {return true;}
 		}
 
- 		public Expression onFailCodeAsCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
-			if (StatementCount > 0) return base.bodyAsCLRExpression(environment, behavior);
-			var objectSpace = Context.ObjectSpace;
-			var parameters = ParmeterExpressions;
-			var parametersArray = new Expression[parameters.Count];
-			for (var i = 0; i < parametersArray.Length; i++) parametersArray[i] = parameters[i];
-			var message = ExpressionTreeGuru.expressionToCreateMessage(objectSpace.MessageClass, Selector, parametersArray);
-			return Expression.Block(
-				new ParameterExpression[]{Context.SelfParameter},
-				Expression.Assign(Context.SelfParameter, Expression.Constant(Context.SelfValue)),
-				ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, behavior, objectSpace.SymbolRegistry, message));
+ 		public virtual Expression onFailCodeAsCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
+			return base.bodyAsCLRExpression(environment, behavior);
 		}
 
 	}
@@ -1588,7 +1586,7 @@ namespace EssenceSharp.CompilationServices {
 
 		protected override Expression bodyAsCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
 			var arguments = new List<Expression>();
-			foreach (var p in ParmeterExpressions) arguments.Add(p);
+			foreach (var p in ParameterExpressions) arguments.Add(p);
 			var invokePrimExpression = Expression.Invoke(Expression.Convert(Expression.Constant(PrimitiveFunction), ESCompiledCode.methodFunctionTypeForNumArgs(NumArgs)), arguments); 
 			var catchBlock = Expression.Catch(TypeGuru.primitiveFailExceptionType, onFailCodeAsCLRExpression(environment, behavior));
 			return Expression.TryCatch(invokePrimExpression, catchBlock);
@@ -1616,6 +1614,19 @@ namespace EssenceSharp.CompilationServices {
 			get {return operation;}
 		}
 
+ 		public override Expression onFailCodeAsCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
+			if (StatementCount > 0) return base.bodyAsCLRExpression(environment, behavior);
+			var parameters = ParameterExpressions;
+			var parametersArray = new Expression[parameters.Count];
+			for (var i = 0; i < parametersArray.Length; i++) parametersArray[i] = parameters[i];
+			var messageClass = Context.ObjectSpace.MessageClass;
+			var message = ExpressionTreeGuru.expressionToCreateMessage(messageClass, Selector, parametersArray);
+			return Expression.Lambda(
+				ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, behavior, Context.ObjectSpace.SymbolRegistry, message), 
+				useTailCallOptimization, 
+				ParameterExpressions);
+		}
+
 		protected override Expression bodyAsCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
 			// The implementation is simply to invoke the method by sending the message specified by its selector, 
 			// because the dynamic binding logic won't actually invoke the method function, but will instead emit 
@@ -1640,7 +1651,7 @@ namespace EssenceSharp.CompilationServices {
 					break;
 			}
 			var messageSend = Context.newMessageSendNode(Context.newSelfNode(), message);
-			return messageSend.asCLRExpression(environment, behavior);
+			return Expression.Lambda(messageSend.asCLRExpression(environment, behavior), useTailCallOptimization, ParameterExpressions);
 		}
 
 	}

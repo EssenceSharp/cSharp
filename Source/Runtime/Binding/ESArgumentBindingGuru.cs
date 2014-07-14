@@ -466,7 +466,7 @@ namespace EssenceSharp.Runtime.Binding {
 				methodInfo = CompilerHelpers.GetExplicitConverter(type, targetType);
 				if (methodInfo != null) hasExplicitConverter = true;
 			}
-			return isAssignable ? 128 : hasExplicitConverter ? 256 : -1;
+			return isAssignable ? 128 : hasExplicitConverter ? 256 : 512;
 		}
 
 		public DynamicMetaObject metaObjectToConvertTo(Type targetType) {

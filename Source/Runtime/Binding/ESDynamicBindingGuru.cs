@@ -202,7 +202,7 @@ namespace EssenceSharp.Runtime.Binding {
 			var self = receiver.Expression;
 			if (method == null) {
 				expression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(self, esClass, selector, argumentsWithoutReceiver);
-				return new DynamicMetaObject(expression, bindingRestrictions, receiver.Value);
+				return expression.asDynamicMetaObject(bindingRestrictions, receiver.Value);
 			}
 
 			long arity = argumentsWithoutReceiver.Length;
@@ -363,7 +363,12 @@ namespace EssenceSharp.Runtime.Binding {
 					default:
 						break;
 				}
-				if (expression == null) expression = operation.OnFailExpression;
+				if (expression == null) {
+					var argumentsWithReceiver = new Expression[arity + 1];
+					argumentsWithReceiver[0] = self;
+					for (int i = 1, j = 0; i <= arity; i++, j++) argumentsWithReceiver[i] = argumentsWithoutReceiver[j].Expression;
+					expression = expression = Expression.Invoke(operation.OnFailExpression, argumentsWithReceiver);;
+				}
 			}
 			return new DynamicMetaObject(expression, bindingRestrictions, receiver.Value);
 
@@ -373,7 +378,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#endregion
 
-		protected ESObjectSpace							objectSpace							= null;
+		protected ESObjectSpace							objectSpace						= null;
 		protected SymbolRegistry						symbolRegistry						= null;
 		protected ESSymbol							selectorValue0						= null;
 		protected ESSymbol							selectorValue1						= null;
