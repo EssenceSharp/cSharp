@@ -94,10 +94,11 @@ namespace EssenceSharp.Runtime.Binding {
 		public class Registry : BinderRegistry {
 
 			protected ESBehavior									unknownClass;
-			protected Dictionary<BehavioralObject, Dictionary<ESSymbol, MessageSendBinder>>		traitSelfReceiverRegistry	= new Dictionary<BehavioralObject, Dictionary<ESSymbol, MessageSendBinder>>();
-			protected Dictionary<ESSymbol, MessageSendBinder>					generalReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
-			protected Dictionary<ESSymbol, MessageSendBinder>					superReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
 			protected Dictionary<ESSymbol, MessageSendBinder>					thisContextReceiverRegistry	= new Dictionary<ESSymbol, MessageSendBinder>();
+			protected Dictionary<ESSymbol, MessageSendBinder>					superReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
+			protected Dictionary<BehavioralObject, Dictionary<ESSymbol, MessageSendBinder>>		traitSelfReceiverRegistry	= new Dictionary<BehavioralObject, Dictionary<ESSymbol, MessageSendBinder>>();
+			protected Dictionary<ESSymbol, MessageSendBinder>					selfReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
+			protected Dictionary<ESSymbol, MessageSendBinder>					generalReceiverRegistry		= new Dictionary<ESSymbol, MessageSendBinder>();
 
 			public Registry(DynamicBindingGuru dynamicBindingGuru) : base(dynamicBindingGuru) {
 			}
@@ -126,7 +127,7 @@ namespace EssenceSharp.Runtime.Binding {
 						}
 						return binder;
 						*/
-						registry = generalReceiverRegistry;
+						registry = selfReceiverRegistry;
 						break;
 					case MessageReceiverKind.General:
 						registry = generalReceiverRegistry;

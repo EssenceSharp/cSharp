@@ -178,6 +178,7 @@ namespace EssenceSharp.Runtime {
 					writeStream.WriteLine("");
 					writeStream.Write("\t");
 					writeStream.WriteLine("protocol: #'system primitives' method:");
+					writeStream.WriteLine("");
 					writeStream.Write("\t[## ");
 					var selector = symbolRegistry.symbolFor(name);
 					MethodInfo method;

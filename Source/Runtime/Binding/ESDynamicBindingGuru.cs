@@ -161,36 +161,166 @@ namespace EssenceSharp.Runtime.Binding {
 			return expressionArray;
 		}
 
-		public static List<DynamicMetaObject> typeCompatibleArgumentsFor(ParameterInfo[] parameters, List<ArgumentBindingGuru> argGurus) {
-			var arguments = new List<DynamicMetaObject>();
-			long arity = parameters.Length;
-			if (argGurus.Count != arity) return null;
-			for (var i = 0; i < arity; i++) {
-				var p = parameters[i];
-				var argGuru = argGurus[i];
-				var argMo = argGuru.metaObjectToConvertTo(p.ParameterType);
-				if (argMo == null) {
-					arguments = null;
-					break;
-				}
-				arguments.Add(argMo);
-			}
-			return arguments;
+		public enum MethodArgumentBinding {
+			ArityMismatch,	// The number of parameters does not match the number of arguments (oops!)
+			Unbindable,	// At least one argument is not type compatible with the corresponding parameter, and all attempts to convert it to a compatible type failed. 
+			PassByRef,	// At least one parameter requires 'pass by reference'; however, each arg that corresponds to such a parameter is a one-arg block, and all the other args are type compatible with their corresponding parameters.
+			PassByValue,	// All argumets are type-compatible with the parameters (although they may have needed type conversion.)
 		}
 
-		#region Static-typing-idiocy duplicate methods
+		public static MethodArgumentBinding computeTypeCompatibleArgumentsFor(ParameterInfo[] parameters, List<ArgumentBindingGuru> argGurus, out List<DynamicMetaObject> argMetaObjects) {
+			long arity = parameters.Length;
+			if (argGurus.Count != arity) {
+				argMetaObjects = null;
+				return MethodArgumentBinding.ArityMismatch;
+			}
+			MethodArgumentBinding bindingResult = MethodArgumentBinding.PassByValue;
+			argMetaObjects = new List<DynamicMetaObject>();
+			for (var i = 0; i < arity; i++) {
+				var p = parameters[i];
+				var pType = p.ParameterType;
+				var argGuru = argGurus[i];
+				var argMo = argGuru.metaObjectToConvertTo(pType);
+				if (argMo == null) return MethodArgumentBinding.Unbindable;
+				if (pType.IsByRef) bindingResult = MethodArgumentBinding.PassByRef;
+				argMetaObjects.Add(argMo);
+			}
+			return bindingResult;
+		}
+
+		public static MethodArgumentBinding typeCompatibleArgumentsFor(MethodInfo methodInfo, List<ArgumentBindingGuru> argGurus, out List<DynamicMetaObject> argMetaObjects) {
+			return computeTypeCompatibleArgumentsFor(methodInfo.GetParameters(), argGurus, out argMetaObjects);
+		}
 
 		public static List<DynamicMetaObject> typeCompatibleArgumentsFor(MethodInfo methodInfo, List<ArgumentBindingGuru> argGurus) {
-			return typeCompatibleArgumentsFor(methodInfo.GetParameters(), argGurus);
+			List<DynamicMetaObject> argMetaObjects;
+			switch (computeTypeCompatibleArgumentsFor(methodInfo.GetParameters(), argGurus, out argMetaObjects)) {
+				case MethodArgumentBinding.PassByValue:
+					return argMetaObjects;
+				default:
+					return null;
+			}
 		}
 
 		public static List<DynamicMetaObject> typeCompatibleArgumentsFor(ConstructorInfo constructorInfo, List<ArgumentBindingGuru> argGurus) {
-			return typeCompatibleArgumentsFor(constructorInfo.GetParameters(), argGurus);
+			List<DynamicMetaObject> argMetaObjects;
+			switch (computeTypeCompatibleArgumentsFor(constructorInfo.GetParameters(), argGurus, out argMetaObjects)) {
+				case MethodArgumentBinding.PassByValue:
+					return argMetaObjects;
+				default:
+					return null;
+			}
 		}
 
 		#endregion
 
 		#endregion
+
+		#region CLR Method Invocation
+
+		public static DynamicMetaObject metaObjectToInvokeMethod(DynamicMetaObject receiver, ESObjectSpace objectSpace, ESBehavior esClass, Type sourceType, String methodName, DynamicMetaObject[] argumentsWithoutReceiver, BindingRestrictions bindingRestrictions) {
+			Expression expression = null;
+			Expression self;
+			long arity = argumentsWithoutReceiver.Length;
+			List<DynamicMetaObject> typedArguments;
+			MethodInfo methodInfo;
+			DynamicBindingGuru dynamicBindingGuru = objectSpace.DynamicBindingGuru;
+
+			if (sourceType == null) 
+				return null;
+
+			switch (dynamicBindingGuru.getMethodAndTypeCompatibleArgumentsFor(methodName, esClass, sourceType, argumentsWithoutReceiver, out methodInfo, out typedArguments)) {
+				case MethodArgumentBinding.PassByValue:
+					if (methodInfo.IsStatic) {
+						self = receiver.Expression;
+						expression = Expression.Call(null, methodInfo, expressionArrayFor(typedArguments.ToArray()));
+					} else { 
+						self = receiver.asExpressionWithFormalType();
+						if (!methodInfo.DeclaringType.IsAssignableFrom(self.Type)) self = self.withType(methodInfo.DeclaringType);
+						expression = Expression.Call(self, methodInfo, expressionArrayFor(typedArguments.ToArray()));
+					}
+					foreach(var argMo in typedArguments) bindingRestrictions = bindingRestrictions.Merge(argMo.Restrictions);
+					expression = methodInfo.ReturnType == TypeGuru.voidType ? 
+							Expression.Block(TypeGuru.objectType, expression, self) :
+							expression.withCanonicalReturnType();
+					break;
+				case MethodArgumentBinding.PassByRef:
+					var actualArguments = new Expression[arity];
+					var postInvocationActions = new List<Expression>();
+					var methodParameters = methodInfo.GetParameters();
+					ParameterExpression parameter;
+					var localVariables = new List<ParameterExpression>();
+					var statements = new List<Expression>();
+					var valueSelector = objectSpace.selectorToEvaluatBlockWithNumArgs(1);
+					for (var i = 0; i < arity; i++) {
+						var p		= methodParameters[i];
+						var pType	= p.ParameterType;
+						var argMo	= typedArguments[i];
+						if (pType.IsByRef) {
+							parameter = Expression.Parameter(pType.GetElementType(), p.Name);
+							localVariables.Add(parameter);
+							actualArguments[i] = parameter;
+							if (argMo.isBlock()) { 
+								if (!p.IsOut) statements.Add(Expression.Assign(parameter, Expression.Default(pType.GetElementType())));
+								var parameterMo = argMo.HasValue ?
+											argArrayFor(parameter.asDynamicMetaObject(BindingRestrictions.Empty, argMo.Value)) :
+											argArrayFor(parameter.asDynamicMetaObject(BindingRestrictions.Empty));
+								var invokeBlockAction = 
+									argMo.BindInvoke(
+										dynamicBindingGuru.canonicalInvokeBinderFor(
+											objectSpace.classOf(argMo.Value), 
+											valueSelector), 
+										parameterMo).Expression;
+								postInvocationActions.Add(invokeBlockAction);
+							} else if (p.IsOut) {
+								postInvocationActions.Add(Expression.Assign(argumentsWithoutReceiver[i].Expression, parameter.withCanonicalReturnType()));
+							} else {
+								statements.Add(Expression.Assign(parameter, argMo.Expression));
+								postInvocationActions.Add(Expression.Assign(argumentsWithoutReceiver[i].Expression, parameter.withCanonicalReturnType()));
+							}
+						} else {
+							actualArguments[i] = argMo.Expression;
+						}
+						bindingRestrictions = bindingRestrictions.Merge(argMo.Restrictions);
+					}
+					Expression methodCallExpression;
+					if (methodInfo.IsStatic) {
+						self = receiver.Expression;
+						methodCallExpression = Expression.Call(null, methodInfo, actualArguments);
+					} else { 
+						self = receiver.asExpressionWithFormalType();
+						if (!methodInfo.DeclaringType.IsAssignableFrom(self.Type)) self = self.withType(methodInfo.DeclaringType);
+						methodCallExpression = Expression.Call(self, methodInfo, actualArguments);
+					}
+					if (methodInfo.ReturnType == TypeGuru.voidType) {
+						statements.Add(Expression.TryFinally(methodCallExpression, Expression.Block(postInvocationActions)));
+						statements.Add(self.withCanonicalReturnType());
+					} else {
+						var returnValue = Expression.Parameter(methodInfo.ReturnType, "$returnValue");
+						localVariables.Add(returnValue);
+						statements.Add(Expression.Assign(returnValue, ExpressionTreeGuru.falseConstant));
+						if (postInvocationActions.Count > 0) { 
+							if (methodInfo.ReturnType.isBoolean()) { 
+								statements.Add(Expression.TryFinally(Expression.Assign(returnValue, methodCallExpression), Expression.IfThen(returnValue, Expression.Block(postInvocationActions))));
+							} else {
+								statements.Add(Expression.TryFinally(Expression.Assign(returnValue, methodCallExpression), Expression.Block(postInvocationActions)));
+							}
+						} else {
+							statements.Add(Expression.Assign(returnValue, methodCallExpression));
+						}
+						statements.Add(returnValue.withCanonicalReturnType());
+					}
+					expression = Expression.Block(TypeGuru.objectType, localVariables, statements);
+					break;
+				default:
+					return null;
+			}
+
+			return receiver.HasValue ?
+				expression.asDynamicMetaObject(bindingRestrictions, receiver.Value) :
+				expression.asDynamicMetaObject(bindingRestrictions);
+
+		}
 
 		#endregion
 
@@ -207,6 +337,7 @@ namespace EssenceSharp.Runtime.Binding {
 
 			long arity = argumentsWithoutReceiver.Length;
 			InlineOperation operation = method.InlineOperation;
+
 			if (operation == null) {
 				var argumentsWithReceiver = new Expression[arity + 1];
 				argumentsWithReceiver[0] = self;
@@ -216,14 +347,27 @@ namespace EssenceSharp.Runtime.Binding {
 				FieldInfo field;
 				PropertyInfo property;
 				EventInfo @event;
-				MethodInfo methodInfo;
 				DynamicMetaObject arg;
 				ArgumentBindingGuru argGuru;
 				Expression fieldExpression;
 				Expression propertyExpression;
+				DynamicMetaObject fieldMo;
+				DynamicMetaObject propertyMo;
+				DynamicMetaObject invocationMo;
+				Type sourceType;
+
 				expression = null;
+
 				DynamicBindingGuru dynamicBindingGuru;
 				List<DynamicMetaObject> typedArguments;
+
+				if (method.IsArchitecturalBehaviorMethod) {
+					sourceType = esClass.InstanceType;
+					esClass = ((ESMetaclass)esClass).CanonicalInstance;
+				} else {
+					sourceType = esClass.ReflectionType;
+				}
+
 				switch (operation.Type) {
 					case MethodOperationType.Convert:
 						Type targetType = ESBehavior.typeFromAssemblyQualifiedName(operation.Operand, true);
@@ -231,17 +375,17 @@ namespace EssenceSharp.Runtime.Binding {
 						expression = receiver.asExpressionWithFormalType().withType(targetType);
 						break;
 					case MethodOperationType.GetField:
-						field = esClass.getField(operation.Operand);
+						field = esClass.getField(sourceType, operation.Operand);
 						if (field == null) break;
 						expression = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), field).withCanonicalReturnType();
 						break;
 					case MethodOperationType.GetProperty:
-						property = esClass.getReadableProperty(operation.Operand);
+						property = esClass.getReadableProperty(sourceType, operation.Operand);
 						if (property == null) break;
 						expression = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), property).withCanonicalReturnType();
 						break;
 					case MethodOperationType.SetField:
-						field = esClass.getField(operation.Operand);
+						field = esClass.getField(sourceType, operation.Operand);
 						if (field == null) break;
 						arg = argumentsWithoutReceiver[0];
 						argGuru = arg.typeBindingGuru(objectSpace);
@@ -251,7 +395,7 @@ namespace EssenceSharp.Runtime.Binding {
 						bindingRestrictions = bindingRestrictions.Merge(arg.Restrictions);
 						break;
 					case MethodOperationType.SetProperty:
-						property = esClass.getWritableProperty(operation.Operand);
+						property = esClass.getWritableProperty(sourceType, operation.Operand);
 						if (property == null) break;
 						arg = argumentsWithoutReceiver[0];
 						argGuru = arg.typeBindingGuru(objectSpace);
@@ -261,101 +405,61 @@ namespace EssenceSharp.Runtime.Binding {
 						bindingRestrictions = bindingRestrictions.Merge(arg.Restrictions);
 						break;
 					case MethodOperationType.InvokeField:
-						field = esClass.getField(operation.Operand);
+						field = esClass.getField(sourceType, operation.Operand);
 						if (field == null) break;
 						if (TypeGuru.delegateType.IsAssignableFrom(field.FieldType)) {
-							fieldExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), field);
-							methodInfo = field.FieldType.GetMethod("Invoke");
-							dynamicBindingGuru = objectSpace.DynamicBindingGuru;
-							var argGurus = dynamicBindingGuru.dynamicMetaObjectArgumentGurusFor(argumentsWithoutReceiver);
-							typedArguments = typeCompatibleArgumentsFor(methodInfo, argGurus);
-							expression = Expression.Invoke(fieldExpression, expressionArrayFor(typedArguments.ToArray()));
-							foreach(var argMo in typedArguments) bindingRestrictions = bindingRestrictions.Merge(argMo.Restrictions);
-							if (methodInfo.ReturnType == TypeGuru.voidType) {
-								expression = Expression.Block(TypeGuru.objectType, expression, self);
-							} else {
-								expression = expression.withCanonicalReturnType();
-							}
+							fieldMo = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), field).asDynamicMetaObject();
+							invocationMo = metaObjectToInvokeMethod(fieldMo, objectSpace, esClass, field.FieldType, "Invoke", argumentsWithoutReceiver, bindingRestrictions);
+							if (invocationMo != null) return invocationMo;
 						}
 						break;
 					case MethodOperationType.InvokeProperty:
-						property = esClass.getReadableProperty(operation.Operand);
+						property = esClass.getReadableProperty(sourceType, operation.Operand);
 						if (property == null) break;
 						if (TypeGuru.delegateType.IsAssignableFrom(property.PropertyType)) {
-							propertyExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), property);
-							methodInfo = property.PropertyType.GetMethod("Invoke");
-							dynamicBindingGuru = objectSpace.DynamicBindingGuru;
-							var argGurus = dynamicBindingGuru.dynamicMetaObjectArgumentGurusFor(argumentsWithoutReceiver);
-							typedArguments = typeCompatibleArgumentsFor(methodInfo, argGurus);
-							expression = Expression.Invoke(propertyExpression, expressionArrayFor(typedArguments.ToArray()));
-							foreach(var argMo in typedArguments) bindingRestrictions = bindingRestrictions.Merge(argMo.Restrictions);
-							if (methodInfo.ReturnType == TypeGuru.voidType) {
-								expression = Expression.Block(TypeGuru.objectType, expression, self);
-							} else {
-								expression = expression.withCanonicalReturnType();
-							}
+							propertyMo = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), property).asDynamicMetaObject();
+							invocationMo = metaObjectToInvokeMethod(propertyMo, objectSpace, esClass, property.PropertyType, "Invoke", argumentsWithoutReceiver, bindingRestrictions);
+							if (invocationMo != null) return invocationMo;
 						}
 						break;
 					case MethodOperationType.InvokeEvent:
 						var eventName = operation.Operand; 
-						@event = esClass.getEvent(eventName);
+						@event = esClass.getEvent(sourceType, eventName);
 						if (@event == null) break;
 						var eventHandlerType = @event.EventHandlerType;
 						Expression eventExpression = null;
-						methodInfo = null;
+						DynamicMetaObject eventMo = null;
 						esClass.getReadablePropertyOrElseField(
+								sourceType, 
 								eventName, 
-								(p) => {
-									methodInfo = p.PropertyType.GetMethod("Invoke");
-									eventExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), p);
+								(p) => {eventExpression = Expression.Property(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), p);
+									eventMo = eventExpression.asDynamicMetaObject();
+									sourceType = p.PropertyType;
 								}, 
-								(f) => {
-									methodInfo = f.FieldType.GetMethod("Invoke");
-									eventExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), f);
+								(f) => {eventExpression = Expression.Field(esClass.IsHostSystemMetaclass ? null : receiver.asExpressionWithFormalType(), f);
+									eventMo = eventExpression.asDynamicMetaObject();
+									sourceType = f.FieldType;
 								});
-						dynamicBindingGuru = objectSpace.DynamicBindingGuru;
-						var eventArgGurus = dynamicBindingGuru.dynamicMetaObjectArgumentGurusFor(argumentsWithoutReceiver);
-						typedArguments = typeCompatibleArgumentsFor(methodInfo, eventArgGurus);
-						expression = Expression.Condition(
-								Expression.ReferenceNotEqual(eventExpression, ExpressionTreeGuru.nilConstant),
-									Expression.Invoke(eventExpression, expressionArrayFor(typedArguments.ToArray())),
-									Expression.Empty());
-						foreach(var argMo in typedArguments) bindingRestrictions = bindingRestrictions.Merge(argMo.Restrictions);
-						if (methodInfo.ReturnType == TypeGuru.voidType) {
-							expression = Expression.Block(TypeGuru.objectType, expression, self);
-						} else {
-							expression = expression.withCanonicalReturnType();
+						if (eventExpression != null) { 
+							invocationMo = metaObjectToInvokeMethod(eventMo, objectSpace, esClass, sourceType, "Invoke", argumentsWithoutReceiver, bindingRestrictions);
+							if (invocationMo != null) { 
+								bindingRestrictions = invocationMo.Restrictions;
+								expression = Expression.Condition(
+										Expression.ReferenceNotEqual(eventExpression, ExpressionTreeGuru.nilConstant),
+											invocationMo.Expression,
+											self);
+							}
 						}
 						break;
 					case MethodOperationType.InvokeMethod:
-						dynamicBindingGuru = objectSpace.DynamicBindingGuru;
-						if (dynamicBindingGuru.getMethodAndTypeCompatibleArgumentsFor(operation.Operand, esClass, argumentsWithoutReceiver, out methodInfo, out typedArguments)) {
-							if (methodInfo.IsStatic) {
-								expression = Expression.Call(
-										null, 
-										methodInfo, 
-										expressionArrayFor(typedArguments.ToArray()));
-							} else { 
-								self = receiver.asExpressionWithFormalType();
-								if (!methodInfo.DeclaringType.IsAssignableFrom(self.Type)) self = self.withType(methodInfo.DeclaringType);
-								expression = Expression.Call(
-										self, 
-										methodInfo, 
-										expressionArrayFor(typedArguments.ToArray()));
-							}
-							foreach(var argMo in typedArguments) bindingRestrictions = bindingRestrictions.Merge(argMo.Restrictions);
-							if (methodInfo.ReturnType == TypeGuru.voidType) {
-								expression = Expression.Block(TypeGuru.objectType, expression, self);
-							} else {
-								expression = expression.withCanonicalReturnType();
-							}
-						}
+						invocationMo = metaObjectToInvokeMethod(receiver, objectSpace, esClass, sourceType, operation.Operand, argumentsWithoutReceiver, bindingRestrictions);
+						if (invocationMo != null) return invocationMo;
 						break;
 					case MethodOperationType.CreateInstance:
 						ConstructorInfo constructorInfo;
 						dynamicBindingGuru = objectSpace.DynamicBindingGuru;
 						var instanceClass = esClass is ESMetaclass ? ((ESMetaclass)esClass).CanonicalInstance : esClass;
-						if (dynamicBindingGuru.getConstructorAndTypeCompatibleArgumentsFor(instanceClass, argumentsWithoutReceiver, out constructorInfo, out typedArguments)) {
+						if (dynamicBindingGuru.getConstructorAndTypeCompatibleArgumentsFor(instanceClass, sourceType, argumentsWithoutReceiver, out constructorInfo, out typedArguments)) {
 							expression = Expression.New(constructorInfo, expressionArrayFor(typedArguments.ToArray())).withCanonicalReturnType();
 							foreach(var argMo in typedArguments) bindingRestrictions = bindingRestrictions.Merge(argMo.Restrictions);
 						}
@@ -512,19 +616,14 @@ namespace EssenceSharp.Runtime.Binding {
 			return argGurus;
 		}
 
-		public bool selectMethodAndTypeCompatibleArgumentsFor(MethodInfo[] candidateMethods, DynamicMetaObject[] args, out MethodInfo methodInfo, out List<DynamicMetaObject> typedArguments) {
+		public MethodArgumentBinding selectMethodAndMakeTypeCompatibleArgumentsFor(MethodInfo[] candidateMethods, DynamicMetaObject[] args, out MethodInfo methodInfo, out List<DynamicMetaObject> typedArguments) {
 			if (candidateMethods.Length > 0) {
 				long arity = args.Length;
 				ParameterInfo[] parameters;
 				var argGurus = dynamicMetaObjectArgumentGurusFor(args);
 				if (candidateMethods.Length < 2) {
 					methodInfo = candidateMethods[0];
-					typedArguments = typeCompatibleArgumentsFor(methodInfo, argGurus);
-					if (typedArguments == null) {
-						methodInfo = null;
-						return false;
-					}
-					return true;
+					return typeCompatibleArgumentsFor(methodInfo, argGurus, out typedArguments);
 				} else {
 					typedArguments = new List<DynamicMetaObject>();
 					methodInfo = null;
@@ -550,47 +649,48 @@ namespace EssenceSharp.Runtime.Binding {
 							}
 						}
 					}
-					if (methodInfo == null) {
-						return false;
-					} else {
-						typedArguments = typeCompatibleArgumentsFor(methodInfo, argGurus);
-						if (typedArguments == null) {
-							methodInfo = null;
-							return false;
-						}
-						return true;
-					}
+					return methodInfo == null ? 
+						MethodArgumentBinding.Unbindable :
+						typeCompatibleArgumentsFor(methodInfo, argGurus, out typedArguments);
 				}
 			} else {
 				methodInfo = null;
 				typedArguments = emptyArgList;
-				return false;
+				return MethodArgumentBinding.Unbindable;
 			}
 		}
 
-		#region Static-typing-idiocy duplicate methods
+		#region Static-typing-idiocy duplicate methods 
 
-		public bool getMethodAndTypeCompatibleArgumentsFor(String methodName, ESBehavior esClass, DynamicMetaObject[] args, out MethodInfo methodInfo, out List<DynamicMetaObject> typedArguments) {
+		public MethodArgumentBinding getMethodAndTypeCompatibleArgumentsFor(String methodName, ESBehavior esClass, DynamicMetaObject[] args, out MethodInfo methodInfo, out List<DynamicMetaObject> typedArguments) {
+			return getMethodAndTypeCompatibleArgumentsFor(methodName, esClass, esClass.ReflectionType, args, out methodInfo, out typedArguments);
+		}
+
+		public MethodArgumentBinding getMethodAndTypeCompatibleArgumentsFor(String methodName, ESBehavior esClass, Type sourceType, DynamicMetaObject[] args, out MethodInfo methodInfo, out List<DynamicMetaObject> typedArguments) {
 			long arity = args.Length;
 			if (arity < 1) {
-				methodInfo = esClass.getHostMethod(methodName, TypeGuru.emptyTypeArray);
+				methodInfo = esClass.getHostMethod(sourceType, methodName, TypeGuru.emptyTypeArray);
 				typedArguments = emptyArgList;
-				return methodInfo != null;
+				return methodInfo == null ? MethodArgumentBinding.Unbindable : MethodArgumentBinding.PassByValue;
 			} else {
-				return selectMethodAndTypeCompatibleArgumentsFor(esClass.getHostMethodsMatching(methodName, arity).ToArray(), args, out methodInfo, out typedArguments);
+				return selectMethodAndMakeTypeCompatibleArgumentsFor(esClass.getHostMethodsMatching(sourceType, methodName, arity).ToArray(), args, out methodInfo, out typedArguments);
 			}
 		}
 
 		public bool getConstructorAndTypeCompatibleArgumentsFor(ESBehavior esClass, DynamicMetaObject[] args, out ConstructorInfo constructorInfo, out List<DynamicMetaObject> typedArguments) {
+			return getConstructorAndTypeCompatibleArgumentsFor(esClass, esClass.ReflectionType, args, out constructorInfo, out typedArguments);
+		}
+
+		public bool getConstructorAndTypeCompatibleArgumentsFor(ESBehavior esClass, Type sourceType, DynamicMetaObject[] args, out ConstructorInfo constructorInfo, out List<DynamicMetaObject> typedArguments) {
 			long arity = args.Length;
 			if (arity < 1) {
-				constructorInfo = esClass.getHostConstructor(TypeGuru.emptyTypeArray);
+				constructorInfo = esClass.getHostConstructor(sourceType, TypeGuru.emptyTypeArray);
 				typedArguments = emptyArgList;
 				return constructorInfo != null;
 			} else {
 				ParameterInfo[] parameters;
 				var argGurus = dynamicMetaObjectArgumentGurusFor(args);
-				var constructors = esClass.getHostConstructors(arity);
+				var constructors = esClass.getHostConstructors(sourceType, arity);
 				if (constructors.Count > 0) {
 					if (constructors.Count < 2) {
 						constructorInfo = constructors[0];
@@ -1244,7 +1344,7 @@ namespace EssenceSharp.Runtime.Binding {
 			ParameterExpression exception;
 			DynamicMetaObject exceptionMO;
 			DynamicMetaObject [] exceptionArgArray;
-			DynamicMetaObject invokeIfCurtailedBlockMO;
+			DynamicMetaObject catchBlockMO;
 			CatchBlock catchBlock;
 			var exceptionSelectorClasss = objectSpace.classOf(exceptionSelectorMO.Value);
 			if (exceptionSelectorClasss.IsHostSystemMetaclass) {
@@ -1253,13 +1353,13 @@ namespace EssenceSharp.Runtime.Binding {
 				exception = Expression.Parameter(exceptionType, "ex");
 				exceptionMO = exception.asDynamicMetaObject();
 				exceptionArgArray = argArrayFor(exceptionMO);
-				invokeIfCurtailedBlockMO = handleExceptionBlockMO.BindInvoke(canonicalInvokeBinderFor(objectSpace.classOf(handleExceptionBlockMO.Value), selectorValue1), exceptionArgArray);
-				catchBlock = Expression.Catch(exception, invokeIfCurtailedBlockMO.Expression);
+				catchBlockMO = handleExceptionBlockMO.BindInvoke(canonicalInvokeBinderFor(objectSpace.classOf(handleExceptionBlockMO.Value), selectorValue1), exceptionArgArray);
+				catchBlock = Expression.Catch(exception, catchBlockMO.Expression);
 			} else { 
 				exception = Expression.Parameter(TypeGuru.exceptionType, "ex");
 				exceptionMO = exception.asDynamicMetaObject();
 				exceptionArgArray = argArrayFor(exceptionMO);
-				invokeIfCurtailedBlockMO = handleExceptionBlockMO.BindInvoke(canonicalInvokeBinderFor(objectSpace.classOf(handleExceptionBlockMO.Value), selectorValue1), exceptionArgArray);
+				catchBlockMO = handleExceptionBlockMO.BindInvoke(canonicalInvokeBinderFor(objectSpace.classOf(handleExceptionBlockMO.Value), selectorValue1), exceptionArgArray);
 				var exceptionSelectionPredicateMO = exceptionSelectorMO.BindInvokeMember(
 									canonicalInvokeMemberBinderFor(
 										exceptionSelectorClasss, 
@@ -1269,7 +1369,7 @@ namespace EssenceSharp.Runtime.Binding {
 				var exceptionSelectionPredicate = exceptionSelectionPredicateMO.asExpressionWithType(TypeGuru.objectType).withType(TypeGuru.boolType);
 				var conditionalExceptionHandler = Expression.Condition(
 										exceptionSelectionPredicate,
-											invokeIfCurtailedBlockMO.asExpressionWithType(TypeGuru.objectType),
+											catchBlockMO.asExpressionWithType(TypeGuru.objectType),
 											Expression.Block(TypeGuru.objectType, Expression.Rethrow(), Expression.Constant(new Object())));
 				catchBlock = Expression.Catch(exception, conditionalExceptionHandler);
 			}
@@ -1513,8 +1613,11 @@ namespace EssenceSharp.Runtime.Binding {
 					inductionVariable = Expression.Parameter(TypeGuru.intType, "$inductionVariable");
 					var indexerMethods = TypeGuru.indexerMethodsOf(receiverType, esClass.HostObjectPropertyGetBindingFlags);
 					List<DynamicMetaObject> typedArguments;
-					if (!selectMethodAndTypeCompatibleArgumentsFor(indexerMethods.ToArray(), argArrayFor(inductionVariable.asDynamicMetaObject()), out methodInfo, out typedArguments)) {
-						return metaObjectToSendDoesNotUnderstandToForeignObject(receiver, esClass, selector, new DynamicMetaObject[]{startingValueMO, endingValueMO, stepValueMO, enumeratorBlockMO});
+					switch (selectMethodAndMakeTypeCompatibleArgumentsFor(indexerMethods.ToArray(), argArrayFor(inductionVariable.asDynamicMetaObject()), out methodInfo, out typedArguments)) {
+						case MethodArgumentBinding.PassByValue:
+							break;
+						default:
+							return metaObjectToSendDoesNotUnderstandToForeignObject(receiver, esClass, selector, new DynamicMetaObject[]{startingValueMO, endingValueMO, stepValueMO, enumeratorBlockMO});
 					}
 				}
 
@@ -1788,8 +1891,11 @@ namespace EssenceSharp.Runtime.Binding {
 				var indexerMethods = TypeGuru.indexerMethodsOf(receiverType, esClass.HostObjectPropertyGetBindingFlags);
 				key = Expression.Parameter(TypeGuru.objectType, "key");
 				List<DynamicMetaObject> typedArguments;
-				if (!selectMethodAndTypeCompatibleArgumentsFor(indexerMethods.ToArray(), argArrayFor(keyMO), out methodInfo, out typedArguments)) {
-					return metaObjectToSendDoesNotUnderstandToForeignObject(receiver, esClass, selector, new DynamicMetaObject[]{keyMO, ifAbsentBlockMO});
+				switch (selectMethodAndMakeTypeCompatibleArgumentsFor(indexerMethods.ToArray(), argArrayFor(keyMO), out methodInfo, out typedArguments)) {
+					case MethodArgumentBinding.PassByValue:
+						break;
+					default:
+						return metaObjectToSendDoesNotUnderstandToForeignObject(receiver, esClass, selector, new DynamicMetaObject[]{keyMO, ifAbsentBlockMO});
 				}
 				typedKeyMO = typedArguments[0];
 			}
@@ -1839,8 +1945,11 @@ namespace EssenceSharp.Runtime.Binding {
 				var indexerMethods = TypeGuru.indexerMethodsOf(receiverType, esClass.HostObjectPropertyGetBindingFlags);
 				key = Expression.Parameter(TypeGuru.objectType, "key");
 				List<DynamicMetaObject> typedArguments;
-				if (!selectMethodAndTypeCompatibleArgumentsFor(indexerMethods.ToArray(), argArrayFor(keyMO, valueMO), out setItemMethodInfo, out typedArguments)) {
-					return metaObjectToSendDoesNotUnderstandToForeignObject(receiver, esClass, selector, new DynamicMetaObject[]{keyMO, ifAbsentValueBlockMO});
+				switch (selectMethodAndMakeTypeCompatibleArgumentsFor(indexerMethods.ToArray(), argArrayFor(keyMO, valueMO), out setItemMethodInfo, out typedArguments)) {
+					case MethodArgumentBinding.PassByValue:
+						break;
+					default:
+						return metaObjectToSendDoesNotUnderstandToForeignObject(receiver, esClass, selector, new DynamicMetaObject[]{keyMO, ifAbsentValueBlockMO});
 				}
 				typedKeyMO = typedArguments[0];
 				typedValueMO = typedArguments[1];
@@ -2919,11 +3028,13 @@ namespace EssenceSharp.Runtime.Binding {
 					if (methodInfo == null) {
 						var indexerMethods = TypeGuru.indexerMethodsOf(receiverType, esClass.HostObjectPropertyGetBindingFlags);
 						List<DynamicMetaObject> typedArguments;
-						if (dynamicBindingGuru.selectMethodAndTypeCompatibleArgumentsFor(indexerMethods.ToArray(), argArrayFor(indexesOrKeys[0]), out methodInfo, out typedArguments)) {
-							typedIndexMo = typedArguments[0];
-							indexParameterType = typedIndexMo.LimitType;
-						} else {
-							return target.BindInvokeMember(dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, Selector, "At"), indexesOrKeys);
+						switch (dynamicBindingGuru.selectMethodAndMakeTypeCompatibleArgumentsFor(indexerMethods.ToArray(), argArrayFor(indexesOrKeys[0]), out methodInfo, out typedArguments)) {
+							case MethodArgumentBinding.PassByValue:
+								typedIndexMo = typedArguments[0];
+								indexParameterType = typedIndexMo.LimitType;
+								break;
+							default:
+								return target.BindInvokeMember(dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, Selector, "At"), indexesOrKeys);
 						}
 					} else {
 						var parameters = methodInfo.GetParameters();
@@ -3016,12 +3127,14 @@ namespace EssenceSharp.Runtime.Binding {
 					if (methodInfo == null) {
 						var indexerMethods = TypeGuru.indexerMethodsOf(receiverType, esClass.HostObjectPropertyGetBindingFlags);
 						List<DynamicMetaObject> typedArguments;
-						if (dynamicBindingGuru.selectMethodAndTypeCompatibleArgumentsFor(indexerMethods.ToArray(), argArrayFor(indexesOrKeys[0], value), out methodInfo, out typedArguments)) {
-							typedIndexMo = typedArguments[0];
-							typedValue = typedArguments[1];
-							indexParameterType = typedIndexMo.LimitType;
-						} else {
-							return target.BindInvokeMember(dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, Selector, "AtPut"), indexesOrKeys);
+						switch (dynamicBindingGuru.selectMethodAndMakeTypeCompatibleArgumentsFor(indexerMethods.ToArray(), argArrayFor(indexesOrKeys[0], value), out methodInfo, out typedArguments)) {
+							case MethodArgumentBinding.PassByValue:
+								typedIndexMo = typedArguments[0];
+								typedValue = typedArguments[1];
+								indexParameterType = typedIndexMo.LimitType;
+								break;
+							default:
+								return target.BindInvokeMember(dynamicBindingGuru.canonicalInvokeMemberBinderFor(esClass, Selector, "AtPut"), indexesOrKeys);
 						}
 					} else {
 						var parameters = methodInfo.GetParameters();
@@ -3538,19 +3651,12 @@ namespace EssenceSharp.Runtime.Binding {
 				if (!target.HasValue || args.Any((arg) => !arg.HasValue)) return Defer(argArrayFor(target, args)); 
 
 				if (TypeGuru.delegateType.IsAssignableFrom(target.LimitType)) {
-					var method = target.LimitType.GetMethod("Invoke");
-					var argGurus = dynamicBindingGuru.dynamicMetaObjectArgumentGurusFor(args);
-					var arguments = typeCompatibleArgumentsFor(method, argGurus);
-					Expression invokeExpression = Expression.Invoke(target.asExpressionWithFormalType(), expressionArrayFor(arguments.ToArray()));
-					if (method.ReturnType == TypeGuru.voidType) {
-						invokeExpression = Expression.Block(TypeGuru.objectType, invokeExpression, target.Expression);
-					} else {
-						invokeExpression = invokeExpression.withCanonicalReturnType();
-					}
-					return new DynamicMetaObject(
-							invokeExpression, 
-							target.addingFormalTypeRestriction().Merge(BindingRestrictions.Combine(arguments)),
-							target.Value);
+					var invocationMo = metaObjectToInvokeMethod(target, objectSpace, esClass, target.LimitType, "Invoke", args, target.bindingRestrictionsForForeignObjectReceiver(esClass));
+					if (invocationMo != null) return invocationMo;
+					return ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, args)
+									.asDynamicMetaObject(
+										target.bindingRestrictionsForForeignObjectReceiver(esClass, args), 
+										target.Value);
 				} else if (numArgs == 0) {
 					return target.BindGetMember(dynamicBindingGuru.canonicalGetMemberBinderFor(esClass, Selector));
 				} else if (numArgs == 1) {
@@ -3618,51 +3724,34 @@ namespace EssenceSharp.Runtime.Binding {
 
 				if (!target.HasValue || args.Any((arg) => !arg.HasValue)) return Defer(argArrayFor(target, args)); 
 
-				Expression invokeMemberExpression = null;
 				var receiverType = target.LimitType;
-				MethodInfo methodInfo;
 				long arity = args.Length;
-				List<DynamicMetaObject> typedArguments;
-				// var typesArray = argLimitTypeArrayFor(args);
 
-				if (arity < 1) {
-					methodInfo = esClass.getHostMethod(Name, TypeGuru.emptyTypeArray);
-					if (methodInfo == null) methodInfo = esClass.getHostMethod(AlternateMethodName, TypeGuru.emptyTypeArray);
-					typedArguments = emptyArgList;
-				} else if (!dynamicBindingGuru.getMethodAndTypeCompatibleArgumentsFor(Name, esClass, args, out methodInfo, out typedArguments)) {
-					dynamicBindingGuru.getMethodAndTypeCompatibleArgumentsFor(AlternateMethodName, esClass, args, out methodInfo, out typedArguments);
+				var invocationMo = metaObjectToInvokeMethod(target, objectSpace, esClass, esClass.ReflectionType, Name, args, target.bindingRestrictionsForForeignObjectReceiver(esClass));
+				if (invocationMo == null) {
+					invocationMo = metaObjectToInvokeMethod(target, objectSpace, esClass, esClass.ReflectionType, AlternateMethodName, args, target.bindingRestrictionsForForeignObjectReceiver(esClass));
 				}
 
-				if (methodInfo == null) {
+				if (invocationMo == null) { 
 					switch (Selector.CanonicalSemantics) {
 						case CanonicalSelectorSemantics.Invoke:
+							// Sending #value answers 'self' by default:
 							if (Selector.NumArgs == 0) return dynamicBindingGuru.metaObjectForForeignObjectOperation(target, esClass, target.Expression);
 							break;
 						case CanonicalSelectorSemantics.Size:
+							// Sending #size answers zero by default:
 							return dynamicBindingGuru.metaObjectForForeignObjectOperation(target, esClass, Expression.Constant(0L));
 						default:
 							break;
 					}
-					invokeMemberExpression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, args);
+					return ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, args)
+									.asDynamicMetaObject(
+										target.bindingRestrictionsForForeignObjectReceiver(esClass, args), 
+										target.Value);
 				} else {
-					if (methodInfo.IsStatic) {
-						invokeMemberExpression = Expression.Call(null, methodInfo, expressionArrayFor(typedArguments.ToArray()));
-					} else { 
-						var self = target.asExpressionWithFormalType();
-						if (!methodInfo.DeclaringType.IsAssignableFrom(self.Type)) self = self.withType(methodInfo.DeclaringType);
-						invokeMemberExpression = Expression.Call(self, methodInfo, expressionArrayFor(typedArguments.ToArray()));
-					}
-					if (methodInfo.ReturnType == TypeGuru.voidType) { 
-						invokeMemberExpression = Expression.Block(TypeGuru.objectType, invokeMemberExpression, target.Expression);
-					} else {
-						invokeMemberExpression = invokeMemberExpression.withCanonicalReturnType();
-					}
+					return invocationMo;
 				}
 
-				return new DynamicMetaObject(
-						invokeMemberExpression, 
-						target.bindingRestrictionsForForeignObjectReceiver(esClass, typedArguments),
-						target.Value);
 
 			}
 
@@ -3671,6 +3760,7 @@ namespace EssenceSharp.Runtime.Binding {
 				if (!target.HasValue || args.Any((arg) => !arg.HasValue)) return Defer(argArrayFor(target, args)); 
 
 				if (TypeGuru.delegateType.IsAssignableFrom(target.LimitType)) {
+					/*
 					var method = target.LimitType.GetMethod("Invoke");
 					var argGurus = dynamicBindingGuru.dynamicMetaObjectArgumentGurusFor(args);
 					var arguments = typeCompatibleArgumentsFor(method, argGurus);
@@ -3684,12 +3774,22 @@ namespace EssenceSharp.Runtime.Binding {
 							invokeExpression, 
 							target.addingFormalTypeRestriction().Merge(BindingRestrictions.Combine(arguments)),
 							target.Value);
-				} else {
-					return new DynamicMetaObject(
-							ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, args), 
-							target.bindingRestrictionsForForeignObjectReceiver(esClass),
-							target.Value);
-				}
+					*/
+
+					var invocationMo = metaObjectToInvokeMethod(target, objectSpace, esClass, target.LimitType, "Invoke", args, target.bindingRestrictionsForForeignObjectReceiver(esClass));
+					if (invocationMo != null) return invocationMo;
+					return ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, args)
+									.asDynamicMetaObject(
+										target.bindingRestrictionsForForeignObjectReceiver(esClass, args), 
+										target.Value);
+
+				} 
+
+				return new DynamicMetaObject(
+						ExpressionTreeGuru.expressionToSendDoesNotUnderstand(target.Expression, esClass, selector, args), 
+						target.bindingRestrictionsForForeignObjectReceiver(esClass),
+						target.Value);
+
 
 			}
 

@@ -1570,7 +1570,7 @@ namespace EssenceSharp.Runtime {
 					environment = childNs;
 				});
 
-			if (typeName.SpecifiesInnerType) {
+			if (typeName.SpecifiesContaingType) {
 				var nameBuilder = new StringBuilder();
 				nameBuilder.Append(typeName.Namespace);
 				typeName.containingTypeNamesDo(
@@ -1582,7 +1582,7 @@ namespace EssenceSharp.Runtime {
 					});
 			}
 
-			return findOrCreateClassForHostSystemType(environment, typeName.NameWithGenericArguments, typeName.FullName, assembly);
+			return findOrCreateClassForHostSystemType(environment, typeName.NameWithModifyingSuffix, typeName.FullName, assembly);
 
 		}
 
@@ -2052,7 +2052,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public void throwInvalidInstanceVariableAccess(ESSymbol className, ESSymbol fieldName, long slotIndex) {
-			throw new PrimInvalidOperandException((className == null ? SymbolRegistry.symbolFor("An anonymous Smalltalk class") : className) + "." + (fieldName == null ? slotIndex.ToString() : fieldName.PrimitiveValue));
+			throw new PrimInvalidOperandException((className == null ? SymbolRegistry.symbolFor("An anonymous class") : className) + "." + (fieldName == null ? slotIndex.ToString() : fieldName.PrimitiveValue));
 		}
 		
 		public void throwIndexOutOfRangeException(long index, long minIndex, long maxIndex) {
@@ -2300,7 +2300,7 @@ namespace EssenceSharp.Runtime {
 			rootNamespace.declareInSelfAs(SymbolRegistry.symbolFor("EssenceSharp"), true);
 			clrNamespace.declareInSelfAs(SymbolRegistry.symbolFor("HostSystem"), true);
 			rootNamespace.addImport(new ESImportSpec(smalltalkNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
-			rootNamespace.addImport(new ESImportSpec(universalNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
+			rootNamespace.addImport(new ESImportSpec(universalNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Transitive));
 			rootNamespace.addImport(new ESImportSpec(undeclaredNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
 			rootNamespace.addImport(new ESImportSpec(clrNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
 		}

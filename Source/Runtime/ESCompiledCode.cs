@@ -1707,6 +1707,12 @@ namespace EssenceSharp.Runtime {
 		public override BehavioralObject HomeClass {
 			get {return homeClass;}
 		}
+
+		public bool IsArchitecturalBehaviorMethod {
+			get {
+				return homeClass == null ? false : homeClass.IsArchitecturalBehavior;
+			}
+		}
 		
 		public ESSymbol Selector {
 			get {return selector;}

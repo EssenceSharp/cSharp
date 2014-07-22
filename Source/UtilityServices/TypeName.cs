@@ -50,16 +50,12 @@ namespace EssenceSharp.UtilityServices {
 
 		public static readonly byte[] nullPublicKeyOrKeyToken = new byte[0];
 
-		public static TypeName fromString(String typeName) {
-			// Leading whitespace is accepted. 
-			// The namespace, any containing types and the assembly name may be omitted.
-			// Generic types must at least specify their parameter arity, but may omit any type arguments.
-
+		public static void parseQualifiedNameFromString(String typeName, out List<String> namespaceElements, out List<String> containingTypes, out String namePrefix, out int genericArity, out TypeName[] genericArguments, out bool isArray) {
 			if (String.IsNullOrEmpty(typeName)) throw new PrimInvalidOperandException("Type name must not be empty or null.");
-			return fromStream(new StringReader(typeName));
+			parseQualifiedNameFromStream(new StringReader(typeName), out namespaceElements, out containingTypes, out namePrefix, out genericArity, out genericArguments, out isArray);
 		}
 
-		public static TypeName fromStream(TextReader stream) {
+		public static void parseQualifiedNameFromStream(TextReader stream, out List<String> namespaceElements, out List<String> containingTypes, out String namePrefix, out int genericArity, out TypeName[] genericArguments, out bool isArray) {
 			// Leading whitespace is accepted.
 			// The namespace, any containing types and the assembly name may be omitted.
 			// Generic types must at least specify their parameter arity, but may omit any type arguments.
@@ -68,14 +64,15 @@ namespace EssenceSharp.UtilityServices {
 			var element = stream.nextIdentifier();
 			if (element == null) throw new PrimInvalidOperandException("Expecting type name, but encountered end of input."); 
 			if (element.Length < 1) throw new PrimInvalidOperandException("Type name must start with a letter or underscore."); 
+
+			namespaceElements			= null;
+			containingTypes				= null;
+			namePrefix				= element;
+			genericArity				= 0;
+			genericArguments			= null;
+			isArray					= false;
 			
-			List<String>	namespaceElements	= null;
-			List<String>	containingTypes		= null;
 			String		outerTypeElement	= element;
-			String		innerTypeElement	= element;
-			int		genericArity		= 0;
-			TypeName[]	genericArguments	= null;
-			AssemblyName	assemblyName		= null;
 
 			var		c			= stream.Peek();
 			var		ch			= c >= 0 ? (char)c : (char)0;
@@ -106,7 +103,7 @@ namespace EssenceSharp.UtilityServices {
 					genericArity = (int)nArity;
 				} 
 
-				innerTypeElement = outerTypeElement;
+				namePrefix = outerTypeElement;
 
 				c = stream.Peek();
 				ch = c >= 0 ? (char)c : (char)0;
@@ -120,20 +117,22 @@ namespace EssenceSharp.UtilityServices {
 							containingType = containingType + "`" + genericArity.ToString();
 						}
 						containingTypes.Add(containingType);
+						var nsElements = namespaceElements;	// Can't reference out parameters in a lambda
+						var containers = containingTypes;	// Can't reference out parameters in a lambda
 						if (parseUnqualifiedName(
 							stream, 
 							out containingType, 
 							out genericArity, 
 							(localPrefix, errorDescription) => {
-								var prefix = namespaceElements.ToArray().compose(".");
-								prefix = prefix + "." + containingTypes.ToArray().compose("+");
+								var prefix = nsElements.ToArray().compose(".");
+								prefix = prefix + "." + containers.ToArray().compose("+");
 								if (localPrefix == null || localPrefix.Length < 1) {
 									throw new PrimInvalidOperandException("Nested type element cannot have a length of zero. Check for unintentional duplication of the separator character ('+'). Prefix = " + prefix);
 								} else {
 									throw new PrimInvalidOperandException("Nested type name cannot end with a '`' (backquote character.). Prefix = " + prefix);
 								}
 							})) {
-							innerTypeElement = containingType;
+							namePrefix = containingType;
 						}
 					}
 
@@ -165,7 +164,7 @@ namespace EssenceSharp.UtilityServices {
 								if (containingTypes != null) {
 									prefix = prefix + containingTypes.ToArray().compose("+") + "+";
 								}
-								prefix = prefix + innerTypeElement;
+								prefix = prefix + namePrefix;
 								throw new PrimInvalidOperandException("A generic type parameter in a type name must be terminated by a ']' character. Prefix = " + prefix);
 							}
 						}
@@ -179,7 +178,7 @@ namespace EssenceSharp.UtilityServices {
 					if (containingTypes != null) {
 						prefix = prefix + containingTypes.ToArray().compose("+") + "+";
 					}
-					prefix = prefix + innerTypeElement;
+					prefix = prefix + namePrefix;
 					throw new PrimInvalidOperandException("A type name's list of generic type parameters must be terminated by a ']' character. Prefix = " + prefix);
 				}
 				if (genericArity > 0) {
@@ -191,56 +190,16 @@ namespace EssenceSharp.UtilityServices {
 						if (containingTypes != null) {
 							prefix = prefix + containingTypes.ToArray().compose("+") + "+";
 						}
-						prefix = prefix + innerTypeElement;
+						prefix = prefix + namePrefix;
 						throw new PrimInvalidOperandException("The number of generic type parameters does not match the specified arity: " + prefix);
 					}
 				} else if (args.Count < 1) {
-					String prefix = "";
-					if (namespaceElements != null) {
-						prefix = namespaceElements.ToArray().compose( ".") + ".";
-					}
-					if (containingTypes != null) {
-						prefix = prefix + containingTypes.ToArray().compose("+") + "+";
-					}
-					prefix = prefix + innerTypeElement;
-					throw new PrimInvalidOperandException("A type name cannot have an empty list of generic type arguments. Prefix = " + prefix);
+					isArray = true;
 				} else {
 					genericArity = args.Count;
 				}
 				genericArguments = args.ToArray();
 			} 
-			
-			if (stream.nextMatches(',')) {
-				if (!parseAssemblyName(
-					stream, 
-					out assemblyName, 
-					(localPrefix, errorDescription) => {
-						var prefix = namespaceElements.ToArray().compose(".");
-						if (containingTypes != null) {
-							prefix = prefix + outerTypeElement + ".";
-							prefix = prefix + containingTypes.ToArray().compose("+");
-						}
-						throw new PrimInvalidOperandException(errorDescription + " TypeName context = " + prefix);
-					})) {
-					return null;
-				}
-			}
-
-			if (genericArguments == null) {
-				return new TypeName(
-						namespaceElements == null ? null : namespaceElements.ToArray(), 
-						containingTypes == null ? null : containingTypes.ToArray(), 
-						innerTypeElement, 
-						genericArity, 
-						assemblyName);
-			} else {
-				return new TypeName(
-						namespaceElements == null ? null : namespaceElements.ToArray(), 
-						containingTypes == null ? null : containingTypes.ToArray(), 
-						innerTypeElement, 
-						genericArguments, 
-						assemblyName);
-			}
 
 		}
 
@@ -593,24 +552,97 @@ namespace EssenceSharp.UtilityServices {
 			return bytes;
 		}
 
+		public static TypeName fromString(String typeName) {
+			// Leading whitespace is accepted. 
+			// The namespace, any containing types and the assembly name may be omitted.
+			// Generic types must at least specify their parameter arity, but may omit any type arguments.
+
+			if (String.IsNullOrEmpty(typeName)) throw new PrimInvalidOperandException("Type name must not be empty or null.");
+			return fromStream(new StringReader(typeName));
+		}
+
+		public static TypeName fromStream(TextReader stream) {
+			// Leading whitespace is accepted.
+			// The namespace, any containing types and the assembly name may be omitted.
+			// Generic types must at least specify their parameter arity, but may omit any type arguments.
+			// And don't blame me for the complexity of the code required to parse type name syntax. The following is what's required by what Microsoft hath wrought:
+			
+			List<String>	namespaceElements;
+			List<String>	containingTypes;
+			String		innerTypeElement;
+			int		genericArity;
+			TypeName[]	genericArguments;
+			bool		isArray;
+
+			parseQualifiedNameFromStream(stream, out namespaceElements, out containingTypes, out innerTypeElement, out genericArity, out genericArguments, out isArray);
+
+			AssemblyName	assemblyName		= null;
+
+			if (stream.nextMatches(',')) {
+				var outerTypeElement = (containingTypes == null || containingTypes.Count < 1) ? innerTypeElement : containingTypes[0];
+				if (!parseAssemblyName(
+					stream, 
+					out assemblyName, 
+					(localPrefix, errorDescription) => {
+						var prefix = namespaceElements.ToArray().compose(".");
+						if (containingTypes != null) {
+							prefix = prefix + outerTypeElement + ".";
+							prefix = prefix + containingTypes.ToArray().compose("+");
+						}
+						throw new PrimInvalidOperandException(errorDescription + " TypeName context = " + prefix);
+					})) {
+					return null;
+				}
+			}
+
+			if (genericArguments == null) {
+				return isArray ?
+					new TypeName(
+						namespaceElements == null ? null : namespaceElements.ToArray(), 
+						containingTypes == null ? null : containingTypes.ToArray(), 
+						innerTypeElement, 
+						true, 
+						assemblyName) :
+					new TypeName(
+						namespaceElements == null ? null : namespaceElements.ToArray(), 
+						containingTypes == null ? null : containingTypes.ToArray(), 
+						innerTypeElement, 
+						genericArity, 
+						assemblyName);
+			} else {
+				return new TypeName(
+						namespaceElements == null ? null : namespaceElements.ToArray(), 
+						containingTypes == null ? null : containingTypes.ToArray(), 
+						innerTypeElement, 
+						genericArguments, 
+						assemblyName);
+			}
+
+		}
+
 		#endregion
 
-		protected String[]	namespacePath		= null;
-		protected String[]	containingTypes		= null;
-		protected String	namePrefix		= null;
+		protected String[]	namespacePath;
+		protected String[]	containingTypes;
+		protected String	namePrefix;
 		protected int		genericArity		= 0;
-		protected TypeName[]	genericArguments	= null;
-		protected AssemblyName	assemblyName		= null;
+		protected TypeName[]	genericArguments;
+		protected bool		isArray			= false;
+		protected AssemblyName	assemblyName;
 
-		protected Type		type			= null;
-		protected Assembly	assembly		= null;
+		protected Type		type;
+		protected Assembly	assembly;
 
 		public TypeName(String[] namespacePath, String name, AssemblyName assemblyName) 
-			: this (namespacePath, null, name, 0, assemblyName) {
+			: this (namespacePath, null, name, false, assemblyName) {
 		}
 
 		public TypeName(String[] namespacePath, String[] containerPath, String name, AssemblyName assemblyName) 
-			: this (namespacePath, containerPath, name, 0, assemblyName) {
+			: this (namespacePath, containerPath, name, false, assemblyName) {
+		}
+
+		public TypeName(String[] namespacePath, String name, bool isArray, AssemblyName assemblyName) 
+			: this (namespacePath, null, name, isArray, assemblyName) {
 		}
 
 		public TypeName(String[] namespacePath, String name, int genericArity, AssemblyName assemblyName) 
@@ -619,6 +651,14 @@ namespace EssenceSharp.UtilityServices {
 
 		public TypeName(String[] namespacePath, String name, TypeName[] genericArguments, AssemblyName assemblyName) 
 			: this (namespacePath, null, name, genericArguments, assemblyName) {
+		}
+
+		public TypeName(String[] namespacePath, String[] containerPath, String namePrefix, bool isArray, AssemblyName assemblyName) {
+			this.namespacePath			= namespacePath == null || namespacePath.Length < 1 ? null : namespacePath;
+			this.containingTypes			= containerPath == null || containerPath.Length < 1 ? null : containerPath;
+			this.namePrefix				= namePrefix;
+			this.isArray				= isArray;
+			this.assemblyName			= assemblyName;
 		}
 
 		public TypeName(String[] namespacePath, String[] containerPath, String namePrefix, int genericArity, AssemblyName assemblyName) {
@@ -641,6 +681,17 @@ namespace EssenceSharp.UtilityServices {
 				genericArity			= genericArguments.Length;
 			}
 			this.assemblyName			= assemblyName;
+		}
+
+		public TypeName(String qualifiedName, Assembly assembly) {
+			List<String>	namespaceElements;
+			List<String>	containingTypeList;
+
+			parseQualifiedNameFromString(qualifiedName, out namespaceElements, out containingTypeList, out namePrefix, out genericArity, out genericArguments, out isArray);
+			if (namespaceElements != null) namespacePath = namespaceElements.ToArray();
+			if (containingTypeList != null) containingTypes = containingTypeList.ToArray();
+			this.assembly = assembly;
+			if (assembly != null) assemblyName = assembly.GetName();
 		}
 
 		public TypeName(Type type) {
@@ -680,7 +731,8 @@ namespace EssenceSharp.UtilityServices {
 					}
 				}
 			} else {
-				namePrefix = type.Name;
+				isArray = type.IsArray;
+				namePrefix = isArray ? type.GetElementType().Name : type.Name;
 			}
 		}
 
@@ -694,7 +746,7 @@ namespace EssenceSharp.UtilityServices {
 				return stream.ToString();}
 		}
 
-		public String NameWithGenericArguments {
+		public String NameWithModifyingSuffix {
 			get {	var stream = new StringWriter();
 				printNameOn(stream, true);
 				return stream.ToString();}
@@ -710,6 +762,10 @@ namespace EssenceSharp.UtilityServices {
 			get {	var stream = new StringWriter();
 				printOn(stream, true);
 				return stream.ToString();}
+		}
+
+		public bool IsArray {
+			get {return isArray;}
 		}
 
 		public int GenericArity {
@@ -732,7 +788,7 @@ namespace EssenceSharp.UtilityServices {
 			get {return genericArguments != null && genericArguments.Length > 0;}
 		}
 
-		public bool SpecifiesInnerType {
+		public bool SpecifiesContaingType {
 			get {return containingTypes != null && containingTypes.Length > 0;}
 		}
 
@@ -833,6 +889,8 @@ namespace EssenceSharp.UtilityServices {
 					printGenericArgumentsOn(stream);
 					stream.Write("]");
 				}
+			} else if (IsArray) {
+				stream.Write("[]");
 			}
 		}
 
@@ -869,16 +927,27 @@ namespace EssenceSharp.UtilityServices {
 		}
 
 		public Type getType(bool raiseExceptionOnErrorOrNotFound) {
+			return getType(null, raiseExceptionOnErrorOrNotFound);
+		}
+
+		public Type getType(Assembly[] candidateSourceAssemblies, bool raiseExceptionOnErrorOrNotFound) {
 			if (type != null) return type;
 			var name = FullName;
 			var assembly = getAssembly(false);
 			if (assembly == null) {
+				if (candidateSourceAssemblies != null) {
+					foreach (var sourceAssembly in candidateSourceAssemblies) {
+						if (sourceAssembly != null) { 
+							type = sourceAssembly.GetType(name, false);
+							if (type != null) return type;
+						}
+					}
+				}
 				assembly = typeof(System.Object).Assembly;
 				type = assembly.GetType(name, false);
 				if (type != null) return type;
 			} else { 
-				type = assembly.GetType(name, raiseExceptionOnErrorOrNotFound);
-				if (type != null) return type;
+				return assembly.GetType(name, raiseExceptionOnErrorOrNotFound);
 			}
 			return System.Type.GetType(AssemblyQualifiedName, raiseExceptionOnErrorOrNotFound);
 		}

@@ -743,14 +743,14 @@ namespace EssenceSharp.Runtime {
 
 		protected virtual void setHostSystemName(String newName) {
 			if (newName == null) {
-				if (hostSystemName == null) return;
+				if (hostSystemName == null) return; // So that the change event won't be raised.
 				hostSystemName = null;
 			} else if (newName == NameString) {
-				if (hostSystemName == null) return;
+				if (hostSystemName == null) return; // So that the change event won't be raised.
 				hostSystemName = null;
 			} else {
 				isBoundToHostSystemNamespace = true;
-				if (hostSystemName == newName) return;
+				if (hostSystemName == newName) return; // So that the change event won't be raised.
 				hostSystemName = newName;
 			}
 			hostSystemNameChanged();
@@ -781,9 +781,16 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public virtual String AssemblyNameString {
-			get {return Assembly.FullName;}
-			set {	Class.ObjectSpace.bindNamespaceToAssemblyNamed(this, new AssemblyName(value));
-				Assembly = Class.ObjectSpace.assemblyFor(this, true);}
+			get {	var assm = Assembly;
+				return assm == null ? null : assm.FullName;
+			}
+			set {	if (value == null) {
+					Assembly = null;
+				} else {
+					Class.ObjectSpace.bindNamespaceToAssemblyNamed(this, new AssemblyName(value));
+					Assembly = Class.ObjectSpace.assemblyFor(this, true);
+				}
+			}
 		}
 
 		public String AssemblyPathname {
@@ -793,6 +800,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public void setAssemblyPath(FileInfo assemblyPath) {
+			if (assemblyPath == null) return;
 			Class.ObjectSpace.bindNamespaceToAssemblyAt(this, assemblyPath);
 			Assembly = Class.ObjectSpace.assemblyFor(this, true);
 		}
@@ -1040,7 +1048,7 @@ namespace EssenceSharp.Runtime {
 							specificImportSpec.NameInSource, 
 							AccessPrivilegeLevel.Public,
 							specificImportSpec.Transitivity,
-							transitiveClosure);
+							source == this ? null : transitiveClosure);
 				}
 			}
 			if (binding == null) {

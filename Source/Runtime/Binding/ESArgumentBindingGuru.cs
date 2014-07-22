@@ -30,6 +30,7 @@
 #region Using declarations
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Dynamic;
 using Microsoft.Scripting.Generation;
 #if CLR2
@@ -436,9 +437,51 @@ namespace EssenceSharp.Runtime.Binding {
 		}
 
 		public long compatibilityIndexForTargetType(Type targetType) {
+			MethodInfo methodInfo;
+			if (targetType.IsByRef) {
+				if (modelArchitecture == ObjectStateArchitecture.Block) {
+					var block = model as ESBlock;
+					if (block.NumArgs == 1) return 0;
+				} else if (TypeGuru.delegateType.IsAssignableFrom(ModelType)) { 
+					methodInfo = ModelType.GetMethod("Invoke");
+					var parameters = methodInfo.GetParameters();
+					if (parameters.Length == 1) {
+						var p = parameters[0];
+						if (p.ParameterType.IsAssignableFrom(targetType.GetElementType())) return 0;
+					}
+				}
+				targetType = targetType.GetElementType();
+			}
 			if (targetType == ModelType) return 0;
 			if (ModelArchitecture == ObjectStateArchitecture.Nil) return targetType.nullIsAssignable() ? 0 : -1;
-			var methodInfo = CompilerHelpers.GetImplicitConverter(ModelType, targetType);
+			if (TypeGuru.delegateType.IsAssignableFrom(targetType)) { 
+				methodInfo = targetType.GetMethod("Invoke");
+				var parameterSpecs = methodInfo.GetParameters();
+				var targetArity = parameterSpecs.Length;
+				switch (modelArchitecture) {
+					case ObjectStateArchitecture.Block:
+						var block = model as ESBlock;
+						if (targetArity == block.NumArgs) {
+							if (methodInfo.ReturnType == TypeGuru.voidType) {
+								return targetType == ESCompiledCode.blockFunctionTypeForNumArgs(targetArity) ? 512 : 1024;
+							}
+							return targetType == ESCompiledCode.blockFunctionTypeForNumArgs(targetArity) ? 0 : 1;
+						}
+						break;
+					case ObjectStateArchitecture.Method:
+						var method = model as ESMethod;
+						if (targetArity - method.NumArgs == 1) {
+							if (methodInfo.ReturnType == TypeGuru.voidType) {
+								return targetType == ESCompiledCode.methodFunctionTypeForNumArgs(targetArity) ? 512 : 1024;
+							}
+							return targetType == ESCompiledCode.methodFunctionTypeForNumArgs(targetArity) ? 0 : 1;
+						}
+						break;
+					default: 
+						break;
+				}
+			}
+			methodInfo = CompilerHelpers.GetImplicitConverter(ModelType, targetType);
 			if (methodInfo != null) return 0;
 			if (targetType.IsAssignableFrom(ModelType)) return 1;
 			if (ModelArchitecture == ObjectStateArchitecture.Symbol && targetType.IsEnum) return 1;
@@ -466,12 +509,29 @@ namespace EssenceSharp.Runtime.Binding {
 				methodInfo = CompilerHelpers.GetExplicitConverter(type, targetType);
 				if (methodInfo != null) hasExplicitConverter = true;
 			}
-			return isAssignable ? 128 : hasExplicitConverter ? 256 : 512;
+			if (isAssignable) return 128;
+			if (hasExplicitConverter) return 256;
+			return -1;
 		}
 
 		public DynamicMetaObject metaObjectToConvertTo(Type targetType) {
+			MethodInfo methodInfo;
+			if (targetType.IsByRef) {
+				if (modelArchitecture == ObjectStateArchitecture.Block) {
+					var block = model as ESBlock;
+					if (block.NumArgs == 1) return metaObject;
+				} else if (TypeGuru.delegateType.IsAssignableFrom(ModelType)) { 
+					methodInfo = ModelType.GetMethod("Invoke");
+					var parameters = methodInfo.GetParameters();
+					if (parameters.Length == 1) {
+						var p = parameters[0];
+						if (p.ParameterType.IsAssignableFrom(targetType.GetElementType())) return metaObject.argumentWithFormalTypeAndTypeRestriction();
+					}
+				}
+				targetType = targetType.GetElementType();
+			}
 			if (targetType == ModelType) return metaObject.argumentWithFormalTypeAndTypeRestriction();
-			var methodInfo = CompilerHelpers.GetImplicitConverter(ModelType, targetType);
+			methodInfo = CompilerHelpers.GetImplicitConverter(ModelType, targetType);
 			if (methodInfo != null) return metaObject.argumentWithTypeRestrictionConvertingTo(targetType, methodInfo);
 			if (targetType.IsAssignableFrom(ModelType)) return metaObject.argumentWithTypeRestrictionConvertingTo(targetType);
 

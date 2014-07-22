@@ -134,7 +134,8 @@ namespace EssenceSharp.Runtime {
 	public interface BehavioralObject : MethodBinder, TraitUser, NamespaceObject {
 
 		ESObjectSpace ObjectSpace {get;}
- 		bool HasSuperclass {get;}
+		bool IsArchitecturalBehavior {get;}
+		bool HasSuperclass {get;}
 		ESBehavior Superclass {get;}
 
 		ESMethod localCompiledMethodAt(ESSymbol selector);
@@ -315,6 +316,10 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual bool InstancesCanHaveNamedSlots {
+			get {return false;}
+		}
+
+		public virtual bool IsArchitecturalBehavior {
 			get {return false;}
 		}
 
@@ -1465,7 +1470,7 @@ namespace EssenceSharp.Runtime {
 			return typeName.getType(raiseExceptionOnErrorOrNotFound);
 		}
 
-		public static ConstructorInfo getHostConstructor(Type instanceType, Type[] signature) {
+		public static ConstructorInfo basicGetHostConstructor(Type instanceType, Type[] signature) {
 			return instanceType.GetConstructor(
 					instanceCreationBindingFlags, 
 					Type.DefaultBinder, 
@@ -1542,8 +1547,9 @@ namespace EssenceSharp.Runtime {
 		protected ESBehavior								superclass; 
 		protected HashSet<ESBehavior>							subclasses;
 
-		protected Type									instanceType; 
+		protected TypeName								instanceTypeName; 
 		protected bool									isInstanceTypeLocked			= false;
+		protected bool									isInstanceTypeValid			= false;
 		protected ObjectStateArchitecture 						instanceArchitecture			= ObjectStateArchitecture.NamedSlots;
 		protected bool									isInstanceArchitectureLocked		= false;
 
@@ -1603,6 +1609,7 @@ namespace EssenceSharp.Runtime {
 
 		public override void validate() {
 			base.validate();
+			if (!isInstanceTypeValid) invalidateInstanceType();
 			assertValidInheritanceStructure(Superclass);
 		}
 
@@ -1623,6 +1630,7 @@ namespace EssenceSharp.Runtime {
 			if (instanceArchitecture == newInstanceArchitecture) return;
 			basicSetInstanceArchitecture(newInstanceArchitecture);
 			invalidateInstanceType();
+			isBoundToHostSystemNamespace = instanceArchitecture == ObjectStateArchitecture.HostSystemObject;
 		}
 
 		public override bool InstancesCanHaveNamedSlots {
@@ -1679,19 +1687,39 @@ namespace EssenceSharp.Runtime {
 			return (int)instanceHashFunctor(instance);
 		}
 
+		public TypeName InstanceTypeName {
+			get {return instanceTypeName;}
+		}
+
 		public Type InstanceType {
-			get {	if (instanceType == null) invalidateInstanceType();
-				return instanceType;}
-			set {	if (instanceType == value) return;
-				setInstanceType(value);}
+			get {	if (instanceTypeName == null) invalidateInstanceType();
+				if (instanceTypeName == null) {
+					if (constraintsMustBeSatisfied) { 
+						var sb = new StringBuilder();
+						sb.AppendLine("Unable to bind to specified host system type:");
+						sb.Append("\tClass = ");
+						sb.AppendLine(PathnameString);
+						sb.Append("\tHostSystemNamespace = ");
+						sb.AppendLine(HostSystemNamespace);
+						sb.Append("\tHostSystemName = ");
+						sb.AppendLine(HostSystemName);
+						sb.Append("\tAssembly = ");
+						sb.AppendLine(AssemblyNameString);
+						throw new TypeBindingFailure(sb.ToString());
+					} else {
+						return null;
+					}
+				}
+				return instanceTypeName.Type;}
+			set {	setInstanceType(value);}
 		}
 
 		protected void setInstanceType(Type newInstanceType) {
+			if (instanceTypeName != null && InstanceType == newInstanceType) return;
 			if (isInstanceTypeLocked)  throw new PrimitiveFailException("The instance type of classes representing open generic types cannot be changed.");
-			if (instanceType == newInstanceType) return;
-			if (instanceType != null) unbindFromInstanceType();
-			instanceType = newInstanceType;
-			if (instanceType != null) bindToInstanceType();
+			if (instanceTypeName != null) unbindFromInstanceType();
+			instanceTypeName = newInstanceType == null ? null : new TypeName(newInstanceType);
+			if (instanceTypeName != null) bindToInstanceType();
 			changedInstanceType();
 		}
 
@@ -1700,13 +1728,14 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected void basicBindToInstanceType() {
-			if (instanceType == null) return;
+			if (instanceTypeName == null) return;
+			isInstanceTypeValid = true;
 			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
-				var namespacePrefix = instanceType.Namespace;
+				var namespacePrefix = InstanceType.Namespace;
 				if (namespacePrefix != HostSystemNamespace) {
 					hostSystemNamespace = namespacePrefix;
-				}
-				var typeName = instanceType.Name;
+				} 
+				var typeName = instanceTypeName.NameWithModifyingSuffix;
 				if (typeName != HostSystemName) {
 					hostSystemName = typeName;
 				}
@@ -1714,52 +1743,52 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected virtual void bindToInstanceType() {
-			isBoundToHostSystemNamespace = instanceArchitecture == ObjectStateArchitecture.HostSystemObject;
-			if (instanceType == null) return;
-			assembly = instanceType.Assembly;
-			if (!isClassOfAdoptedType(InstanceArchitecture) && !instanceType.isEssenceSharpType()) basicSetInstanceArchitecture(ObjectStateArchitecture.HostSystemObject);
+			if (instanceTypeName == null) return;
+			assembly = instanceTypeName.Assembly;
+			if (!isClassOfAdoptedType(InstanceArchitecture) && !InstanceType.isEssenceSharpType()) basicSetInstanceArchitecture(ObjectStateArchitecture.HostSystemObject);
 			basicBindToInstanceType();
 		}
 
 		protected virtual void unbindFromInstanceType() {
-			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject && instanceType.IsGenericType) {
+			if (instanceTypeName == null) return;
+			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject && InstanceType.IsGenericType) {
 				methodDictionary = newMethodDictionary();
 				hostSystemMethodDictionary = newHostSystemMethodDictionary();
 			}
 		}
 
 		protected void invalidateInstanceType() {
-			setInstanceType(getInstanceType());
+			if (constraintsMustBeSatisfied) { 
+				setInstanceType(getInstanceType());
+			} else {
+				setInstanceType(null);
+			}
 		}
 
 		public Type typeFromQualifiedName(String qualifiedTypeName, bool raiseExceptionOnErrorOrNotFound) {
-			Type type = null;
-			var assembly = Assembly;
-			if (assembly != null) {
-				type = assembly.GetType(qualifiedTypeName, false);
-				if (type != null) return type;
-			}
-			return Type.GetType(qualifiedTypeName, raiseExceptionOnErrorOrNotFound);
+			return (new TypeName(qualifiedTypeName, Assembly)).getType(raiseExceptionOnErrorOrNotFound);
+
 		}
 
-		protected virtual Type ReflectionType {
+		public virtual Type ReflectionType {
 			get { return InstanceType;}
 		}
 
 		public ESSymbol nameInEnvironmentFor(Type hostSystemType) {
-			return objectSpace.symbolFor(new TypeName(hostSystemType).NameWithGenericArguments);
+			return objectSpace.symbolFor(new TypeName(hostSystemType).NameWithModifyingSuffix);
 		}
 
 		public override Assembly Assembly {
-			get {	if (assembly == null) {
-					if (instanceType == null) return base.Assembly;
-					assembly = instanceType.Assembly;
-				}
+			get {	if (assembly == null) return base.Assembly;
 				return assembly;
 			}
 			set {	if (assembly == value) return;
 				assembly = value;
-				if (instanceType != null && assembly != instanceType.Assembly) invalidateInstanceType();}
+				if (isInstanceTypeValid) { 
+					var instanceType = InstanceType;
+					if (instanceType == null || assembly != instanceType.Assembly) invalidateInstanceType();
+				}
+			}
 		}
 
 		#region getInstanceType()
@@ -2372,6 +2401,47 @@ namespace EssenceSharp.Runtime {
 
 		#region Host System Object Reflection
 
+		public Type InstanceArrayType {
+			get {return InstanceType.MakeArrayType();}
+		}
+
+		public Type InstanceByRefType {
+			get {
+				var type = InstanceType;
+				return type.IsByRef ? type : type.MakeByRefType();
+			}
+		}
+
+		public Type GenericInstanceTypeDefinition {
+			get {
+				var type = InstanceType;
+				if (!type.IsGenericType) {
+					throw new PrimInvalidOperationException("The receiver's instance type is not a generic type (" + PathnameString + ")");
+				}
+				return type.IsGenericTypeDefinition ? type : type.GetGenericTypeDefinition();
+			}
+		}
+
+		public Type instanceTypeWith(Type tp1) {
+			return GenericInstanceTypeDefinition.MakeGenericType(new Type[]{tp1});
+		}
+
+		public Type instanceTypeWith(Type tp1, Type tp2) {
+			return GenericInstanceTypeDefinition.MakeGenericType(new Type[]{tp1, tp2});
+		}
+
+		public Type instanceTypeWith(Type tp1, Type tp2, Type tp3) {
+			return GenericInstanceTypeDefinition.MakeGenericType(new Type[]{tp1, tp2, tp3});
+		}
+
+		public Type instanceTypeWith(Type tp1, Type tp2, Type tp3, Type tp4, Type tp5) {
+			return GenericInstanceTypeDefinition.MakeGenericType(new Type[]{tp1, tp2, tp3, tp4, tp5});
+		}
+
+		public Type instanceTypeWithAll(Type[] parameters) {
+			return GenericInstanceTypeDefinition.MakeGenericType(parameters);
+		}
+
 		public virtual BindingFlags HostObjectMethodInvokeBindingFlags {
 			get { return instanceMethodInvokeBindingFlags; }
 		}
@@ -2393,17 +2463,28 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ConstructorInfo getHostConstructor() {
-			return getHostConstructor(ReflectionType, TypeGuru.emptyTypeArray);
+			return basicGetHostConstructor(ReflectionType, TypeGuru.emptyTypeArray);
+		}
+
+		public ConstructorInfo getHostConstructor(Type sourceType) {
+			return basicGetHostConstructor(sourceType, TypeGuru.emptyTypeArray);
 		}
 
 		public ConstructorInfo getHostConstructor(Type[] signature) {
-			return getHostConstructor(ReflectionType, signature);
+			return basicGetHostConstructor(ReflectionType, signature);
 		}
 
-		public virtual List<ConstructorInfo> getHostConstructors(long arity) {
+		public ConstructorInfo getHostConstructor(Type sourceType, Type[] signature) {
+			return basicGetHostConstructor(sourceType, signature);
+		}
+
+		public List<ConstructorInfo> getHostConstructors(long arity) {
+			return getHostConstructors(ReflectionType, arity);
+		}
+
+		public virtual List<ConstructorInfo> getHostConstructors(Type sourceType, long arity) {
 			var matchingConstructors = new List<ConstructorInfo>();
-			var type = ReflectionType;
-			var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+			var constructors = sourceType.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 			foreach (var ci in constructors) {
 				var parameters = ci.GetParameters();
 				if (parameters.Length != arity) continue;
@@ -2412,17 +2493,29 @@ namespace EssenceSharp.Runtime {
 			return matchingConstructors;
 		}
 
-		public virtual MethodInfo getHostMethod(String methodName) {
-			return getHostInstanceMethod(ReflectionType, methodName);
+		public MethodInfo getHostMethod(String methodName) {
+			return getHostMethod(ReflectionType, methodName);
 		}
 
-		public virtual MethodInfo getHostMethod(String methodName, Type[] signature) {
-			return getHostInstanceMethod(ReflectionType, methodName, signature);
+		public virtual MethodInfo getHostMethod(Type sourceType, String methodName) {
+			return getHostInstanceMethod(sourceType, methodName);
 		}
 
-		public virtual List<MethodInfo> getHostMethodsMatching(String methodName, long arity) {
+		public MethodInfo getHostMethod(String methodName, Type[] signature) {
+			return getHostMethod(ReflectionType, methodName, signature);
+		}
+
+		public virtual MethodInfo getHostMethod(Type sourceType, String methodName, Type[] signature) {
+			return getHostInstanceMethod(sourceType, methodName, signature);
+		}
+
+		public List<MethodInfo> getHostMethodsMatching(String methodName, long arity) {
+			return getHostMethodsMatching(ReflectionType, methodName, arity);
+		}
+
+		public virtual List<MethodInfo> getHostMethodsMatching(Type sourceType, String methodName, long arity) {
 			var matchingMethods = new List<MethodInfo>();
-			var methods = ReflectionType.GetMethods(HostObjectMethodInvokeBindingFlags);
+			var methods = sourceType.GetMethods(HostObjectMethodInvokeBindingFlags);
 			foreach (var mi in methods) {
 				var parameters = mi.GetParameters();
 				if (parameters.Length != arity) continue;
@@ -2433,34 +2526,54 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public PropertyInfo getReadableProperty(String name) {
-			var property = ReflectionType.GetProperty(name, HostObjectPropertyGetBindingFlags);
+			return getReadableProperty(ReflectionType, name);
+		}
+
+		public PropertyInfo getReadableProperty(Type sourceType, String name) {
+			var property = sourceType.GetProperty(name, HostObjectPropertyGetBindingFlags);
 			if (property == null) return null;
 			return property.CanRead ? property : null;
 		}
 
 		public PropertyInfo getWritableProperty(String name) {
-			var property = ReflectionType.GetProperty(name, HostObjectPropertySetBindingFlags);
+			return getWritableProperty(ReflectionType, name);
+		}
+
+		public PropertyInfo getWritableProperty(Type sourceType, String name) {
+			var property = sourceType.GetProperty(name, HostObjectPropertySetBindingFlags);
 			if (property == null) return null;
 			return property.CanWrite ? property : null;
 		}
 
 		public FieldInfo getField(String name) {
-			return InstanceType.GetField(name, HostObjectFieldGetBindingFlags);
+			return getField(ReflectionType, name);
+		}
+
+		public FieldInfo getField(Type sourceType, String name) {
+			return sourceType.GetField(name, HostObjectFieldGetBindingFlags);
 		}
 
 		public EventInfo getEvent(String name) {
-			return InstanceType.GetEvent(name, HostObjectFieldGetBindingFlags);
+			return getEvent(ReflectionType, name);
+		}
+
+		public EventInfo getEvent(Type sourceType, String name) {
+			return sourceType.GetEvent(name, HostObjectFieldGetBindingFlags);
 		}
 
 		public bool getReadablePropertyOrElseField(String name, Action<PropertyInfo> propertyAction, Action<FieldInfo> fieldAction) {
+			return getReadablePropertyOrElseField(ReflectionType, name, propertyAction, fieldAction);
+		}
+
+		public bool getReadablePropertyOrElseField(Type sourceType, String name, Action<PropertyInfo> propertyAction, Action<FieldInfo> fieldAction) {
 			String propertyName = name.usingCapitalizationScheme(CapitalizationScheme.InitialCapital);
-			var property = getReadableProperty(propertyName);
+			var property = getReadableProperty(sourceType, propertyName);
 			if (property != null) {
 				propertyAction(property);
 				return true;
 			}
 			String fieldName = name.usingCapitalizationScheme(CapitalizationScheme.InitialLowerCase);
-			var field = getField(fieldName);
+			var field = getField(sourceType, fieldName);
 			if (field != null) {
 				fieldAction(field);
 				return true;
@@ -2469,14 +2582,18 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public bool getWritablePropertyOrElseField(String name, Action<PropertyInfo> propertyAction, Action<FieldInfo> fieldAction) {
+			return getWritablePropertyOrElseField(ReflectionType, name, propertyAction, fieldAction);
+		}
+
+		public bool getWritablePropertyOrElseField(Type sourceType, String name, Action<PropertyInfo> propertyAction, Action<FieldInfo> fieldAction) {
 			String propertyName = name.usingCapitalizationScheme(CapitalizationScheme.InitialCapital);
-			var property = getWritableProperty(propertyName);
+			var property = getWritableProperty(sourceType, propertyName);
 			if (property != null) {
 				propertyAction(property);
 				return true;
 			}
 			String fieldName = name.usingCapitalizationScheme(CapitalizationScheme.InitialLowerCase);
-			var field = getField(fieldName);
+			var field = getField(sourceType, fieldName);
 			if (field != null) {
 				fieldAction(field);
 				return true;
@@ -2844,6 +2961,10 @@ namespace EssenceSharp.Runtime {
 			var metaclass = Class;
 			if (metaclass != null) setClass((ESBehavior)metaclass.copy());
 		}
+
+		public override bool IsArchitecturalBehavior {
+			get {return this == objectSpace.ClassClass || this == objectSpace.MetaclassClass || this == objectSpace.BehaviorClass;}
+		}
 		
 		public override bool IsClass {
 			get {return true;}
@@ -2880,13 +3001,16 @@ namespace EssenceSharp.Runtime {
 
 		protected override void bindToInstanceType() {
 			base.bindToInstanceType();
-			if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
-				if (instanceType.IsGenericTypeDefinition) {
-					isInstanceTypeLocked = true;
-					isInstanceArchitectureLocked = true;
+			var instanceType = InstanceType;
+			if (instanceType != null ) {
+				if (InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) {
+					if (instanceType.IsGenericTypeDefinition) {
+						isInstanceTypeLocked = true;
+						isInstanceArchitectureLocked = true;
+					}
+					objectSpace.bindHostSystemTypeTo(instanceType, this);
+					bindToHostSystemSuperclasses();
 				}
-				objectSpace.bindHostSystemTypeTo(instanceType, this);
-				bindToHostSystemSuperclasses();
 			}
 		}
 
@@ -3036,48 +3160,54 @@ namespace EssenceSharp.Runtime {
 			base.invalidateInstanceVariableNames();
 		}
 
-		protected override Type ReflectionType {
+		public override Type ReflectionType {
 			get {	var baseClass = CanonicalInstance;
 				if (baseClass == null) return InstanceType;
-				return isClassOfHostSystemType(baseClass.InstanceArchitecture) ?
-					baseClass.InstanceType :
-					InstanceType;}
+				return baseClass.InstanceType;}
+		}
+
+		public ObjectStateArchitecture InstanceInstanceArchitecture {
+			get {
+				var baseClass = CanonicalInstance;
+				if (baseClass == null) return InstanceArchitecture;
+				return baseClass.InstanceArchitecture;
+			}
 		}
 
 		public override BindingFlags HostObjectMethodInvokeBindingFlags {
-			get { return staticMethodInvokeBindingFlags; }
+			get {return staticMethodInvokeBindingFlags;}
 		}
 
 		public override BindingFlags HostObjectFieldGetBindingFlags {
-			get { return staticFieldGetBindingFlags; }
+			get {return staticFieldGetBindingFlags;}
 		}
 
 		public override BindingFlags HostObjectFieldSetBindingFlags {
-			get { return staticFieldSetBindingFlags; }
+			get {return staticFieldSetBindingFlags;}
 		}
 
 		public override BindingFlags HostObjectPropertyGetBindingFlags {
-			get { return staticPropertyGetBindingFlags; }
+			get {return staticPropertyGetBindingFlags;}
 		}
 
 		public override BindingFlags HostObjectPropertySetBindingFlags {
-			get { return staticPropertySetBindingFlags; }
+			get {return staticPropertySetBindingFlags;}
 		}
 
-		public override MethodInfo getHostMethod(String methodName) {
-			return getHostClassMethod(ReflectionType, methodName);
+		public override MethodInfo getHostMethod(Type sourceType, String methodName) {
+			return getHostClassMethod(sourceType, methodName);
 		}
 
-		public override MethodInfo getHostMethod(String methodName, Type[] signature) {
-			return getHostClassMethod(ReflectionType, methodName, signature);
+		public override MethodInfo getHostMethod(Type sourceType, String methodName, Type[] signature) {
+			return getHostClassMethod(sourceType, methodName, signature);
 		}
 
 		public override Object sendHostMessage(Object receiver, String messageName) {
-			return sendHostClassMessage(receiver.GetType(), messageName, HostObjectMethodInvokeBindingFlags);
+			return sendHostClassMessage(receiver.GetType(), messageName, staticMethodInvokeBindingFlags);
 		}
 
 		public override Object sendHostMessage(Object receiver, String messageName, Object[] args) {
-			return sendHostClassMessage(receiver.GetType(), messageName, args, HostObjectMethodInvokeBindingFlags);
+			return sendHostClassMessage(receiver.GetType(), messageName, args, staticMethodInvokeBindingFlags);
 		}
 
 		public override T valueBy<T>(Operation<T> operation) {

@@ -41,7 +41,10 @@ using System.Linq.Expressions;
 using FuncNs = System;
 #endif
 using EssenceSharp.CompilationServices;
+using EssenceSharp.Exceptions;
+using EssenceSharp.Exceptions.System;
 using EssenceSharp.Exceptions.System.PrimitiveFailures;
+using EssenceSharp.UtilityServices;
 #endregion
 
 namespace EssenceSharp.Runtime.Binding {
@@ -210,6 +213,10 @@ namespace EssenceSharp.Runtime.Binding {
 			var types = new Type[size];
 			for (var i = 0; i < size; i++) types[i] = type;
 			return types;
+		}
+
+		public static String nameWithGenericArguments(this Type type) {
+			return new TypeName(type).NameWithModifyingSuffix;
 		}
 
 		public static bool isVoidType(this Type aType) {
@@ -431,7 +438,7 @@ namespace EssenceSharp.Runtime.Binding {
 			return type;
 		}
 
-		public static Type[] parameterTypesFromDelegateType(Type delegateType) {
+		public static Type[] parameterTypesFromDelegateType(this Type delegateType) {
 
 			MethodInfo invoke = delegateType.GetMethod("Invoke");
 
@@ -443,7 +450,7 @@ namespace EssenceSharp.Runtime.Binding {
 			return typeParameters;
 		}
 
-		public static List<MethodInfo> indexerMethodsOf(Type aType, BindingFlags bindingFlags) {
+		public static List<MethodInfo> indexerMethodsOf(this Type aType, BindingFlags bindingFlags) {
 			var indexerProperties = aType.GetProperties(bindingFlags);
 			var indexerMethods = new List<MethodInfo>();
 			foreach (var p in indexerProperties) {
@@ -851,31 +858,22 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public static Expression expressionToInvokeESMethod(ESMethod method, Expression[] argumentsWithReceiver) {
 			return expressionToInvokeESMethod(Expression.Constant(method), argumentsWithReceiver);
-			/*
-			return 
-				Expression.Invoke(
-					Expression.Constant(method.Function).withType(ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
-					argumentsWithReceiver);
-			*/
 		}
 
 		public static Expression expressionToSendDoesNotUnderstand(Expression self, BehavioralObject esClass, SymbolRegistry symbolRegistry, Expression createMessageAction) {
 
-			var method = esClass == null ? null : esClass.compiledMethodAt(symbolRegistry.DoesNotUnderstandSelector);
-			if (method == null) {
-				return
-					Expression.Call(
+			var directThowAction = Expression.Call(
 							null,
 							TypeGuru.esObjectSpaceType.GetMethod("throwMessageNotUnderstood", new Type[]{TypeGuru.objectType, TypeGuru.esMessageType}),
 							self,
 							createMessageAction);
+			var method = esClass == null ? null : esClass.compiledMethodAt(symbolRegistry.DoesNotUnderstandSelector);
+			if (method == null) {
+				return directThowAction;
 			} else {
-				return			
-					Expression.Invoke(
-						Expression.Constant(method.Function).withType(ESCompiledCode.methodFunctionTypeForNumArgs(method.NumArgs)), 
-						self, 
-						createMessageAction); 
-
+				var exception = Expression.Parameter(typeof(MessageNotUnderstood), "ex");
+				var catchBlock = Expression.Catch(exception, directThowAction);
+				return Expression.TryCatch(expressionToInvokeESMethod(method, new Expression[]{self, createMessageAction}), catchBlock);
 			}
 		
 		}

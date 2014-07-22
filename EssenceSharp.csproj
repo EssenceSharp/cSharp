@@ -13,7 +13,7 @@
     <TargetFrameworkVersion Condition=" '$(Configuration)' == 'x86.35.Release'">v3.5</TargetFrameworkVersion>
     <TargetFrameworkVersion Condition=" '$(Configuration)' == 'x64.35.Debug'">v3.5</TargetFrameworkVersion>
     <TargetFrameworkVersion Condition=" '$(Configuration)' == 'x64.35.Release'">v3.5</TargetFrameworkVersion>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup>
     <RootNamespace>EssenceSharp</RootNamespace>
@@ -193,6 +193,7 @@
     <Compile Include="Source\Exceptions\System\PrimitiveFailures\PrimNonDeletableKeyException.cs" />
     <Compile Include="Source\Exceptions\System\PrimitiveFailures\UnimplementedPrimitiveException.cs" />
     <Compile Include="Source\Exceptions\System\SystemException.cs" />
+    <Compile Include="Source\Exceptions\System\TypeBindingFailure.cs" />
     <Compile Include="Source\Exceptions\UnsupportedOperationException.cs" />
     <Compile Include="Source\Exceptions\Warning.cs" />
     <Compile Include="Source\Runtime\Binding\ESDynamicBindingGuru.cs" />
