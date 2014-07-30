@@ -14,9 +14,13 @@
     <EnableSecurityDebugging>false</EnableSecurityDebugging>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.35.Debug|x86'">
-    <StartArguments>-d "Multitasking.ThreadLocal instanceType"</StartArguments>
+    <StartArguments>Events</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.40.Debug|x86'">
-    <StartArguments>OutParameters</StartArguments>
+    <StartArguments>
+</StartArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x64.35.Debug|x64'">
+    <StartArguments>-d "CLR.System.IO.Directory allIn: %27.%27"</StartArguments>
   </PropertyGroup>
 </Project>

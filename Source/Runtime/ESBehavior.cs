@@ -1599,6 +1599,11 @@ namespace EssenceSharp.Runtime {
 			base.initialize();
 			subclasses = newSubclassesSet();
 		}
+
+		protected override void incrementVersion() {
+			base.incrementVersion();
+			foreach (var subclass in subclasses) subclass.incrementVersion();
+		}
 	
 		protected override void bindToObjectSpace() {
 			base.bindToObjectSpace();
@@ -1607,10 +1612,15 @@ namespace EssenceSharp.Runtime {
 			instanceHashFunctor = instanceEqualityComparator.HashFunctor;
 		}
 
+		internal override void invalidateBinding(AccessPrivilegeLevel accessPrivilegeLevel) {
+			environment.atPut(Name, this.asBindingHandle());
+		}
+
 		public override void validate() {
 			base.validate();
 			if (!isInstanceTypeValid) invalidateInstanceType();
 			assertValidInheritanceStructure(Superclass);
+			foreach (var subclass in subclasses) subclass.validate();
 		}
 
 		public virtual ObjectStateArchitecture InstanceArchitecture {
@@ -1757,7 +1767,7 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		protected void invalidateInstanceType() {
+		internal void invalidateInstanceType() {
 			if (constraintsMustBeSatisfied) { 
 				setInstanceType(getInstanceType());
 			} else {
@@ -1900,11 +1910,6 @@ namespace EssenceSharp.Runtime {
 	
 		public override ESBehavior asESBehavior() {
 			return this;
-		}
-
-		protected override void incrementVersion() {
-			base.incrementVersion();
-			foreach (var subclass in subclasses) subclass.incrementVersion();
 		}
 
 		public override void postCopy() {
@@ -2106,6 +2111,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		internal override void nameChanged() {
+			base.nameChanged();
 			if (hostSystemName == null && InstanceArchitecture == ObjectStateArchitecture.HostSystemObject) invalidateInstanceType();
 		}
 		
@@ -2566,14 +2572,22 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public bool getReadablePropertyOrElseField(Type sourceType, String name, Action<PropertyInfo> propertyAction, Action<FieldInfo> fieldAction) {
-			String propertyName = name.usingCapitalizationScheme(CapitalizationScheme.InitialCapital);
-			var property = getReadableProperty(sourceType, propertyName);
-			if (property != null) {
+			String nameWithInitialLowerCase = null;
+			String nameWithInitialCapital = name.usingCapitalizationScheme(CapitalizationScheme.InitialCapital);
+			var property = getReadableProperty(sourceType, nameWithInitialCapital);
+			if (property == null) {
+				nameWithInitialLowerCase = name.usingCapitalizationScheme(CapitalizationScheme.InitialLowerCase);
+				property = getReadableProperty(sourceType, nameWithInitialLowerCase);
+				if (property != null) {
+					propertyAction(property);
+					return true;
+				}
+			} else {
 				propertyAction(property);
 				return true;
 			}
-			String fieldName = name.usingCapitalizationScheme(CapitalizationScheme.InitialLowerCase);
-			var field = getField(sourceType, fieldName);
+			var field = getField(sourceType, nameWithInitialLowerCase);
+			if (field == null) field = getField(sourceType, nameWithInitialCapital);
 			if (field != null) {
 				fieldAction(field);
 				return true;
@@ -2586,14 +2600,22 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public bool getWritablePropertyOrElseField(Type sourceType, String name, Action<PropertyInfo> propertyAction, Action<FieldInfo> fieldAction) {
-			String propertyName = name.usingCapitalizationScheme(CapitalizationScheme.InitialCapital);
-			var property = getWritableProperty(sourceType, propertyName);
-			if (property != null) {
+			String nameWithInitialLowerCase = null;
+			String nameWithInitialCapital = name.usingCapitalizationScheme(CapitalizationScheme.InitialCapital);
+			var property = getWritableProperty(sourceType, nameWithInitialCapital);
+			if (property == null) {
+				nameWithInitialLowerCase = name.usingCapitalizationScheme(CapitalizationScheme.InitialLowerCase);
+				property = getWritableProperty(sourceType, nameWithInitialCapital);
+				if (property != null) {
+					propertyAction(property);
+					return true;
+				}
+			} else {
 				propertyAction(property);
 				return true;
 			}
-			String fieldName = name.usingCapitalizationScheme(CapitalizationScheme.InitialLowerCase);
-			var field = getField(sourceType, fieldName);
+			var field = getField(sourceType, nameWithInitialLowerCase);
+			if (field == null) field = getField(sourceType, nameWithInitialCapital);
 			if (field != null) {
 				fieldAction(field);
 				return true;
@@ -2932,7 +2954,6 @@ namespace EssenceSharp.Runtime {
 			setName(nameInEnvironmentFor(hostSystemType));
 			setInstanceType(hostSystemType);
 			isBoundToHostSystemNamespace = true;
-			bindToHostSystemSuperclasses();
 		}
 			
 		public ESClass(ESBehavior metaClass, ESSymbol name) : base(metaClass) {
@@ -2963,7 +2984,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public override bool IsArchitecturalBehavior {
-			get {return this == objectSpace.ClassClass || this == objectSpace.MetaclassClass || this == objectSpace.BehaviorClass;}
+			get {return objectSpace == null || this == objectSpace.ClassClass || this == objectSpace.MetaclassClass || this == objectSpace.BehaviorClass;}
 		}
 		
 		public override bool IsClass {
@@ -2976,6 +2997,22 @@ namespace EssenceSharp.Runtime {
 		
 		protected override String AnonymousName {
 			get {return "AnAnonymousClass";}
+		}
+
+		internal override void invalidateBinding(AccessPrivilegeLevel accessPrivilegeLevel) {
+			ESBindingReference binding = environment.localBindingAt(NameString, AccessPrivilegeLevel.Local);
+			if (binding == null) {
+				binding = objectSpace.newBindingReference(NameString, this, accessPrivilegeLevel);
+				binding.beImmutable();
+				environment.basicAdd(binding);
+			} else {
+				var value = binding.Value.Value;
+				if (value == this) return;
+				if (binding.IsImmutable) throw new ImmutableBindingException("Cannot change the value of the binding named " + binding.Key);
+				binding.setValue(this.asBindingHandle());
+				binding.AccessPrivilegeLevel = accessPrivilegeLevel;
+				binding.beImmutable();
+			}
 		}
 		
 		internal override void nameChanged() {
@@ -3111,6 +3148,10 @@ namespace EssenceSharp.Runtime {
 				}
 				return name;}
 		}
+
+		internal override void invalidateBinding(AccessPrivilegeLevel accessPrivilegeLevel) {
+			// Do nothing
+		}
 		
 		internal override void nameChanged() {
 			name = null;
@@ -3146,11 +3187,11 @@ namespace EssenceSharp.Runtime {
 			// Should not implement
 		}
 
-		protected override void unbindFromEnvironment() {
-			// Should not implement
+		protected override AccessPrivilegeLevel unbindFromEnvironment() {
+			return AccessPrivilegeLevel.Local;
 		}
 
-		protected override void bindToEnvironment() {
+		protected override void bindToEnvironment(AccessPrivilegeLevel accessPrivilegeLevel) {
 			// Should not implement
 		}
 

@@ -2525,7 +2525,19 @@ namespace EssenceSharp.ParsingServices {
 		public override LexicalToken FinalToken {
 			get {return pseudoVariable;}
 		}
-		
+
+		public override bool IsPseudovariable {
+			get {return true;}
+		}
+
+		public override bool IsSelf {
+			get {return pseudoVariable.IsSelf;}
+		}
+
+		public override bool IsSuper {
+			get {return pseudoVariable.IsSuper;}
+		}
+
 		public PseudoVariableReferenceToken PseudoVariable {
 			get {return pseudoVariable;}
 		}

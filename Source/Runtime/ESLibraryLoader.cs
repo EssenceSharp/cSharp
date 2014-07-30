@@ -259,6 +259,8 @@ namespace EssenceSharp.Runtime {
 			foreach (var factory in classFactories) 
 				if (!factory.compileAll()) return false;
 
+			foreach (var factory in traitFactories) 
+				if (!factory.initializeAll()) return false;
 			foreach (var factory in classFactories) 
 				if (!factory.initializeAll()) return false;
 			foreach (var factory in namespaceFactories) 
@@ -325,8 +327,7 @@ namespace EssenceSharp.Runtime {
 			FileSystemInfo namespaceConfigurationFile	= null;
 			FileSystemInfo classConfigurationFile		= null;
 			FileSystemInfo metaclassConfigurationFile	= null;
-			FileSystemInfo classInitializationFile		= null;
-			FileSystemInfo metaclassInitializationFile	= null;
+			FileSystemInfo initializerFile			= null;
 			FileSystemInfo instanceMethodsFile		= null;
 			FileSystemInfo classMethodsFile			= null;
 			var variables					= new List<FileSystemInfo>();
@@ -337,20 +338,75 @@ namespace EssenceSharp.Runtime {
 			TraitFactory traitFactory;
 			ClassFactory behaviorFactory;
 
+			var renameCount = 0;
+			foreach (var fileEntry in files) {
+				var fileName = fileEntry.Name.ToLower();
+				if ((fileEntry.Attributes & FileAttributes.Directory) == FileAttributes.Directory ) {
+					continue;
+				} else {
+					var file = (FileInfo)fileEntry;
+					switch (fileName) {
+
+						case "namespace.configure":
+						case "configure.namespace":
+							file.MoveTo(Path.Combine(file.Directory.FullName, "namespace.def"));
+							renameCount++;
+							break;
+
+						case "trait.configure":
+						case "configure.trait":
+							file.MoveTo(Path.Combine(file.Directory.FullName, "trait.def"));
+							renameCount++;
+							break;
+
+						case "classTrait.configure":
+						case "configure.classTrait":
+							file.MoveTo(Path.Combine(file.Directory.FullName, "classTrait.def"));
+							renameCount++;
+							break;
+
+						case "class.configure":
+						case "configure.class":
+							file.MoveTo(Path.Combine(file.Directory.FullName, "class.def"));
+							renameCount++;
+							break;
+
+						case "metaclass.configure":
+						case "configure.metaclass":
+							file.MoveTo(Path.Combine(file.Directory.FullName, "metaclass.def"));
+							renameCount++;
+							break;
+
+						case "instance.methods":
+							file.MoveTo(Path.Combine(file.Directory.FullName, "methods.instance"));
+							renameCount++;
+							break;
+
+						case "class.methods":
+							file.MoveTo(Path.Combine(file.Directory.FullName, "methods.class"));
+							renameCount++;
+							break;
+
+						default:
+							break;
+					}
+				}
+			}
+
+			if (renameCount > 0) files = baseDirectory.GetFileSystemInfos();
+
 			foreach (var file in files) {
-				var fileName = file.Name;
+				var fileName = file.Name.ToLower();
 				if ((file.Attributes & FileAttributes.Directory) == FileAttributes.Directory ) {
 					if (recurseIntoNestedNamespaces) nestedNamespaces.Add((DirectoryInfo)file);
 				} else {
 					switch (fileName) {
 
-						case "namespace.configure":
-						case "configure.namespace":
+						case "namespace.def":
 							namespaceConfigurationFile = file;
 							break;
 
-						case "trait.configure":
-						case "configure.trait":
+						case "trait.def":
 							if (type == DeclarationType.Class) { 
 								Console.WriteLine(baseDirectory.FullName + " cannot be declared to be both a class and a trait.");
 								return false;
@@ -358,8 +414,8 @@ namespace EssenceSharp.Runtime {
 							type = DeclarationType.Trait;
 							classConfigurationFile = file;
 							break;
-						case "classTrait.configure":
-						case "configure.classTrait":
+
+						case "classTrait.def":
 							if (type == DeclarationType.Class) { 
 								Console.WriteLine(baseDirectory.FullName + " cannot be declared to be both a class and a trait.");
 								return false;
@@ -368,8 +424,7 @@ namespace EssenceSharp.Runtime {
 							metaclassConfigurationFile = file;
 							break;
 
-						case "class.configure":
-						case "configure.class":
+						case "class.def":
 							if (type == DeclarationType.Trait) { 
 								Console.WriteLine(baseDirectory.FullName + " cannot be declared to be both a class and a trait.");
 								return false;
@@ -377,8 +432,8 @@ namespace EssenceSharp.Runtime {
 							type = DeclarationType.Class;
 							classConfigurationFile = file;
 							break;
-						case "metaclass.configure":
-						case "configure.metaclass":
+
+						case "metaclass.def":
 							if (type == DeclarationType.Trait) { 
 								Console.WriteLine(baseDirectory.FullName + " cannot be declared to be both a class and a trait.");
 								return false;
@@ -387,32 +442,29 @@ namespace EssenceSharp.Runtime {
 							metaclassConfigurationFile = file;
 							break;
 
-						case "class.initialize":
-						case "initialize.class":
-							if (type == DeclarationType.Trait) continue;
-							type = DeclarationType.Class;
-							classInitializationFile = file;
-							break;
-						case "metaclass.initialize":
-						case "initialize.metaclass":
-							if (type == DeclarationType.Trait) continue;
-							type = DeclarationType.Class;
-							metaclassInitializationFile = file;
+						case "initializer":
+							initializerFile = file;
 							break;
 
 						case "methods.instance":
-						case "instance.methods":
 							if (type == DeclarationType.Namespace) { 
 								type = DeclarationType.TraitOrClass;
 							}
 							instanceMethodsFile = file;
 							break;
+
 						case "methods.class":
-						case "class.methods":
 							if (type == DeclarationType.Namespace) { 
 								type = DeclarationType.TraitOrClass;
 							}
 							classMethodsFile = file;
+							break;
+
+						case "class.initialize":
+						case "initialize.class":
+						case "metaclass.initialize":
+						case "initialize.metaclass":
+							Console.WriteLine("Deprecated/retired file type; not processed: " + file.FullName);
 							break;
 
 						default:
@@ -448,8 +500,6 @@ namespace EssenceSharp.Runtime {
 					classFactories.Add(behaviorFactory);
 					behaviorFactory.ClassConfigurationFile = (FileInfo)classConfigurationFile;
 					behaviorFactory.MetaclassConfigurationFile = (FileInfo)metaclassConfigurationFile;
-					behaviorFactory.ClassInitializationFile = (FileInfo)classInitializationFile;
-					behaviorFactory.MetaclassInitializationFile = (FileInfo)metaclassInitializationFile;
 					behaviorFactory.InstanceMethodsFile = (FileInfo)instanceMethodsFile;
 					behaviorFactory.ClassMethodsFile = (FileInfo)classMethodsFile;
 					break;
@@ -460,6 +510,7 @@ namespace EssenceSharp.Runtime {
 					break;
 
 			}
+			namespaceFactory.InitializerFile = (FileInfo)initializerFile;
 			namespaceFactory.IsVerbose = IsVerbose;
 			if (!namespaceFactory.declareNamespace()) return false;
 			loadedNamespace = namespaceFactory.ThisNamespace;
@@ -519,6 +570,7 @@ namespace EssenceSharp.Runtime {
 		protected NamespaceObject					baseEnvironment;
 		protected ESSymbol						name;
 		protected FileInfo						namespaceConfigurationFile;
+		protected FileInfo						initializerFile;
 		protected ESNamespace						thisNamespace;
 		protected List<Association<ESBindingReference, FileInfo>>	constants			= new List<Association<ESBindingReference, FileInfo>>();
 		protected List<Association<ESBindingReference, FileInfo>>	variables			= new List<Association<ESBindingReference, FileInfo>>();
@@ -556,6 +608,11 @@ namespace EssenceSharp.Runtime {
 		public FileInfo NamespaceConfigurationFile {
 			get {return namespaceConfigurationFile;}
 			set {namespaceConfigurationFile = value;}
+		}
+
+		public FileInfo InitializerFile {
+			get {return initializerFile;}
+			set {initializerFile = value;}
 		}
 
 		public void addConstantInitializerFile(FileInfo constantInitializationFile) {
@@ -605,7 +662,7 @@ namespace EssenceSharp.Runtime {
 		public virtual bool initializeAll() {
 			initializeConstants();
 			initializeVariables();
-			return true;
+			return initializeThis();
 		}
 
 		public virtual bool initializeConstants() {
@@ -659,15 +716,27 @@ namespace EssenceSharp.Runtime {
 		protected virtual bool configureNamespace() {
 			if (NamespaceConfigurationFile == null) return true;
 			if (IsVerbose) Console.WriteLine("Configuring namespace: " + ThisNamespace.PathnameString);
-			return evaluateAsSelfExpression(ThisNamespace, ThisNamespace, NamespaceConfigurationFile);
+			Object value;
+			return evaluateAsSelfExpression(ThisNamespace, ThisNamespace, NamespaceConfigurationFile, out value);
+		}
+
+		protected virtual bool initializeThis() {
+			if (initializerFile == null) return true;
+			if (IsVerbose) Console.WriteLine("Initializing: " + ThisNamespace.PathnameString);
+			Object value;
+			return evaluate(ThisNamespace, ThisNamespace, InitializerFile, out value);
 		}
 
 		protected virtual bool initializeConstant(Association<ESBindingReference, FileInfo> association) {
 			var binding = association.Key;
 			var file = association.Value;
 			if (IsVerbose) Console.WriteLine("Initializing constant: " + binding.Key + " in: " + ThisNamespace.PathnameString);
-			var success = evaluateAsSelfExpression(ThisNamespace, binding, file);
-			if (success) binding.beImmutable();
+			Object value;
+			var success = evaluate(ThisNamespace, binding, file, out value);
+			if (success) {
+				binding.setValue(value);
+				binding.beImmutable();
+			}
 			return success;
 		}
 
@@ -675,21 +744,37 @@ namespace EssenceSharp.Runtime {
 			var binding = association.Key;
 			var file = association.Value;
 			if (IsVerbose) Console.WriteLine("Initializing variable: " + binding.Key + " in: " + ThisNamespace.PathnameString);
-			var success = evaluateAsSelfExpression(ThisNamespace, binding, file);
+			Object value;
+			var success = evaluate(ThisNamespace, binding, file, out value);
+			if (success) {
+				binding.setValue(value);
+			}
 			return success;
 		}
 
-		protected virtual bool evaluateAsSelfExpression(NamespaceObject environment, Object selfValue, FileInfo file) {
-			Object value;
+		protected virtual bool evaluate(NamespaceObject environment, Object selfValue, FileInfo file, out Object value) {
+			objectSpace.evaluate(
+					file, 
+					environment, 
+					selfValue, 
+					(errorDescription, span, code, severity) => {
+						var error = new LibraryCompilationError(file, environment, errorDescription, span, code, severity);
+						error.addTo(compilationErrors);
+					},
+					out value);
+			return true;
+		}
+
+		protected virtual bool evaluateAsSelfExpression(NamespaceObject environment, Object selfValue, FileInfo file, out Object value) {
 			objectSpace.evaluateAsSelfExpression(
-				file, 
-				environment, 
-				selfValue, 
-				(errorDescription, span, code, severity) => {
-					var error = new LibraryCompilationError(file, environment, errorDescription, span, code, severity);
-					error.addTo(compilationErrors);
-				},
-				out value);
+					file, 
+					environment, 
+					selfValue, 
+					(errorDescription, span, code, severity) => {
+						var error = new LibraryCompilationError(file, environment, errorDescription, span, code, severity);
+						error.addTo(compilationErrors);
+					},
+					out value);
 			return true;
 		}
 
@@ -759,7 +844,8 @@ namespace EssenceSharp.Runtime {
 		protected virtual bool compileMethodsFor(BehavioralObject methodClass, FileInfo methodDeclarationFile) {
 			if (methodDeclarationFile == null) return true;
 			if (IsVerbose) Console.WriteLine("Compiling methods for: " + methodClass.PathnameString);
-			return evaluateAsSelfExpression(methodClass, methodClass, methodDeclarationFile);
+			Object value;
+			return evaluateAsSelfExpression(methodClass, methodClass, methodDeclarationFile, out value);
 		}
 
 		public void reportUndeclaredVariables() {
@@ -778,8 +864,6 @@ namespace EssenceSharp.Runtime {
 	public class ClassFactory : BehavioralObjectFactory {
 		protected ESClass thisClass;
 		protected ESMetaclass thisMetaclass;
-		protected FileInfo classInitializationFile;
-		protected FileInfo metaclassInitializationFile;
 
 		public ClassFactory(ESObjectSpace objectSpace, NamespaceObject baseEnvironment, ESSymbol name, IDictionary<String, List<LibraryCompilationError>> compilationErrors) : base(objectSpace, baseEnvironment, name, compilationErrors) {
 		}
@@ -798,16 +882,6 @@ namespace EssenceSharp.Runtime {
 
 		public ESMetaclass ThisMetaclass {
 			get {return thisMetaclass;}
-		}
-
-		public FileInfo ClassInitializationFile {
-			get {return classInitializationFile;}
-			set {classInitializationFile = value;}
-		}
-
-		public FileInfo MetaclassInitializationFile {
-			get {return metaclassInitializationFile;}
-			set {metaclassInitializationFile = value;}
 		}
 
 		public override bool declareNamespace() {
@@ -831,13 +905,15 @@ namespace EssenceSharp.Runtime {
 		protected override bool configureClass() {
 			if (ClassConfigurationFile == null) return true;
 			if (IsVerbose) Console.WriteLine("Configuring class : " + ThisClass.PathnameString);
-			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile);
+			Object value;
+			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile, out value);
 		}
 
 		protected override bool configureMetaclass() {
 			if (MetaclassConfigurationFile == null) return true;
 			if (IsVerbose) Console.WriteLine("Configuring metaclass: " + ThisMetaclass.PathnameString);
-			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassConfigurationFile);
+			Object value;
+			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassConfigurationFile, out value);
 		}
 
 		public override bool compileInstanceMethods() {
@@ -848,26 +924,10 @@ namespace EssenceSharp.Runtime {
 			return compileMethodsFor(ThisMetaclass, ClassMethodsFile);
 		}
 
-		public override bool initializeAll() {
-			if (!base.initializeAll()) return false;
-			if (!initializeMetaclass()) return false;
-			return initializeClass();
+		protected override bool initializeThis() {
+			if (!ThisClass.HasSuperclass) ThisClass.validate();
+			return base.initializeThis();
 		}
-
-		protected virtual bool initializeClass() {
-			ThisClass.validate();
-			if (ClassInitializationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Initializing class : " + ThisClass.PathnameString);
-			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassInitializationFile);
-		}
-
-		protected virtual bool initializeMetaclass() {
-			ThisMetaclass.validate();
-			if (MetaclassInitializationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Initializing metaclass: " + ThisMetaclass.PathnameString);
-			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassInitializationFile);
-		}
-
 
 	}
 
@@ -915,13 +975,15 @@ namespace EssenceSharp.Runtime {
 		protected override bool configureClass() {
 			if (ClassConfigurationFile == null) return true;
 			if (IsVerbose) Console.WriteLine("Configuring instance trait : " + ThisClass.PathnameString);
-			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile);
+			Object value;
+			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile, out value);
 		}
 
 		protected override bool configureMetaclass() {
 			if (MetaclassConfigurationFile == null) return true;
 			if (IsVerbose) Console.WriteLine("Configuring class trait: " + ThisMetaclass.PathnameString);
-			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassConfigurationFile);
+			Object value;
+			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassConfigurationFile, out value);
 		}
 
 		public override bool compileInstanceMethods() {

@@ -821,6 +821,10 @@ namespace EssenceSharp.ParsingServices {
 		
 		public PseudoVariableReferenceToken(int occurrenceIndex, uint lineNumberStart, uint columnNumberStart, uint lineNumberEnd, uint columnNumberEnd) : base (occurrenceIndex, lineNumberStart, columnNumberStart, lineNumberEnd, columnNumberEnd) {
 		}
+
+		public override bool IsPseudovariable {
+			get {return true;}
+		}
 		
 	}
 	
@@ -835,6 +839,10 @@ namespace EssenceSharp.ParsingServices {
 
 		public override String Name {
 			get {return "self";}
+		}
+
+		public override bool IsSelf {
+			get {return true;}
 		}
 
 		public override T valueBy<T>(ParseTreeNodeOperation<T> operation) {
@@ -855,6 +863,10 @@ namespace EssenceSharp.ParsingServices {
 
 		public override String Name {
 			get {return "super";}
+		}
+
+		public override bool IsSuper {
+			get {return true;}
 		}
 
 		public override T valueBy<T>(ParseTreeNodeOperation<T> operation) {

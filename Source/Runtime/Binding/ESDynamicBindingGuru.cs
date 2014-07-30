@@ -1522,7 +1522,6 @@ namespace EssenceSharp.Runtime.Binding {
 
 				var currentProperty = enumeratorType.GetProperty("Current", BindingFlags.Instance | BindingFlags.GetProperty | BindingFlags.Public);
 				var keyValuePairType = currentProperty.PropertyType;
-				// var keyValuePairArgs = keyValuePairType.GetGenericArguments();
 
 				var enumerator = Expression.Parameter(enumeratorType, "$enumerator");
 				var assignEnumerator = Expression.Assign(enumerator, Expression.Call(self, getEnumeratorMethod));
@@ -1530,9 +1529,22 @@ namespace EssenceSharp.Runtime.Binding {
 				var keyValuePair = Expression.Parameter(keyValuePairType, "$keyValuePair");
 				var assignKeyValuePair = Expression.Assign(keyValuePair, getKeyValuePair);
 				Expression getValue = Expression.Property(keyValuePair, "Value");
-				if (getValue.Type != TypeGuru.objectType) getValue = getValue.withType(TypeGuru.objectType);
+				valueType = getValue.Type;
+				if (valueType != TypeGuru.objectType) getValue = getValue.withType(TypeGuru.objectType);
 				var assignValue = Expression.Assign(value, getValue);
-				var moveNext = Expression.Call(enumerator, enumeratorType.GetMethod("MoveNext"));
+
+				var moveNextMethod = enumeratorType.GetMethod("MoveNext", ESBehavior.instanceMethodInvokeBindingFlags);
+				if (moveNextMethod == null) {
+					var baseEnumeratorType = typeof(IEnumerator);
+					var interfaces = enumeratorType.GetInterfaces();
+					foreach (var i in interfaces) {
+						if (baseEnumeratorType.IsAssignableFrom(i)) { 
+							moveNextMethod = i.GetMethod("MoveNext", ESBehavior.instanceMethodInvokeBindingFlags);
+							if (moveNextMethod != null) break;
+						}
+					}
+				}
+				var moveNext = Expression.Call(enumerator, moveNextMethod);
 
 				block = Expression.Block(
 						TypeGuru.objectType,
@@ -1558,9 +1570,21 @@ namespace EssenceSharp.Runtime.Binding {
 				var enumerator = Expression.Parameter(enumeratorType, "$enumerator");
 				var assignEnumerator = Expression.Assign(enumerator, Expression.Call(self, getEnumeratorMethod));
 				Expression getElement = Expression.Property(enumerator, "Current");
-				if (getElement.Type != TypeGuru.objectType) getElement = getElement.withType(TypeGuru.objectType);
+				elementType = getElement.Type;
+				if (elementType != TypeGuru.objectType) getElement = getElement.withType(TypeGuru.objectType);
 				var assignElement = Expression.Assign(element, getElement);
-				var moveNext = Expression.Call(enumerator, enumeratorType.GetMethod("MoveNext"));
+				var moveNextMethod = enumeratorType.GetMethod("MoveNext", ESBehavior.instanceMethodInvokeBindingFlags);
+				if (moveNextMethod == null) {
+					var baseEnumeratorType = typeof(IEnumerator);
+					var interfaces = enumeratorType.GetInterfaces();
+					foreach (var i in interfaces) {
+						if (baseEnumeratorType.IsAssignableFrom(i)) { 
+							moveNextMethod = i.GetMethod("MoveNext", ESBehavior.instanceMethodInvokeBindingFlags);
+							if (moveNextMethod != null) break;
+						}
+					}
+				}
+				var moveNext = Expression.Call(enumerator, moveNextMethod);
 
 				block = Expression.Block(
 						TypeGuru.objectType,
@@ -1691,7 +1715,19 @@ namespace EssenceSharp.Runtime.Binding {
 				Expression getElement = Expression.Property(enumerator, "Current");
 				if (getElement.Type != TypeGuru.objectType) getElement = getElement.withType(TypeGuru.objectType);
 				var assignElement = Expression.Assign(element, getElement);
-				var moveNext = Expression.Call(enumerator, enumeratorType.GetMethod("MoveNext"));
+
+				var moveNextMethod = enumeratorType.GetMethod("MoveNext", ESBehavior.instanceMethodInvokeBindingFlags);
+				if (moveNextMethod == null) {
+					var baseEnumeratorType = typeof(IEnumerator);
+					var interfaces = enumeratorType.GetInterfaces();
+					foreach (var i in interfaces) {
+						if (baseEnumeratorType.IsAssignableFrom(i)) { 
+							moveNextMethod = i.GetMethod("MoveNext", ESBehavior.instanceMethodInvokeBindingFlags);
+							if (moveNextMethod != null) break;
+						}
+					}
+				}
+				var moveNext = Expression.Call(enumerator, moveNextMethod);
 
 				block = Expression.Block(
 						TypeGuru.objectType,
@@ -1747,7 +1783,19 @@ namespace EssenceSharp.Runtime.Binding {
 				Expression getKey = Expression.Property(keyValuePair, "Key");
 				if (getKey.Type != TypeGuru.objectType) getKey = getKey.withType(TypeGuru.objectType);
 				var assignKey = Expression.Assign(key, getKey);
-				var moveNext = Expression.Call(enumerator, enumeratorType.GetMethod("MoveNext"));
+
+				var moveNextMethod = enumeratorType.GetMethod("MoveNext", ESBehavior.instanceMethodInvokeBindingFlags);
+				if (moveNextMethod == null) {
+					var baseEnumeratorType = typeof(IEnumerator);
+					var interfaces = enumeratorType.GetInterfaces();
+					foreach (var i in interfaces) {
+						if (baseEnumeratorType.IsAssignableFrom(i)) { 
+							moveNextMethod = i.GetMethod("MoveNext", ESBehavior.instanceMethodInvokeBindingFlags);
+							if (moveNextMethod != null) break;
+						}
+					}
+				}
+				var moveNext = Expression.Call(enumerator, moveNextMethod);
 
 				block = Expression.Block(
 						TypeGuru.objectType,
@@ -1813,7 +1861,19 @@ namespace EssenceSharp.Runtime.Binding {
 				if (getValue.Type != TypeGuru.objectType) getValue = getValue.withType(TypeGuru.objectType);
 				var assignKey = Expression.Assign(key, getKey);
 				var assignValue = Expression.Assign(value, getValue);
-				var moveNext = Expression.Call(enumerator, enumeratorType.GetMethod("MoveNext"));
+
+				var moveNextMethod = enumeratorType.GetMethod("MoveNext", ESBehavior.instanceMethodInvokeBindingFlags);
+				if (moveNextMethod == null) {
+					var baseEnumeratorType = typeof(IEnumerator);
+					var interfaces = enumeratorType.GetInterfaces();
+					foreach (var i in interfaces) {
+						if (baseEnumeratorType.IsAssignableFrom(i)) { 
+							moveNextMethod = i.GetMethod("MoveNext", ESBehavior.instanceMethodInvokeBindingFlags);
+							if (moveNextMethod != null) break;
+						}
+					}
+				}
+				var moveNext = Expression.Call(enumerator, moveNextMethod);
 
 				block = Expression.Block(
 						TypeGuru.objectType,
@@ -2076,7 +2136,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectToSendMessageToNil(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 			var method = objectSpace.UndefinedObjectClass.compiledMethodAt(selector);
 			if (method == null) {
-				return metaObjectToSendSyntheticMessageToNil(receiver, selector, metaObjectArgs);
+				return metaObjectToSendVirtualMessageToNil(receiver, selector, metaObjectArgs);
 			}
 			return metaObjectToSendMessage(
 					receiver, 
@@ -2091,18 +2151,25 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectToSendMessageToNilSuper(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 			var superclass = objectSpace.UndefinedObjectClass.Superclass;
 			ESMethod method;
+			bool maySendVirtualMessage = true;
 			if (superclass == null) {
 				method = null;
+				maySendVirtualMessage = false;
 			} else { 
 				method = superclass.compiledMethodAt(selector);
 				var homeClass = method.HomeClass;
 				if (homeClass != superclass) { 
 					superclass = homeClass.Superclass;
-					method = superclass == null ? null : superclass.compiledMethodAt(selector);
+					if (superclass == null) {
+						method = null;
+						maySendVirtualMessage = false;
+					} else {
+						method = superclass.compiledMethodAt(selector);
+					}
 				}
 			}
-			if (method == null) {
-				return metaObjectToSendSyntheticMessageToNil(receiver, selector, metaObjectArgs);
+			if (method == null && maySendVirtualMessage) {
+				return metaObjectToSendVirtualMessageToNil(receiver, selector, metaObjectArgs);
 			}
 			return metaObjectToSendMessage(
 					receiver, 
@@ -2114,7 +2181,7 @@ namespace EssenceSharp.Runtime.Binding {
 					ExpressionTreeGuru.expressionToTestThatNilHasSameClassVersion(receiver.Expression, objectSpace.UndefinedObjectClass).asBindingRestriction());
 		}
 
-		public DynamicMetaObject metaObjectToSendSyntheticMessageToNil(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] args) {
+		public DynamicMetaObject metaObjectToSendVirtualMessageToNil(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] args) {
 
 			var self = receiver.Expression;
 			var esClass = objectSpace.UndefinedObjectClass;
@@ -2306,17 +2373,24 @@ namespace EssenceSharp.Runtime.Binding {
 			var esClass = objectSpace.classOfHostSystemValue(receiver.Value);
 			var superclass = esClass.Superclass;
 			ESMethod method;
+			bool maySendVirtualMessage = true;
 			if (superclass == null) {
 				method = null;
+				maySendVirtualMessage = false;
 			} else { 
 				method = superclass.compiledMethodAt(selector);
 				var homeClass = method.HomeClass;
 				if (homeClass != superclass) { 
 					superclass = homeClass.Superclass;
-					method = superclass == null ? null : superclass.compiledMethodAt(selector);
+					if (superclass == null) {
+						method = null;
+						maySendVirtualMessage = false;
+					} else {
+						method = superclass.compiledMethodAt(selector);
+					}
 				}
 			}
-			if (method == null) {
+			if (method == null && maySendVirtualMessage) {
 				return metaObjectToSendVirtualMessageToForeignObject(receiver, esClass, selector, metaObjectArgs);
 			} else {
 				return metaObjectToSendMessage(
@@ -2804,7 +2878,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public class GetPropertyOrFieldOfForeignObjectBinder : GetMemberBinder {
 
 			protected DynamicBindingGuru	dynamicBindingGuru	= null;
-			protected ESObjectSpace		objectSpace			= null;
+			protected ESObjectSpace		objectSpace		= null;
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 
@@ -2907,7 +2981,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public class SetPropertyOrFieldOfForeignObjectBinder : SetMemberBinder {
 
 			protected DynamicBindingGuru	dynamicBindingGuru	= null;
-			protected ESObjectSpace		objectSpace			= null;
+			protected ESObjectSpace		objectSpace		= null;
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 
@@ -2994,7 +3068,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public class GetValueAtIndexOrKeyInForeignObjectBinder : GetIndexBinder {
 
 			protected DynamicBindingGuru	dynamicBindingGuru	= null;
-			protected ESObjectSpace		objectSpace			= null;
+			protected ESObjectSpace		objectSpace		= null;
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 
@@ -3090,7 +3164,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public class SetValueAtIndexOrKeyInForeignObjectBinder : SetIndexBinder {
 
 			protected DynamicBindingGuru	dynamicBindingGuru	= null;
-			protected ESObjectSpace		objectSpace			= null;
+			protected ESObjectSpace		objectSpace		= null;
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 
@@ -3200,7 +3274,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public class RemoveAtIndexOrKeyFromForeignCollectionBinder : DeleteIndexBinder {
 
 			protected DynamicBindingGuru	dynamicBindingGuru	= null;
-			protected ESObjectSpace		objectSpace			= null;
+			protected ESObjectSpace		objectSpace		= null;
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 
@@ -3255,7 +3329,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public class UnaryMessageSendToForeignObjectBinder : UnaryOperationBinder {
 	
 			protected DynamicBindingGuru	dynamicBindingGuru	= null;
-			protected ESObjectSpace		objectSpace			= null;
+			protected ESObjectSpace		objectSpace		= null;
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 
@@ -3340,7 +3414,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public class BinaryMessageSendToForeignObjectBinder : BinaryOperationBinder {
 	
 			protected DynamicBindingGuru	dynamicBindingGuru	= null;
-			protected ESObjectSpace		objectSpace			= null;
+			protected ESObjectSpace		objectSpace		= null;
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 
@@ -3629,7 +3703,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public class InvokeForeignFunctionBinder : InvokeBinder {
 	
 			protected DynamicBindingGuru	dynamicBindingGuru	= null;
-			protected ESObjectSpace		objectSpace			= null;
+			protected ESObjectSpace		objectSpace		= null;
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 			protected long			numArgs			= 0;
@@ -3699,7 +3773,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public class MessageSendToForeignObjectBinder : InvokeMemberBinder {
 	
 			protected DynamicBindingGuru	dynamicBindingGuru	= null;
-			protected ESObjectSpace		objectSpace			= null;
+			protected ESObjectSpace		objectSpace		= null;
 			protected ESBehavior		esClass			= null;
 			protected ESSymbol		selector		= null;
 			protected String		alternateMethodName	= null;

@@ -308,7 +308,7 @@ namespace EssenceSharp.Runtime {
 		ValueType at(KeyType key);
 		ValueType atIfAbsent(KeyType key, FuncNs.Func<ValueType> notFoundAction);
 		ValueType atIfAbsentPut(KeyType key, FuncNs.Func<ValueType> computeValueToBeAdded);
-		void add(AssociationType newAssociation);
+		AssociationType add(AssociationType newAssociation);
 		void atPut(KeyType key, ValueType value);
 		void atImmutablyPut(KeyType key, ValueType value);
 		bool includesKey(KeyType key);
@@ -398,13 +398,19 @@ namespace EssenceSharp.Runtime {
 					});
 		}
 
-		public void add(AssociationType newAssociation) {
+		internal void basicAdd(AssociationType newAssociation) {
+			newAssociation.keyBeImmutable();
+			bindings[newAssociation.Key] = newAssociation;
+		}
+
+		public virtual AssociationType add(AssociationType newAssociation) {
 			AssociationType prevAssociation;
 			if (bindings.TryGetValue(newAssociation.Key, out prevAssociation)) {
 				prevAssociation.Value = newAssociation.Value;
+				return prevAssociation;
 			} else {
-				newAssociation.keyBeImmutable();
-				bindings[newAssociation.Key] = newAssociation;
+				basicAdd(newAssociation);
+				return newAssociation;
 			}
 		}
 
@@ -682,8 +688,7 @@ namespace EssenceSharp.Runtime {
 			}
 
 			public Object _add_(Object receiver, Object newAssociation) {
-				((ESDictionary)receiver).add((ESAssociation)newAssociation);
-				return receiver;
+				return ((ESDictionary)receiver).add((ESAssociation)newAssociation);
 			}
 
 			public Object _atPut_(Object receiver, Object key, Object newValue) {

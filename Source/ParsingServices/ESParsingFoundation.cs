@@ -42,10 +42,11 @@ namespace EssenceSharp.ParsingServices {
 	public enum SyntaxProfile {
 		Amber,		// Squeak + DictionaryLiterals. Amber runs natively on the JavaScript virtual machine. (See notes #1 through #4 below.)
 		ANSI,		// All widely-used implementations extend ANSI, and fully implement it syntactially (but not semantically; see notes #1 through #4 below.)
+		Essence,	// Default: ANSI + Dynamic Array Literals + Dictionary Literals + Method Literals (see note #5.) + Qualified.Names + Initializers ("Do its") with parameters
 		SmalltalkX,	// VisualWorks + extensions, but with different qualified name syntax.  (See note #2 below.)
 		Squeak,		// Most widely-used syntax profile. There are several implementations descended from Squeak, such as Pharo and Spoon. (See notes #1 through #4 below.)
-		Universal,	// Default: Widest set of non-conflicting syntax elements, plus an extension for method literals (see note #5.)
-		VisualWorks,	// Most widely-used syntax profile in commercial/proprietary use. (See note #2 below.)
+		Universal,	// Widest set of non-conflicting syntax elements, including all Essence extensions.
+		VisualWorks,	// Most widely-used syntax profile in commercial/proprietary use. ANSI + Qualified.Names + BindingReference literals (See note #2 below.)
 	}	
 	// Note 1: 	The constant names nil, true and false are always interpreted as their ANSI-mandated values when they occur in array literals, even though legacy (but not modern) versions of 
 	//		Squeak and its descendents interpet them as Symbol literals in that case (Squeak used to conform to the original Smalltalk-80 semantics in this regard.) Note that it is 
@@ -72,17 +73,27 @@ namespace EssenceSharp.ParsingServices {
 	//
 	//		Whitespace is permitted but not required both preceding and following the <MethodHeaderBegin> token. 
 	//
+	//		If and only if a method header is preceded by the ## token, the name of the class which is to be used as the environment for binding variable references when compiling the method
+	//		may be specified preceding the method header. However, the token ">>" must then be used as a separator between the class name and the method header. Whitespace is permitted but
+	//		not required in between the class name and the ">>" token, and in between the ">>" token and the method header.
+	//
 	//		Examples:
 	//
-	//			##at: index
+	//			## at: index
 	//				"Method declaration as it might appear in a code browser, with OPTIONAL leading <MethodHeaderBegin> token."
-	//				^index > self size ifTrue: [IndexOutOfBoundsException raiseWith: index] ifFalse: [self elements at: index]
+	//				^index > self size ifTrue: [IndexOutOfBoundsException signalWith: index] ifFalse: [self elements at: index]
 	//
 	//			[## yourself ^self] "Method literal as it might appear in the body of a method or doIt, with leading (and required in this case) <MethodHeaderBegin> token."
 	//
 	//			[@ y ^Point x: self y: y] "Method literal as it might appear in the body of a method or doIt, without the (in this case) optional leading <MethodHeaderBegin> token."
 	//
 	//			[at: index ^self basicAt: index] "Method literal as it might appear in the body of a method or doIt, without the (in this case) optional leading <MethodHeaderBegin> token."
+	//
+	//			[## View>>displayAt: aPoint
+	//				"Method literal which specifies the name of the class to be used to resolve variable references."
+	//		
+	//				self displayOn: Screen graphicsContext at: aPoint
+	//			]
 		
 	public class ParsingOptions {
 
@@ -132,6 +143,14 @@ namespace EssenceSharp.ParsingServices {
 					SupportsQualifiedNameSyntax = false;
 					SupportsDynamicArrayLiterals = false;
 					SupportsDictionaryLiterals = false;
+					SupportsBindingReferenceLiterals = false;
+					SupportsThisContextPseudoVariable = false;
+					break;
+				case SyntaxProfile.Essence:
+					SupportsMethodHeaderBeginToken = true;
+					SupportsQualifiedNameSyntax = true;
+					SupportsDynamicArrayLiterals = true;
+					SupportsDictionaryLiterals = true;
 					SupportsBindingReferenceLiterals = false;
 					SupportsThisContextPseudoVariable = false;
 					break;
@@ -428,6 +447,18 @@ namespace EssenceSharp.ParsingServices {
 		public virtual bool CanBeDeclaredAsVariableOrParameter {
 			get {return false;}
 		}		
+
+		public virtual bool IsPseudovariable {
+			get {return false;}
+		}
+
+		public virtual bool IsSelf {
+			get {return false;}
+		}
+
+		public virtual bool IsSuper {
+			get {return false;}
+		}
 		
 		public virtual void esPrintElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
 		}

@@ -73,18 +73,18 @@ namespace EssenceSharp.ParsingServices {
 
 		#region Instance Variables
 
-		private int									errorCount				= 0;
-		private System.Action<String, SourceSpan, int, Severity> 			handleErrorAction			= new System.Action<String, SourceSpan, int, Severity>(reportError);
-		private Functor3<ParseTreeNode, ParseNodeType, ParseNodeType[], ParseTreeNode> 	handleUnexpectedTokenFunctor 		= null;
+		private int										errorCount				= 0;
+		private System.Action<String, SourceSpan, int, Severity> 				handleErrorAction			= new System.Action<String, SourceSpan, int, Severity>(reportError);
+		private Functor4<ParseTreeNode, String, ParseNodeType, ParseNodeType[], ParseTreeNode> 	handleUnexpectedTokenFunctor 		= null;
 		
-		private ESLexicalAnalyzer 							scanner 				= null;
-		private LexicalToken 								nextToken 				= null;
-		private bool 									hasNextToken 				= false;
+		private ESLexicalAnalyzer 								scanner 				= null;
+		private LexicalToken 									nextToken 				= null;
+		private bool 										hasNextToken 				= false;
 		
-		private ParsingContext 								context 				= ParsingContext.General;
-		private List<ParsingContext>							contextStack				= null; 
+		private ParsingContext 									context 				= ParsingContext.General;
+		private List<ParsingContext>								contextStack				= null; 
 		
-		private bool 									supportsMethodLiteralSyntax 		= true;
+		private bool 										supportsMethodLiteralSyntax 		= true;
 		
 		#endregion
 		
@@ -181,14 +181,19 @@ namespace EssenceSharp.ParsingServices {
 
 		#region Error Handling 
 		
-		public virtual ParseTreeNode defaultHandleUnexpectedToken(ParseNodeType parentNodeType, ParseNodeType[] expectedNodeTypeSet, ParseTreeNode unexpectedNode) {
+		public virtual ParseTreeNode defaultHandleUnexpectedToken(String description, ParseNodeType parentNodeType, ParseNodeType[] expectedOrRequiredNodeTypeSet, ParseTreeNode unexpectedNode) {
 			StringBuilder sb = new StringBuilder();
 			sb.Append("Syntax error in ");
 			sb.Append(parentNodeType);
+			if (!String.IsNullOrEmpty(description)) {
+				sb.Append(" [");
+				sb.Append(description);
+				sb.Append("]");
+			}
 			sb.Append(": Expecting <");
 			int count = 0;
-			int lastIndex = expectedNodeTypeSet.Length - 1;
-			foreach (ParseNodeType nodeType in expectedNodeTypeSet) {
+			int lastIndex = expectedOrRequiredNodeTypeSet.Length - 1;
+			foreach (ParseNodeType nodeType in expectedOrRequiredNodeTypeSet) {
 				sb.Append(nodeType);
 				count++;
 				if (count < lastIndex) {
@@ -211,11 +216,18 @@ namespace EssenceSharp.ParsingServices {
 			return unexpectedNode == null ? null : (unexpectedNode.IsEndOfSource ? unexpectedNode : null);
 		}
 
-		protected ParseTreeNode handledUnexpectedToken(ParseNodeType parentNodeType, ParseNodeType[] expectedNodeTypeSet, ParseTreeNode unexpectedNode) {
+		protected ParseTreeNode handledUnexpectedToken(ParseNodeType parentNodeType, ParseNodeType[] expectedOrRequiredNodeTypeSet, ParseTreeNode unexpectedNode) {
 			errorCount++;
 			return handleUnexpectedTokenFunctor == null ?
-				defaultHandleUnexpectedToken(parentNodeType, expectedNodeTypeSet, unexpectedNode) :
-				handleUnexpectedTokenFunctor(parentNodeType, expectedNodeTypeSet, unexpectedNode);
+				defaultHandleUnexpectedToken(null, parentNodeType, expectedOrRequiredNodeTypeSet, unexpectedNode) :
+				handleUnexpectedTokenFunctor(null, parentNodeType, expectedOrRequiredNodeTypeSet, unexpectedNode);
+		}
+
+		protected ParseTreeNode handledUnexpectedToken(String description, ParseNodeType parentNodeType, ParseNodeType[] expectedOrRequiredNodeTypeSet, ParseTreeNode unexpectedNode) {
+			errorCount++;
+			return handleUnexpectedTokenFunctor == null ?
+				defaultHandleUnexpectedToken(description, parentNodeType, expectedOrRequiredNodeTypeSet, unexpectedNode) :
+				handleUnexpectedTokenFunctor(description, parentNodeType, expectedOrRequiredNodeTypeSet, unexpectedNode);
 		}
 
 		#endregion
@@ -240,7 +252,7 @@ namespace EssenceSharp.ParsingServices {
 			set {handleErrorAction = value;}
 		}	
 
-		public Functor3<ParseTreeNode, ParseNodeType, ParseNodeType[], ParseTreeNode> HandledUnexpectedToken {
+		public Functor4<ParseTreeNode, String, ParseNodeType, ParseNodeType[], ParseTreeNode> HandledUnexpectedToken {
 			get {return handleUnexpectedTokenFunctor;}
 			set {handleUnexpectedTokenFunctor = value == null ? defaultHandleUnexpectedToken : value;}
 		}
@@ -899,6 +911,7 @@ namespace EssenceSharp.ParsingServices {
 
 		protected ParseTreeNode parseExpression(ParseTreeNode operand) {
 			// Expression
+			bool requiresMessage = false;
 			if (operand == null) {
 				operand = parseOperand();
 				if (operand == null || operand.IsEndOfSource) return operand;
@@ -917,10 +930,15 @@ namespace EssenceSharp.ParsingServices {
 						break;
 						
 					case ParseNodeType.Self:
-					case ParseNodeType.Super:
 					case ParseNodeType.ThisContext:
-						// PseudoVariableReference
+						// PseudoVariableReference: self or thisContext
 						operand = newPseudoVariableReference((PseudoVariableReferenceToken)operand);
+						break;
+
+					case ParseNodeType.Super:
+						// PseudoVariableReference: super
+						operand = newPseudoVariableReference((PseudoVariableReferenceToken)operand);
+						requiresMessage = true;
 						break;
 						
 					case ParseNodeType.EndOfSource: 
@@ -948,6 +966,13 @@ namespace EssenceSharp.ParsingServices {
 						hasCascadedMessage = peekLexicalType() == ParseNodeType.MessageCascadeOp;
 					}
 				}
+			} else if (requiresMessage) {
+				return
+					handledUnexpectedToken(
+						"The pseudovariable 'super' must be followed by a message send", 
+						ParseNodeType.Expression, 
+						new ParseNodeType[]{ParseNodeType.MessageChain}, 
+						nextToken);
 			}
 			var expression = newExpression((Operand)operand, (MessageChain)messageChain, hasMessageChain ? (cascadedMessages != null && cascadedMessages.Count > 0 ? cascadedMessages : null) : null);
 			switch (peekLexicalType()) {
@@ -1152,6 +1177,7 @@ namespace EssenceSharp.ParsingServices {
 			ParseTreeNode operand = parseBinaryMessageOperand(acceptExpressionsAsParameters);
 			if (operand == null || operand.IsEndOfSource) 
 				return handledUnexpectedToken(ParseNodeType.KeywordMessageArgument, new ParseNodeType[]{ParseNodeType.BinaryMessageOperand}, operand == null ? nextToken : operand);
+			bool requiresMessage = operand.IsSuper;
 			bool expectBinaryMessageChain;
 			switch (peekLexicalType()) {
 				case ParseNodeType.BinaryMessageSelector:
@@ -1167,6 +1193,13 @@ namespace EssenceSharp.ParsingServices {
 				if (messageChain == null || messageChain.IsEndOfSource) 
 					return handledUnexpectedToken(ParseNodeType.KeywordMessageArgument, new ParseNodeType[]{ParseNodeType.BinaryOnlyMessageChain}, messageChain == null ? nextToken : messageChain);
 				return newKeywordMessageArgument((BinaryMessageOperand)operand, (BinaryOnlyMessageChain)messageChain);
+			} else if (requiresMessage) {
+				return
+					handledUnexpectedToken(
+						"The pseudovariable 'super' must be followed by a message send", 
+						ParseNodeType.KeywordMessageArgument, 
+						new ParseNodeType[]{ParseNodeType.BinaryMessage, ParseNodeType.UnaryMessage}, 
+						nextToken);
 			} else {
 				return newKeywordMessageArgument((BinaryMessageOperand)operand);
 			}
@@ -1177,11 +1210,19 @@ namespace EssenceSharp.ParsingServices {
 			ParseTreeNode operand = parseOperand();
 			if (operand == null || operand.IsEndOfSource) 
 				return handledUnexpectedToken(ParseNodeType.BinaryMessageOperand, new ParseNodeType[]{ParseNodeType.Operand}, operand == null ? nextToken : operand);
+			bool requiresMessage = operand.IsSuper;
 			if (acceptExpressionsAsParameters && peekLexicalType() == ParseNodeType.Identifier) {
 				ParseTreeNode messageChain = parseUnaryOnlyMessageChain();
 				if (messageChain == null || messageChain.IsEndOfSource) 
 					return handledUnexpectedToken(ParseNodeType.BinaryMessageOperand, new ParseNodeType[]{ParseNodeType.UnaryOnlyMessageChain}, messageChain == null ? nextToken : messageChain);
 				return newBinaryMessageOperand((Operand)operand, (UnaryOnlyMessageChain)messageChain);
+			} else if (requiresMessage) {
+				return
+					handledUnexpectedToken(
+						"The pseudovariable 'super' must be followed by a message send", 
+						ParseNodeType.BinaryMessageOperand, 
+						new ParseNodeType[]{ParseNodeType.UnaryMessage}, 
+						nextToken);
 			} else {
 				return newBinaryMessageOperand((Operand)operand);
 			}

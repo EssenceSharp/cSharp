@@ -41,6 +41,7 @@ using FuncNs = System;
 #endif
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
+using EssenceSharp.Exceptions;
 using EssenceSharp.Exceptions.System;
 using EssenceSharp.Exceptions.System.PrimitiveFailures;
 #endregion
@@ -178,6 +179,7 @@ namespace EssenceSharp.Runtime {
 	public class ESBindingReference : ESAbstractAssociation<String, BindingHandle> {
 		
 		public static readonly byte								nonDeletabilityFlagBit			= 4;
+		protected static readonly HashSet<String>						prohibitedKeys				= new HashSet<string>(new String[]{"nil", "true", "false", "self", "super"});
 
 		public static implicit operator KeyValuePair<String, BindingHandle>(ESBindingReference association) {
 			return new KeyValuePair<String, BindingHandle>(association.Key, association.Value);  
@@ -188,16 +190,33 @@ namespace EssenceSharp.Runtime {
 		public ESBindingReference(ESBehavior esClass) : base(esClass) {}
 
 
-		public ESBindingReference(ESBehavior esClass, String key, BindingHandle value) : base(esClass, key, value) {}
+		public ESBindingReference(ESBehavior esClass, String key, BindingHandle value) : base(esClass, key, value) {
+			signalErrorIfKeyNotValid();
+		}
 
-		public ESBindingReference(ESBehavior esClass, String key, Object value) : base(esClass, key, new DirectBindingHandle(value)) {}
+		public ESBindingReference(ESBehavior esClass, String key, Object value) : base(esClass, key, new DirectBindingHandle(value)) {
+			signalErrorIfKeyNotValid();
+		}
 
 		public ESBindingReference(ESBehavior esClass, String key, BindingHandle value, AccessPrivilegeLevel accessPrivilegeLevel) : base(esClass, key, value) {
+			signalErrorIfKeyNotValid();
 			this.accessPrivilegeLevel = accessPrivilegeLevel;
 		}
 
 		public ESBindingReference(ESBehavior esClass, String key, Object value, AccessPrivilegeLevel accessPrivilegeLevel) : base(esClass, key, new DirectBindingHandle(value)) {
+			signalErrorIfKeyNotValid();
 			this.accessPrivilegeLevel = accessPrivilegeLevel;
+		}
+
+		protected void signalErrorIfKeyNotValid() {
+			signalErrorIfKeyNotValid(key);
+		}
+
+		protected void signalErrorIfKeyNotValid(String theKey) {
+			if (theKey == null) return;
+			if (prohibitedKeys.Contains(theKey)) { 
+				throw new InvalidArgumentException("'" + theKey + "' cannot be the key of a BindingReference");
+			}
 		}
 
 		public override bool IsDeletable {
@@ -220,6 +239,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public void setKeyAndValue(String newKey, Object newValue) {
+			signalErrorIfKeyNotValid(newKey);
 			if (IsImmutable || IsKeyImmutable) throw new ImmutableObjectException();
 			key = newKey;
 			if (value == null) {
@@ -260,6 +280,7 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public ESBindingReference withKeyAndValue(String newKey, Object newValue) {
+			signalErrorIfKeyNotValid(newKey);
 			var mutableCopy = (ESBindingReference)base.shallowCopy();
 			mutableCopy.setKeyAndValue(newKey, newValue);
 			if (IsImmutable) {
@@ -364,7 +385,7 @@ namespace EssenceSharp.Runtime {
 		
 			public Object _setValue_(Object receiver, Object value) {
 				((ESBindingReference)receiver).setValue(value);
-				return receiver;
+				return value;
 			}
 		
 			public Object _setValueImmutably_(Object receiver, Object value) {
@@ -545,7 +566,7 @@ namespace EssenceSharp.Runtime {
 		protected List<ESImportSpec>									generalImports;
 
 		public ESNamespace(ESBehavior esClass) : base(esClass) {
-			initializeImports();
+			initializeNamesapce();
 		}
 
 		public ESNamespace(ESBehavior esClass, bool isBoundToHostNamespace) : this(esClass) {
@@ -553,7 +574,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ESNamespace(ESBehavior esClass, ESNamespace environment, ESSymbol name) : base(esClass) {
-			initializeImports();
+			initializeNamesapce();
 			this.name = name;
 			setEnvironment(environment);
 		}
@@ -563,11 +584,11 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public ESNamespace(ESBehavior esClass, long capacity) : base(esClass, capacity) {
-			initializeImports();
+			initializeNamesapce();
 		}
 
 		public ESNamespace(ESBehavior esClass, long capacity, ESNamespace environment, ESSymbol name) : base(esClass, capacity) {
-			initializeImports();
+			initializeNamesapce();
 			this.name = name;
 			setEnvironment(environment);
 		}
@@ -578,6 +599,14 @@ namespace EssenceSharp.Runtime {
 
 		public override ObjectStateArchitecture Architecture {
 			get {return ObjectStateArchitecture.Namespace;}
+		}
+
+		protected void initializeNamesapce() {
+			initializeImports();
+			var myClass = Class;
+			if (myClass == null) return;
+			var os = myClass.ObjectSpace;
+			if (os != null) declareInSelfAs("_Environment", true);
 		}
 		
 		public override bool IsNamespace {
@@ -611,6 +640,18 @@ namespace EssenceSharp.Runtime {
 
 		public override ESBindingReference associationAtIfAbsent(String key, FuncNs.Func<ESBindingReference> notFoundAction) {
 			return bindingAt(key, AccessPrivilegeLevel.Public, ImportTransitivity.Transitive, notFoundAction);
+		}
+
+		public override ESBindingReference add(ESBindingReference binding) {
+			ESBindingReference prevBinding;
+			if (bindings.TryGetValue(binding.Key, out prevBinding)) {
+				prevBinding.Value = binding.Value;
+				prevBinding.AccessPrivilegeLevel = binding.AccessPrivilegeLevel;
+				return prevBinding;
+			} else {
+				basicAdd(binding);
+				return binding;
+			}
 		}
 		
 		#endregion
@@ -702,6 +743,22 @@ namespace EssenceSharp.Runtime {
 				}
 			}
 		}
+
+		internal virtual void invalidateBinding(AccessPrivilegeLevel accessPrivilegeLevel) {
+			ESBindingReference binding = environment.localBindingAt(NameString, AccessPrivilegeLevel.Local);
+			if (binding == null) {
+				binding = Class.ObjectSpace.newBindingReference(NameString, this, accessPrivilegeLevel);
+				binding.beImmutable();
+				environment.basicAdd(binding);
+			} else {
+				var value = binding.Value.Value;
+				if (value == this) return;
+				if (binding.IsImmutable) throw new ImmutableBindingException("Cannot change the value of the binding named " + binding.Key);
+				binding.setValue(this.asBindingHandle());
+				binding.AccessPrivilegeLevel = accessPrivilegeLevel;
+				binding.beImmutable();
+			}
+		}
 		
 		internal virtual void nameChanged() {
 			// By default, do nothing
@@ -714,15 +771,20 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual void setName(ESSymbol newName) {
-			if (ReferenceEquals(name, newName)) return;
+			if (name == newName) return;
 			if (IsImmutable) throw new ImmutableObjectException();
-			ESSymbol prevName = name;
-			if (environment == null) {
-				basicSetName(newName);
-			} else if (prevName == null) {
-				environment.atPut(newName.PrimitiveValue, this.asBindingHandle());
-			} else {
-				environment.renameFromTo(prevName, newName);
+			var prevName = name;
+			basicSetName(newName);
+			if (name == null) {
+				if (prevName != null && environment != null) environment.removeKey(prevName.PrimitiveValue);
+			} else if (environment != null) {
+				if (prevName == null) {
+					invalidateBinding(AccessPrivilegeLevel.Public);
+				} else {
+					var binding = environment.localBindingAt(prevName.PrimitiveValue, AccessPrivilegeLevel.Local);
+					invalidateBinding(binding.AccessPrivilegeLevel);
+					environment.removeKey(prevName.PrimitiveValue);
+				}
 			}
 		}
 
@@ -731,11 +793,13 @@ namespace EssenceSharp.Runtime {
 			ESBindingReference prevAssociation;
 			if (bindings.TryGetValue(prevName.PrimitiveValue, out prevAssociation)) {
 				ESBindingReference newAssociation= (ESBindingReference)prevAssociation.withKey(newName.PrimitiveValue);
+				BindingHandle handle = newAssociation.Value;
+				ESNamespace localNS = handle.Value as ESNamespace;
+				if (localNS != null) {
+					localNS.basicSetName(newName);
+				}
 				bindings[newName.PrimitiveValue] = newAssociation;
 				bindings.Remove(prevName.PrimitiveValue);
-				BindingHandle nsReference = newAssociation.Value;
-				ESNamespace localNS = nsReference.Value as ESNamespace;
-				if (localNS != null) localNS.basicSetName(newName);
 			} else { 
 				throw new KeyNotFoundException(prevName.PrimitiveValue);
 			}
@@ -824,23 +888,25 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual void setEnvironment(ESNamespace newEnvironment) {
-			if (ReferenceEquals(environment, newEnvironment)) return;
+			if (environment == newEnvironment) return;
 			if (IsImmutable) throw new ImmutableObjectException();
-			unbindFromEnvironment();
+			var accessPrivilegeLevel = unbindFromEnvironment();
 			environment = newEnvironment;
-			bindToEnvironment();
+			bindToEnvironment(accessPrivilegeLevel);
 		}
 
-		protected virtual void unbindFromEnvironment() {
-			if (environment == null || name == null) return;
+		protected virtual AccessPrivilegeLevel unbindFromEnvironment() {
+			if (environment == null || name == null) return AccessPrivilegeLevel.Public;
+			var binding = environment.localBindingAt(name.PrimitiveValue, AccessPrivilegeLevel.Local);
 			environment.removeKeyIfAbsent(Name.PrimitiveValue, null);
+			return binding == null ? AccessPrivilegeLevel.Public : binding.AccessPrivilegeLevel;
 		}
 
-		protected virtual void bindToEnvironment() {
+		protected virtual void bindToEnvironment(AccessPrivilegeLevel accessPrivilegeLevel) {
 			if (environment == null) return;
 			isBoundToHostSystemNamespace = isBoundToHostSystemNamespace || environment.IsBoundToHostSystemNamespace;
 			if (name != null) {
-				environment.atPut(Name.PrimitiveValue, this.asBindingHandle());
+				invalidateBinding(accessPrivilegeLevel);
 			}
 		}
 
@@ -903,7 +969,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public bool declareInSelf(bool overridePreviousBinding) {
-			return declareInSelfAs(Name, overridePreviousBinding);
+			return declareInSelfAs(NameString, overridePreviousBinding);
 		}
 
 		public bool declareInSelfAs(String alias, bool overridePreviousBinding) {
@@ -919,13 +985,17 @@ namespace EssenceSharp.Runtime {
 				var value = binding.Value.Value;
 				if (value != null) {
 					theNamespace = value as ESNamespace;
-					if (theNamespace == null && binding.IsImmutable) throw new ImmutableBindingException("Cannot change the value of the binding named " + binding.Key);
+					if (theNamespace == null) {
+						if (binding.IsImmutable) throw new ImmutableBindingException("Cannot change the value of the binding named " + binding.Key);
+					}
 				}
 				if (binding.AccessPrivilegeLevel != accessPrivilegeLevel) binding.AccessPrivilegeLevel = accessPrivilegeLevel;
 			} 
 			if (theNamespace == null) {
 				var objectSpace = Class.ObjectSpace;
 				theNamespace = objectSpace.newNamespace(this, null);
+				theNamespace.setEnvironment(this);
+				theNamespace.basicSetName(objectSpace.symbolFor(nsName));
 				if (binding == null) {
 					binding = objectSpace.newBindingReference(nsName, theNamespace, accessPrivilegeLevel);
 					bindings[nsName] = binding;
@@ -933,7 +1003,7 @@ namespace EssenceSharp.Runtime {
 					binding.setValue(theNamespace);
 					if (binding.AccessPrivilegeLevel != accessPrivilegeLevel) binding.AccessPrivilegeLevel = accessPrivilegeLevel;
 				}
-				theNamespace.basicSetName(objectSpace.symbolFor(nsName));
+				binding.beImmutable();
 			}
 			if (configureNamespace != null) configureNamespace(theNamespace);
 			return theNamespace;
@@ -946,7 +1016,9 @@ namespace EssenceSharp.Runtime {
 				var value = binding.Value.Value;
 				if (value != null) {
 					theClass = value as ESClass;
-					if (theClass == null && binding.IsImmutable) throw new ImmutableBindingException("Cannot change the value of the binding named " + binding.Key);
+					if (theClass == null) { 
+						if (binding.IsImmutable) throw new ImmutableBindingException("Cannot change the value of the binding named " + binding.Key);
+					}
 				}
 				if (binding.AccessPrivilegeLevel != accessPrivilegeLevel) {
 					binding.AccessPrivilegeLevel = accessPrivilegeLevel;
@@ -955,14 +1027,15 @@ namespace EssenceSharp.Runtime {
 			if (theClass == null) {
 				var objectSpace = Class.ObjectSpace;
 				theClass = objectSpace.newClass();
+				theClass.setEnvironment(this);
+				theClass.basicSetName(objectSpace.symbolFor(className));
 				if (binding == null) {
 					binding = objectSpace.newBindingReference(className, theClass, accessPrivilegeLevel);
 					bindings[className] = binding;
 				} else {
 					binding.setValue(theClass);
 				}
-				theClass.setEnvironment(this);
-				theClass.basicSetName(objectSpace.symbolFor(className));
+				binding.beImmutable();
 			}
 			if (configureClass != null) configureClass(theClass);
 			return theClass;
@@ -975,7 +1048,9 @@ namespace EssenceSharp.Runtime {
 				var value = binding.Value.Value;
 				if (value != null) {
 					theTrait = value as ESInstanceTrait;
-					if (theTrait == null && binding.IsImmutable) throw new ImmutableBindingException("Cannot change the value of the binding named " + binding.Key);
+					if (theTrait == null) { 
+						if (binding.IsImmutable) throw new ImmutableBindingException("Cannot change the value of the binding named " + binding.Key);
+					}
 				}
 				if (binding.AccessPrivilegeLevel != accessPrivilegeLevel) {
 					binding.AccessPrivilegeLevel = accessPrivilegeLevel;
@@ -984,14 +1059,15 @@ namespace EssenceSharp.Runtime {
 			if (theTrait == null) {
 				var objectSpace = Class.ObjectSpace;
 				theTrait = objectSpace.newTrait();
+				theTrait.setEnvironment(this);
+				theTrait.basicSetName(objectSpace.symbolFor(traitName));
 				if (binding == null) {
 					binding = objectSpace.newBindingReference(traitName, theTrait, accessPrivilegeLevel);
 					bindings[traitName] = binding;
 				} else {
 					binding.setValue(theTrait);
 				}
-				theTrait.setEnvironment(this);
-				theTrait.basicSetName(objectSpace.symbolFor(traitName));
+				binding.beImmutable();
 			}
 			if (configureTrait != null) configureTrait(theTrait);
 			return theTrait;
@@ -1250,7 +1326,7 @@ namespace EssenceSharp.Runtime {
 
 			public Object _add_(Object receiver, Object newAssociation) {
 				((ESNamespace)receiver).add((ESBindingReference)newAssociation);
-				return receiver;
+				return ((ESNamespace)receiver).add((ESBindingReference)newAssociation);
 			}
 
 			public Object _atPut_(Object receiver, Object key, Object newValue) {

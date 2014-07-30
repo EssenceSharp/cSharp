@@ -196,7 +196,7 @@ namespace EssenceSharp.Runtime {
 			get;
 		}
 		
-		public abstract ESMethod HomeMethod {
+		public abstract ESCompiledCode RootContext {
 			get;
 		}
 		
@@ -372,8 +372,8 @@ namespace EssenceSharp.Runtime {
 				return ((ESCompiledCode)receiver).NumArgs;
 			}
 		
-			public static Object _homeMethod_(Object receiver) {
-				return ((ESCompiledCode)receiver).HomeMethod;
+			public static Object _rootContext_(Object receiver) {
+				return ((ESCompiledCode)receiver).RootContext;
 			}
 		
 			public static Object _homeClass_(Object receiver) {
@@ -386,7 +386,7 @@ namespace EssenceSharp.Runtime {
 
 				publishPrimitive("function",					new FuncNs.Func<Object, Object>(_function_));
 				publishPrimitive("numArgs",					new FuncNs.Func<Object, Object>(_numArgs_));
-				publishPrimitive("homeMethod",					new FuncNs.Func<Object, Object>(_homeMethod_));
+				publishPrimitive("rootContext",					new FuncNs.Func<Object, Object>(_rootContext_));
 				publishPrimitive("homeClass",					new FuncNs.Func<Object, Object>(_homeClass_));
 
 			}
@@ -399,7 +399,7 @@ namespace EssenceSharp.Runtime {
 	
 	public class ESBlock : ESCompiledCode {
 
-		protected ESCompiledCode 									lexicalContext;
+		protected ESCompiledCode 									enclosingContext;
 		protected IDictionary<Type, Delegate>								avatars; 
 		// An 'avatar' is a function with typed parameters that does nothing except to invoke this block's function.
 		// Note that the degenerate case is where the block's function is its own avatar.
@@ -420,25 +420,25 @@ namespace EssenceSharp.Runtime {
 			get {return true;}
 		}
 		
-		public ESCompiledCode LexicalContext {
-			get {return lexicalContext;}
-			set {lexicalContext = value;}
+		public ESCompiledCode EnclosingContext {
+			get {return enclosingContext;}
+			set {enclosingContext = value;}
 		}
 		
 		public override NamespaceObject Environment {
-			get {return lexicalContext == null ? null : lexicalContext.Environment;}
+			get {return enclosingContext == null ? null : enclosingContext.Environment;}
 		}
 		
-		public override ESMethod HomeMethod {
-			get {return lexicalContext == null ? null : lexicalContext.HomeMethod;}
+		public override ESCompiledCode RootContext {
+			get {return enclosingContext == null ? null : enclosingContext.RootContext;}
 		}
 		
 		public override bool HasHomeClass {
-			get {return lexicalContext == null ? false : lexicalContext.HasHomeClass;}
+			get {return enclosingContext == null ? false : enclosingContext.HasHomeClass;}
 		}
 		
 		public override BehavioralObject HomeClass {
-			get {return lexicalContext == null ? null : lexicalContext.HomeClass;}
+			get {return enclosingContext == null ? null : enclosingContext.HomeClass;}
 		}
 		
 		public override ESBlock asBlock() {
@@ -1093,12 +1093,12 @@ namespace EssenceSharp.Runtime {
 				return ((ESBlock)receiver).Environment;
 			}
 		
-			public static Object _lexicalContext_(Object receiver) {
-				return ((ESBlock)receiver).LexicalContext;
+			public static Object _enclosingContext_(Object receiver) {
+				return ((ESBlock)receiver).EnclosingContext;
 			}
 		
-			public static Object _homeMethod_(Object receiver) {
-				return ((ESBlock)receiver).HomeMethod;
+			public static Object _rootContext_(Object receiver) {
+				return ((ESBlock)receiver).RootContext;
 			}
 		
 			public static Object _hasHomeClass_(Object receiver) {
@@ -1510,9 +1510,10 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("numArgs",					new FuncNs.Func<Object, Object>(_numArgs_));
 
 				publishPrimitive("environment",					new FuncNs.Func<Object, Object>(_environment_));
-				publishPrimitive("lexicalContext",				new FuncNs.Func<Object, Object>(_lexicalContext_));
-				publishPrimitive("homeMethod",					new FuncNs.Func<Object, Object>(_homeMethod_));
+				publishPrimitive("enclosingContext",				new FuncNs.Func<Object, Object>(_enclosingContext_));
+				publishPrimitive("rootContext",					new FuncNs.Func<Object, Object>(_rootContext_));
 				publishPrimitive("hasHomeClass",				new FuncNs.Func<Object, Object>(_hasHomeClass_));
+				publishPrimitive("homeClass",					new FuncNs.Func<Object, Object>(_homeClass_));
 
 				publishPrimitive("whileNil",					new FuncNs.Func<Object, Object>(_whileNil_));
 				publishPrimitive("whileNotNil",					new FuncNs.Func<Object, Object>(_whileNotNil_));
@@ -1696,7 +1697,7 @@ namespace EssenceSharp.Runtime {
 			get {return environment;}
 		}
 
-		public override ESMethod HomeMethod {
+		public override ESCompiledCode RootContext {
 			get {return this;}
 		}
 		
@@ -2413,8 +2414,8 @@ namespace EssenceSharp.Runtime {
 				return ((ESMethod)receiver).Environment;
 			}
 		
-			public static Object _homeMethod_(Object receiver) {
-				return ((ESMethod)receiver).HomeMethod;
+			public static Object _rootContext_(Object receiver) {
+				return ((ESMethod)receiver).RootContext;
 			}
 		
 			public static Object _hasHomeClass_(Object receiver) {
@@ -2828,7 +2829,7 @@ namespace EssenceSharp.Runtime {
 			public override void publishCanonicalPrimitives() {
 
 				publishPrimitive("environment",					new FuncNs.Func<Object, Object>(_environment_));
-				publishPrimitive("homeMethod",					new FuncNs.Func<Object, Object>(_homeMethod_));
+				publishPrimitive("rootContext",					new FuncNs.Func<Object, Object>(_rootContext_));
 				publishPrimitive("hasHomeClass",				new FuncNs.Func<Object, Object>(_hasHomeClass_));
 				publishPrimitive("homeClass",					new FuncNs.Func<Object, Object>(_homeClass_));
 	

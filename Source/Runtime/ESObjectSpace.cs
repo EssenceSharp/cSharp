@@ -1406,7 +1406,165 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Binding Essence# Namespaces To CLR Namespace / Assembly
+		#region Namespace & Class Binding
+
+		public ESBehavior classOf(Object value) {
+			var esValue = value as ESObject;
+			if (esValue != null) return esValue.Class;
+			return classOfHostSystemValue(value);
+		}
+
+		public ESBehavior classOfHostSystemValue(Object hostSystemValue) {
+			if (hostSystemValue == null) return canonicalUndefinedObjectClass;
+			var hostSystemType = hostSystemValue.GetType();
+			switch (Type.GetTypeCode(hostSystemType)) {
+				case TypeCode.Empty:
+					return canonicalUndefinedObjectClass;
+				case TypeCode.Boolean:
+					return (bool)hostSystemValue ? canonicalTrueClass : canonicalFalseClass;
+				case TypeCode.Char:
+					return canonicalCharacterClass;
+				case TypeCode.Byte:
+				case TypeCode.SByte:
+				case TypeCode.UInt16:
+				case TypeCode.Int16:
+				case TypeCode.UInt32:
+				case TypeCode.Int32:
+				case TypeCode.UInt64:
+				case TypeCode.Int64:
+					return canonicalSmallIntegerClass;
+				case TypeCode.Single:
+					return canonicalFloatClass;
+				case TypeCode.Double:
+					return canonicalDoubleClass;
+				case TypeCode.Decimal:
+					return canonicalQuadClass;
+				case TypeCode.Object:
+					break;
+			}
+			ESClass hostSystemClass;
+			if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) return hostSystemClass;
+			return classForHostSystemType(new TypeName(hostSystemType));
+		}
+
+		public ESBehavior classForHostSystemType(Type hostSystemType) {
+			ESClass hostSystemClass;
+			if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) return hostSystemClass;
+			return classForHostSystemType(new TypeName(hostSystemType));
+		}
+
+		public ESBehavior classForHostSystemType(TypeName typeName) {
+
+			ESBindingReference binding;
+			var environment = ClrNamespace;
+			var assembly = typeName.getAssembly(false);
+
+			typeName.namespacePathElementsDo(nsName => {environment = environment.defineNamespace(nsName, AccessPrivilegeLevel.Public, null);});
+
+			if (typeName.SpecifiesContaingType) {
+				var nameBuilder = new StringBuilder();
+				nameBuilder.Append(typeName.Namespace);
+				typeName.containingTypeNamesDo(
+					containingTypeName => {
+						nameBuilder.Append(containingTypeName);
+						var typeNameInPath = nameBuilder.ToString();
+						nameBuilder.Append('+');
+						environment = findOrCreateClassForHostSystemType(environment, new TypeName(typeNameInPath, assembly));
+					});
+			}
+
+			return findOrCreateClassForHostSystemType(environment, typeName);
+
+		}
+
+		private ESClass findOrCreateClassForHostSystemType(ESNamespace environment, TypeName typeName) {
+			var nameInEnvironment = typeName.NameWithModifyingSuffix;
+			var qualifiedTypeName = typeName.FullName;
+			var assembly = typeName.getAssembly(true);
+			var hostSystemType = typeName.getType(true);
+			ESClass hostSystemClass;
+			var binding = environment.localBindingAt(nameInEnvironment, AccessPrivilegeLevel.Local);
+			if (binding == null) {
+				if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) {
+					environment[nameInEnvironment] = hostSystemClass.asBindingHandle();
+				} else {
+					hostSystemClass = environment.defineClass(nameInEnvironment, AccessPrivilegeLevel.Public, null);
+					hostSystemClass.InstanceType = hostSystemType;
+				}
+			} else {
+				var thisValue = binding.Value.Value;
+				var hostSystemClassInEnv = thisValue as ESClass;
+
+				/*
+				if (hostSystemClassInEnv == null) {
+					environment.removeKey(nameInEnvironment);
+					if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) {
+						environment[nameInEnvironment] = hostSystemClass.asBindingHandle();
+					} else {
+						hostSystemClass = newClass(hostSystemType);
+						hostSystemClass.setEnvironment(environment);
+					}
+				}
+				*/
+
+				if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) {
+					if (hostSystemClass != hostSystemClassInEnv) {
+						environment[nameInEnvironment] = hostSystemClass.asBindingHandle();
+					}
+				} else {
+					hostSystemClass = hostSystemClassInEnv;
+					hostSystemClass.InstanceType = hostSystemType;
+				}
+
+			}
+			return hostSystemClass;
+		}
+
+		internal void bindHostSystemTypeTo(Type hostSystemType, ESClass esClass) {
+			typeToClassMap[hostSystemType] = esClass;
+		}
+
+		public NamespaceObject getNamespace(String qualifiedNamespaceName, AccessPrivilegeLevel requestorPrivilege) {
+			var pathname = pathnameFromString(qualifiedNamespaceName);
+			var value = pathname.valueInNamespaceIfAbsent(RootNamespace, requestorPrivilege, ImportTransitivity.Intransitive, null);
+			return value as ESNamespace;
+		}
+
+		public NamespaceObject findOrCreateNamespace(String qualifiedNsName) {
+			return findOrCreateNamespace(qualifiedNsName.elementsFromString('.', null));
+		}
+
+		public NamespaceObject findOrCreateNamespace(String[] qualifiedNsName) {
+
+			var environment = RootNamespace;
+			ESBindingReference binding;
+
+			for (var i = 0; i < qualifiedNsName.Length; i++) { 
+				var nsName = qualifiedNsName[i];
+				ESNamespace childNs = null;
+				binding = environment.localBindingAt(nsName, AccessPrivilegeLevel.Local);
+				if (binding == null) {
+					childNs = newNamespace(environment, symbolFor(nsName));
+					childNs.setEnvironment(environment);
+				} else {
+					var thisValue = binding.Value.Value;
+					childNs = thisValue as ESNamespace;
+					if (childNs == null) {
+						environment.removeKey(nsName);
+						childNs = newNamespace(environment, symbolFor(nsName));
+						childNs.setEnvironment(environment);
+					}
+				}
+				environment = childNs;
+			}
+
+			return environment;
+
+		}
+
+		#endregion
+
+		#region Binding Essence# Namespaces To CLR Namespaces / Assemblies
 
 		public void bindNamespaceToAssemblyNamed(String qualifiedNamespaceName, AssemblyName assemblyName) {
 			assemblyNameBindings[qualifiedNamespaceName] = assemblyName;
@@ -1498,167 +1656,6 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Namespace & Class Binding
-
-		public ESBehavior classOf(Object value) {
-			var esValue = value as ESObject;
-			if (esValue != null) return esValue.Class;
-			return classOfHostSystemValue(value);
-		}
-
-		public ESBehavior classOfHostSystemValue(Object hostSystemValue) {
-			if (hostSystemValue == null) return canonicalUndefinedObjectClass;
-			var hostSystemType = hostSystemValue.GetType();
-			switch (Type.GetTypeCode(hostSystemType)) {
-				case TypeCode.Empty:
-					return canonicalUndefinedObjectClass;
-				case TypeCode.Boolean:
-					return (bool)hostSystemValue ? canonicalTrueClass : canonicalFalseClass;
-				case TypeCode.Char:
-					return canonicalCharacterClass;
-				case TypeCode.Byte:
-				case TypeCode.SByte:
-				case TypeCode.UInt16:
-				case TypeCode.Int16:
-				case TypeCode.UInt32:
-				case TypeCode.Int32:
-				case TypeCode.UInt64:
-				case TypeCode.Int64:
-					return canonicalSmallIntegerClass;
-				case TypeCode.Single:
-					return canonicalFloatClass;
-				case TypeCode.Double:
-					return canonicalDoubleClass;
-				case TypeCode.Decimal:
-					return canonicalQuadClass;
-				case TypeCode.Object:
-					break;
-			}
-			ESClass hostSystemClass;
-			if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) return hostSystemClass;
-			return classForHostSystemType(new TypeName(hostSystemType));
-		}
-
-		public ESBehavior classForHostSystemType(Type hostSystemType) {
-			ESClass hostSystemClass;
-			if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) return hostSystemClass;
-			return classForHostSystemType(new TypeName(hostSystemType));
-		}
-
-		public ESBehavior classForHostSystemType(TypeName typeName) {
-
-			var environment = ClrNamespace;
-			ESBindingReference binding;
-			var assembly = typeName.getAssembly(false);
-
-			typeName.namespacePathElementsDo(
-				nsName => {
-					ESNamespace childNs = null;
-					binding = environment.localBindingAt(nsName, AccessPrivilegeLevel.Local);
-					if (binding == null) {
-						childNs = newNamespace(environment, symbolFor(nsName));
-						childNs.setEnvironment(environment);
-					} else {
-						var thisValue = binding.Value.Value;
-						childNs = thisValue as ESNamespace;
-						if (childNs == null) {
-							environment.removeKey(nsName);
-							childNs = newNamespace(environment, symbolFor(nsName));
-							childNs.setEnvironment(environment);
-						}
-					}
-					environment = childNs;
-				});
-
-			if (typeName.SpecifiesContaingType) {
-				var nameBuilder = new StringBuilder();
-				nameBuilder.Append(typeName.Namespace);
-				typeName.containingTypeNamesDo(
-					containingTypeName => {
-						nameBuilder.Append(containingTypeName);
-						var typeNameInPath = nameBuilder.ToString();
-						nameBuilder.Append('+');
-						environment = findOrCreateClassForHostSystemType(environment, containingTypeName, typeNameInPath, assembly);
-					});
-			}
-
-			return findOrCreateClassForHostSystemType(environment, typeName.NameWithModifyingSuffix, typeName.FullName, assembly);
-
-		}
-
-		private ESClass findOrCreateClassForHostSystemType(ESNamespace environment, String nameInEnvironment, String qualifiedTypeName, Assembly assembly) {
-			ESClass hostSystemClass;
-			Type hostSystemType = null;
-			if (assembly != null) hostSystemType = assembly.GetType(qualifiedTypeName, false);
-			if (hostSystemType == null) hostSystemType = Type.GetType(qualifiedTypeName, true);
-			var binding = environment.localBindingAt(nameInEnvironment, AccessPrivilegeLevel.Local);
-			if (binding == null) {
-				if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) {
-					environment[nameInEnvironment] = hostSystemClass.asBindingHandle();
-				} else {
-					hostSystemClass = newClass(hostSystemType);
-					hostSystemClass.setEnvironment(environment);
-				}
-			} else {
-				var thisValue = binding.Value.Value;
-				hostSystemClass = thisValue as ESClass;
-				if (hostSystemClass == null) {
-					environment.removeKey(nameInEnvironment);
-					if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) {
-						environment[nameInEnvironment] = hostSystemClass.asBindingHandle();
-					} else {
-						hostSystemClass = newClass(hostSystemType);
-						hostSystemClass.setEnvironment(environment);
-					}
-				}
-			}
-			return hostSystemClass;
-		}
-
-		internal void bindHostSystemTypeTo(Type hostSystemType, ESClass esClass) {
-			typeToClassMap[hostSystemType] = esClass;
-		}
-
-		public NamespaceObject getNamespace(String qualifiedNamespaceName, AccessPrivilegeLevel requestorPrivilege) {
-			var pathname = pathnameFromString(qualifiedNamespaceName);
-			var value = pathname.valueInNamespaceIfAbsent(RootNamespace, requestorPrivilege, ImportTransitivity.Intransitive, null);
-			return value as ESNamespace;
-		}
-
-		public NamespaceObject findOrCreateNamespace(String qualifiedNsName) {
-			return findOrCreateNamespace(qualifiedNsName.elementsFromString('.', null));
-		}
-
-		public NamespaceObject findOrCreateNamespace(String[] qualifiedNsName) {
-
-			var environment = RootNamespace;
-			ESBindingReference binding;
-
-			for (var i = 0; i < qualifiedNsName.Length; i++) { 
-				var nsName = qualifiedNsName[i];
-				ESNamespace childNs = null;
-				binding = environment.localBindingAt(nsName, AccessPrivilegeLevel.Local);
-				if (binding == null) {
-					childNs = newNamespace(environment, symbolFor(nsName));
-					childNs.setEnvironment(environment);
-				} else {
-					var thisValue = binding.Value.Value;
-					childNs = thisValue as ESNamespace;
-					if (childNs == null) {
-						environment.removeKey(nsName);
-						childNs = newNamespace(environment, symbolFor(nsName));
-						childNs.setEnvironment(environment);
-					}
-				}
-				environment = childNs;
-			}
-
-			return environment;
-
-		}
-
-		#endregion
-
 		#region File paths
 
 		protected virtual void setEssenceSharpPath(DirectoryInfo newDefaultEssenceSharpPath) {
@@ -1713,7 +1710,7 @@ namespace EssenceSharp.Runtime {
 		#region Compilation/Evaluation Services
 
 		public virtual ESCompiler newCompiler(TextReader sourceStream) {
-			return new ESCompiler(this, sourceStream, SyntaxProfile.Universal);
+			return new ESCompiler(this, sourceStream, SyntaxProfile.Essence);
 		}
 
 		public virtual ESCompiler newCompiler(TextReader sourceStream, SyntaxProfile syntaxProfile) {
@@ -1955,17 +1952,17 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Executable Code
+		#region Executable Code ("Do its"; "initializers" in ANSI Smalltalk terminology)
 
 		public virtual bool evaluate(FileInfo file, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
-				return evaluate(sourceStream, environment, null, handleError, out value);
+				return evaluate(sourceStream, environment, selfValue, handleError, out value);
 			}
 		}
 
 		public virtual bool evaluate(FileInfo file, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			using (var sourceStream = ESFileUtility.newReadStream(file)) {
-				return evaluate(sourceStream, parsingOptions, environment, null, handleError, out value);
+				return evaluate(sourceStream, parsingOptions, environment, selfValue, handleError, out value);
 			}
 		}
 
@@ -1988,13 +1985,13 @@ namespace EssenceSharp.Runtime {
 		public virtual bool evaluate(TextReader sourceStream, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			var compiler = newCompiler(sourceStream);
 			if (handleError != null) compiler.HandleError = handleError;
-			return compiler.evaluate(environment, environment is ESBehavior, null, out value);
+			return compiler.evaluate(environment, selfValue, null, out value);
 		}
 
 		public virtual bool evaluate(TextReader sourceStream, ParsingOptions parsingOptions, NamespaceObject environment, Object selfValue, System.Action<String, SourceSpan, int, Severity> handleError, out Object value) {
 			var compiler = newCompiler(sourceStream, parsingOptions);
 			if (handleError != null) compiler.HandleError = handleError;
-			return compiler.evaluate(environment, environment is ESBehavior, null, out value);
+			return compiler.evaluate(environment, selfValue, null, out value);
 		}
 
 		#endregion
@@ -2292,13 +2289,12 @@ namespace EssenceSharp.Runtime {
 			universalNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Universal"));
 			undeclaredNamespace	= newNamespace(rootNamespace, SymbolRegistry.symbolFor("Undeclared"));
 			clrNamespace		= newNamespace(rootNamespace, SymbolRegistry.symbolFor("CLR"), true);
-			clrNamespace.Assembly	= TypeGuru.objectType.Assembly;
 		}
 
 		public virtual void establishCanonicalNamespaceStructure() {
 			rootNamespace.declareInSelf(true);
-			rootNamespace.declareInSelfAs(SymbolRegistry.symbolFor("EssenceSharp"), true);
-			clrNamespace.declareInSelfAs(SymbolRegistry.symbolFor("HostSystem"), true);
+			rootNamespace.declareInSelfAs("EssenceSharp", true);
+			clrNamespace.declareInSelfAs("HostSystem", true);
 			rootNamespace.addImport(new ESImportSpec(smalltalkNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
 			rootNamespace.addImport(new ESImportSpec(universalNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Transitive));
 			rootNamespace.addImport(new ESImportSpec(undeclaredNamespace, AccessPrivilegeLevel.Public, ImportTransitivity.Intransitive));
@@ -2415,6 +2411,7 @@ namespace EssenceSharp.Runtime {
 
 		public virtual void registerAdoptedHostSystemClasses() {
 
+			typeToClassMap[TypeGuru.boolType] = BooleanClass;
 			typeToClassMap[TypeGuru.charType] = CharacterClass;
 
 			typeToClassMap[TypeGuru.longType] = SmallIntegerClass;

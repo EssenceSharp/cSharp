@@ -70,7 +70,7 @@ namespace EssenceSharp.CompilationServices {
 		#region Constructors
 
 		public ESCompiler(ESObjectSpace objectSpace, TextReader sourceStream) 
-			: this (objectSpace, sourceStream, SyntaxProfile.Universal) {
+			: this (objectSpace, sourceStream, SyntaxProfile.Essence) {
 		}
 		
 		public ESCompiler(ESObjectSpace objectSpace, TextReader sourceStream, SyntaxProfile syntaxProfile) 
