@@ -17,8 +17,7 @@
     <StartArguments>Events</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.40.Debug|x86'">
-    <StartArguments>
-</StartArguments>
+    <StartArguments>OutParameters</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x64.35.Debug|x64'">
     <StartArguments>-d "CLR.System.IO.Directory allIn: %27.%27"</StartArguments>

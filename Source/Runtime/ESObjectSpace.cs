@@ -142,7 +142,7 @@ namespace EssenceSharp.Runtime {
 		private readonly SymbolRegistry							symbolRegistry			= null;
 		private readonly Dictionary<PrimitiveDomainType, PrimitiveDomain>		primitiveDomainRegistry		= new Dictionary<PrimitiveDomainType, PrimitiveDomain>();  
 		protected readonly Dictionary<Type, ESClass>					typeToClassMap			= new Dictionary<Type, ESClass>();
-		protected readonly Dictionary<String, AssemblyName>				assemblyNameBindings		= new Dictionary<String, AssemblyName>();
+		protected readonly Dictionary<String, String>					assemblyNameBindings		= new Dictionary<String, String>();
 		protected readonly Dictionary<AssemblyName, FileInfo>				assemblyPathnameBindings	= new Dictionary<AssemblyName, FileInfo>();
 
 		protected DynamicBindingGuru							dynamicBindingGuru		= null;
@@ -150,8 +150,11 @@ namespace EssenceSharp.Runtime {
 		protected GetVariableValueBinder.Registry					getVariableValueBinderRegistry	= null;
 		protected SetVariableValueBinder.Registry					setVariableValueBinderRegistry	= null;
 
+		protected String								configurationProfileName	= "Default";
+		protected ESNamespace								assemblyMap;
 
 		protected DirectoryInfo								essenceSharpPath		= ESFileUtility.defaultEssenceSharpPath();
+		protected DirectoryInfo								configurationPath		= null;
 		protected DirectoryInfo								sharedSourcePath		= null;
 		protected DirectoryInfo								sharedScriptsPath		= null;
 		protected DirectoryInfo								sharedLibrariesPath		= null;
@@ -412,6 +415,11 @@ namespace EssenceSharp.Runtime {
 		}
 
 		#endregion
+
+		public string ConfigurationProfileName {
+			get {return configurationProfileName;}
+			set {configurationProfileName = value ?? "Default";}
+		}
 
 		public ObjectIdentityComparator ObjectIdentityComparator {
 			get {return objectIdentityComparator;}
@@ -1566,12 +1574,12 @@ namespace EssenceSharp.Runtime {
 
 		#region Binding Essence# Namespaces To CLR Namespaces / Assemblies
 
-		public void bindNamespaceToAssemblyNamed(String qualifiedNamespaceName, AssemblyName assemblyName) {
+		public void bindNamespaceToAssemblyNamed(String qualifiedNamespaceName, String assemblyName) {
 			assemblyNameBindings[qualifiedNamespaceName] = assemblyName;
-			if (beVerbose) Console.WriteLine("Binding " + qualifiedNamespaceName + " to assembly: " + assemblyName.FullName);
+			if (beVerbose) Console.WriteLine("Binding " + qualifiedNamespaceName + " to assembly: " + assemblyName);
 		}
 
-		internal void bindNamespaceToAssemblyNamed(ESNamespace esNamespace, AssemblyName assemblyName) {
+		internal void bindNamespaceToAssemblyNamed(ESNamespace esNamespace, String assemblyName) {
 			bindNamespaceToAssemblyNamed(esNamespace.PathnameString, assemblyName);
 		}
 	
@@ -1579,7 +1587,7 @@ namespace EssenceSharp.Runtime {
 			if (beVerbose) Console.WriteLine("Binding " + qualifiedNamespaceName + " to assembly at: " + assemblyPath.FullName);
 			var assemblyName = AssemblyName.GetAssemblyName(assemblyPath.FullName);
 			assemblyPathnameBindings[assemblyName] = assemblyPath;
-			bindNamespaceToAssemblyNamed(qualifiedNamespaceName, assemblyName);
+			bindNamespaceToAssemblyNamed(qualifiedNamespaceName, assemblyName.FullName);
 		}
 	
 		public void bindNamespaceToAssemblyAt(ESNamespace esNamespace, FileInfo assemblyPath) {
@@ -1591,8 +1599,8 @@ namespace EssenceSharp.Runtime {
 			return assemblyName == null ? null : assemblyName.ToString();
 		}
 
-		public AssemblyName assemblyNameFor(String qualifiedNamespaceName) {
-			AssemblyName assemblyName;
+		public String assemblyNameFor(String qualifiedNamespaceName) {
+			String assemblyName;
 			return assemblyNameBindings.TryGetValue(qualifiedNamespaceName, out assemblyName) ? assemblyName : null;
 		}
 
@@ -1602,15 +1610,17 @@ namespace EssenceSharp.Runtime {
 
 		public FileInfo assemblyPathFor(String qualifiedNamespaceName) {
 			FileInfo assemblyPath;
-			var assemblyName = assemblyNameFor(qualifiedNamespaceName);
+			var assemblyNameString = assemblyNameFor(qualifiedNamespaceName);
+			if (String.IsNullOrEmpty(assemblyNameString)) return null;
+			var assemblyName = new AssemblyName(assemblyNameString);
 			return assemblyPathnameBindings.TryGetValue(assemblyName, out assemblyPath) ? assemblyPath : null;
 		}
 
-		public Assembly assemblyNamed(String assemblyName, bool raiseExceptionOnError, out Exception caughtException) {
-			return assemblyNamed(new AssemblyName(assemblyName), raiseExceptionOnError, out caughtException);
+		public Assembly loadAssemblyNamed(String assemblyName, bool raiseExceptionOnError, out Exception caughtException) {
+			return loadAssemblyNamed(new AssemblyName(assemblyName), raiseExceptionOnError, out caughtException);
 		}
 
-		public Assembly assemblyNamed(AssemblyName assemblyName, bool raiseExceptionOnError, out Exception caughtException) {
+		public Assembly loadAssemblyNamed(AssemblyName assemblyName, bool raiseExceptionOnError, out Exception caughtException) {
 			if (beVerbose) Console.WriteLine("Loading assembly: " + assemblyName.FullName);
 			caughtException = null;
 			try {
@@ -1622,31 +1632,50 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		public Assembly assemblyAt(FileInfo assemblyPath, bool raiseExceptionOnError) {
+		public Assembly loadAssemblyFrom(FileInfo assemblyPath, bool raiseExceptionOnError, out Exception caughtException) {
 			if (beVerbose) Console.WriteLine("Loading assembly from: " + assemblyPath.FullName);
+			caughtException = null;
 			try {
 				return Assembly.LoadFrom(assemblyPath.FullName);
 			} catch (Exception ex) {
+				caughtException = ex;
 				if (raiseExceptionOnError) throw new AssemblyBindingFailure("Unable to load assembly from: " + assemblyPath.FullName, ex);
 				return null;
 			}
 		}
 
 		public Assembly assemblyFor(ESNamespace esNamespace, bool raiseExceptionOnError) {
-			return basicAssemblyFor(esNamespace.PathnameString, raiseExceptionOnError);
+			return assemblyFor(esNamespace.PathnameString, raiseExceptionOnError);
 		}
 
-		private Assembly basicAssemblyFor(String qualifiedNamespaceName, bool raiseExceptionOnError) {
-			if (beVerbose) Console.WriteLine("Loading assembly for " + qualifiedNamespaceName);
-			FileInfo assemblyPath;
-			Assembly assembly;
+		public Assembly assemblyFor(String qualifiedNamespaceName, bool raiseExceptionOnError) {
+			var assemblyNameString = assemblyNameFor(qualifiedNamespaceName);
+			if (assemblyNameString == null) return null;
+			var assemblyName = versionSpecificAssemblyNameFor(assemblyNameString);
+			if (beVerbose) Console.WriteLine("Binding " + qualifiedNamespaceName + " to assembly " + assemblyName.FullName);
+			// Console.WriteLine("Binding " + qualifiedNamespaceName + " to assembly " + assemblyName.FullName);
 			Exception caughtException;
-			var assemblyName = assemblyNameFor(qualifiedNamespaceName);
-			if (assemblyName == null) return null;
-			assembly = assemblyNamed(assemblyName, false, out caughtException);
+			var assembly = assemblyNamed(assemblyName, false, out caughtException);
+			if (raiseExceptionOnError && caughtException != null) {
+				throw new AssemblyBindingFailure("Unable to bind namesapce " + qualifiedNamespaceName + " to assembly " + assemblyName.FullName, caughtException);
+			}
+			return assembly;
+		}
+
+		public AssemblyName versionSpecificAssemblyNameFor(String logicalAssemblyName) {
+			if (assemblyMap != null) { 
+				var binding = assemblyMap.atIfAbsent(logicalAssemblyName, null);
+				if (binding != null) return (AssemblyName)binding.Value;
+			}
+			return new AssemblyName(logicalAssemblyName);
+		}
+
+		public Assembly assemblyNamed(AssemblyName assemblyName, bool raiseExceptionOnError, out Exception caughtException) {
+			FileInfo assemblyPath;
+			var assembly = loadAssemblyNamed(assemblyName, false, out caughtException);
 			if (assembly == null) {
 				if (assemblyPathnameBindings.TryGetValue(assemblyName, out assemblyPath)) {
-					assembly = assemblyAt(assemblyPath, raiseExceptionOnError);
+					assembly = loadAssemblyFrom(assemblyPath, false, out caughtException);
 				} else if (raiseExceptionOnError && caughtException != null) {
 					throw new AssemblyBindingFailure("Unable to load assembly: " + assemblyName.FullName, caughtException);
 				}
@@ -1663,6 +1692,7 @@ namespace EssenceSharp.Runtime {
 			if (Equals(essenceSharpPath, newDefaultEssenceSharpPath)) return;
 			essenceSharpPath = newDefaultEssenceSharpPath;
 
+			configurationPath = new DirectoryInfo(Path.Combine(essenceSharpPath.FullName,		"Config"));
 			sharedSourcePath = new DirectoryInfo(Path.Combine(essenceSharpPath.FullName,		"Source"));
 			sharedScriptsPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Scripts"));
 			sharedLibrariesPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Libraries"));
@@ -1670,7 +1700,7 @@ namespace EssenceSharp.Runtime {
 			libraryPathBinder = new ESPathnameBinder(SharedLibrariesPath, ".lib");
 			sciptPathBinder = new ESPathnameBinder(SharedScriptsPath, ".es");
 
-			if (!pathForSharedLibrary(standardLibraryName, out standardLibraryPath)) standardLibraryPath = new DirectoryInfo(Path.Combine(sharedLibrariesPath.FullName, standardLibraryName));
+			if (!pathForLibrary(standardLibraryName, out standardLibraryPath)) standardLibraryPath = new DirectoryInfo(Path.Combine(sharedLibrariesPath.FullName, standardLibraryName));
 
 		}
 
@@ -1678,6 +1708,14 @@ namespace EssenceSharp.Runtime {
 			get {return essenceSharpPath;}
 			set {	var newDefaultEssenceSharpPath = value ?? ESFileUtility.defaultEssenceSharpPath();
 				setEssenceSharpPath(newDefaultEssenceSharpPath);}
+		}
+
+		public DirectoryInfo ConfigurationPath {
+			get {return configurationPath;}
+		}
+
+		public DirectoryInfo ConfigurationProfilePath {
+			get {return pathForConfigurationProfile(ConfigurationProfileName);}
 		}
 
 		public DirectoryInfo SharedSourcePath {
@@ -1696,7 +1734,15 @@ namespace EssenceSharp.Runtime {
 			get {return standardLibraryPath;}
 		}
 
-		public bool pathForSharedLibrary(String userLibraryName, out DirectoryInfo libraryPath) {
+		public DirectoryInfo pathForConfigurationProfile(String configurationProfileName) {
+			var extension = Path.GetExtension(configurationProfileName);
+			if (extension != ".profile") {
+				configurationProfileName = configurationProfileName + ".profile";
+			}
+			return new DirectoryInfo(Path.Combine(ConfigurationPath.FullName, configurationProfileName));
+		}
+
+		public bool pathForLibrary(String userLibraryName, out DirectoryInfo libraryPath) {
 			var libraryName = new StringReader(userLibraryName).nextQualifiedIdentifier();
 			return libraryPathBinder.pathFor(libraryName, out libraryPath);
 		}
@@ -2094,6 +2140,7 @@ namespace EssenceSharp.Runtime {
 			publishCanonicalPrimitives();
 			installCanonicalPrimitivesInCanonicalClasses(SymbolRegistry.symbolFor("system primitives"));
 			bindToFileSystem();
+			loadConfiguration();
 		}
 
 		protected void createDynamicBinderRegistries() {
@@ -2432,6 +2479,22 @@ namespace EssenceSharp.Runtime {
 			EssenceSharpPath = ESFileUtility.defaultEssenceSharpPath();
 		}
 
+		protected virtual void loadConfiguration() {
+			var assemblyMapPath = new FileInfo(Path.Combine(ConfigurationProfilePath.FullName, "AssemblyMap.es"));
+			if (!assemblyMapPath.Exists) return;
+			Object value;
+			if (evaluate(assemblyMapPath, SmalltalkNamespace, this, null, out value)) {
+				// Console.WriteLine(value.ToString());
+				var dict = value as ESDictionary;
+				assemblyMap = newNamespace();
+				dict.keysAndValuesDo(
+					(key, assemblyNameString) => {
+						assemblyMap.atPut(ESObject.asHostString(key), new DirectBindingHandle(new AssemblyName(ESObject.asHostString(assemblyNameString)))); 
+						return null;
+					});
+			}
+		}
+
 		#endregion
 
 		#region Bootstrap Load
@@ -2465,7 +2528,7 @@ namespace EssenceSharp.Runtime {
 			foreach (var name in libraryNames) {
 				if (loadedLibraries.Contains(name)) continue;
 				DirectoryInfo libraryPath;
-				var libraryPathExists = pathForSharedLibrary(name, out libraryPath);
+				var libraryPathExists = pathForLibrary(name, out libraryPath);
 				if (libraryPathExists) { 
 					if (beVerbose) Console.WriteLine("Loading library " + name + " from path " + libraryPath + " ...");
 					if (!ESLibraryLoader.load(this, rootNamespace, libraryPath, startupVerbosely, true, out initialRootNamespaces)) {

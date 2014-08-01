@@ -2077,35 +2077,52 @@ namespace EssenceSharp.Runtime.Binding {
 
 		#region Sending messages--general
 
-		public DynamicMetaObject metaObjectToSendMessageToESObject(DynamicMetaObject receiver, ESObjectSpace objectSpace, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
-
-			ESMethod method;
+		public bool getMethodOrElseTryGetMetaObjectToInvokeVirtualMethodOfESObject(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] metaObjectArgs, out ESMethod method, out DynamicMetaObject metaObjectToInvokeVirtualMethod) {
 			if (esClass == null) {
 				method = null;
+				metaObjectToInvokeVirtualMethod = null;
 			} else {
 				method = esClass.compiledMethodAt(selector);
 				if (method == null) { 
 					if (esClass.IsHostSystemMetaclass) {
 						switch (selector.NumArgs) {
 							case 0:
-								return canonicalGetMemberBinderFor(esClass, selector).FallbackGetMember(receiver);
+								metaObjectToInvokeVirtualMethod = canonicalGetMemberBinderFor(esClass, selector).FallbackGetMember(receiver);
+								return true;
 							case 1:
-								return canonicalSetMemberBinderFor(esClass, selector).FallbackSetMember(receiver, metaObjectArgs[0]);
+								metaObjectToInvokeVirtualMethod = canonicalSetMemberBinderFor(esClass, selector).FallbackSetMember(receiver, metaObjectArgs[0]);
+								return true;
 							default:
 								var name = selector.asHostSystemMemberName(CapitalizationScheme.InitialCapital);
-								return canonicalInvokeMemberBinderFor(esClass, selector, name).FallbackInvokeMember(receiver, metaObjectArgs);
+								metaObjectToInvokeVirtualMethod = canonicalInvokeMemberBinderFor(esClass, selector, name).FallbackInvokeMember(receiver, metaObjectArgs);
+								return true;
 						}
 					}
 					switch (selector.CanonicalSemantics) {
 						case CanonicalSelectorSemantics.Ensure:
-							return metaObjectToInvokeWithEnsureBlock(receiver, esClass, selector, metaObjectArgs[0]);
+							metaObjectToInvokeVirtualMethod = metaObjectToInvokeWithEnsureBlock(receiver, esClass, selector, metaObjectArgs[0]);
+							return true;
 						case CanonicalSelectorSemantics.IfCurtailed:
-							return metaObjectToInvokeWithIfCurtailedBlock(receiver, esClass, selector, metaObjectArgs[0]);
+							metaObjectToInvokeVirtualMethod = metaObjectToInvokeWithIfCurtailedBlock(receiver, esClass, selector, metaObjectArgs[0]);
+							return true;
 						case CanonicalSelectorSemantics.OnDo:
-							return metaObjectToInvokeWithExceptionHandler(receiver, esClass, selector, metaObjectArgs[0], metaObjectArgs[1]);
+							metaObjectToInvokeVirtualMethod = metaObjectToInvokeWithExceptionHandler(receiver, esClass, selector, metaObjectArgs[0], metaObjectArgs[1]);
+							return true;
+						default:
+							break;
 					}
 				}
+				metaObjectToInvokeVirtualMethod = null;
 			}
+			return false;
+		}
+
+		public DynamicMetaObject metaObjectToSendMessageToESObject(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
+
+			ESMethod method;
+			DynamicMetaObject metaObjectToInvokeVirtualMethod;
+			
+			if (getMethodOrElseTryGetMetaObjectToInvokeVirtualMethodOfESObject(receiver, esClass, selector, metaObjectArgs, out method, out metaObjectToInvokeVirtualMethod)) return metaObjectToInvokeVirtualMethod;
 
 			return metaObjectToSendMessage(
 					receiver, 
@@ -2125,7 +2142,7 @@ namespace EssenceSharp.Runtime.Binding {
 			if (esObject == null) {
 				return metaObjectToSendMessageToForeignObject(receiver, model, selector, metaObjectArgs);
 			} else {
-				return metaObjectToSendMessageToESObject(receiver, objectSpace, esObject.Class, selector, metaObjectArgs);
+				return metaObjectToSendMessageToESObject(receiver, esObject.Class, selector, metaObjectArgs);
 			}
 		}
 
@@ -2211,7 +2228,7 @@ namespace EssenceSharp.Runtime.Binding {
 					return metaObjectForInstanceRestrictedOperation(self, ExpressionTreeGuru.expressionToSendReferenceEquals(Expression.Constant(esClass), args[0].Expression), receiver.Value);
 				case CanonicalSelectorSemantics.IsKindOf:
 					var classExpression = Expression.Constant(esClass);
-					var messageSendMO = metaObjectToSendMessageToESObject(classExpression.asDynamicMetaObject(), objectSpace, esClass.Class, symbolFor("includesBehavior:"), args);
+					var messageSendMO = metaObjectToSendMessageToESObject(classExpression.asDynamicMetaObject(), esClass.Class, symbolFor("includesBehavior:"), args);
 					return messageSendMO.Expression.asDynamicMetaObject(self.expressionToTestThatNilHasSameClassVersion(esClass).asBindingRestriction(), receiver.Value);
 
 				case CanonicalSelectorSemantics.Size:	
@@ -2298,20 +2315,8 @@ namespace EssenceSharp.Runtime.Binding {
 			if (esObject == null) {
 				return metaObjectToSendMessageToForeignSelf(receiver, selector, metaObjectArgs);
 			} else {
-				return metaObjectToSendMessageToESSelf(receiver, esObject.Class, selector, metaObjectArgs);
+				return metaObjectToSendMessageToESObject(receiver, esObject.Class, selector, metaObjectArgs);
 			}
-		}
-
-		public DynamicMetaObject metaObjectToSendMessageToESSelf(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
-			var method = esClass == null ? null : esClass.compiledMethodAt(selector);
-			return metaObjectToSendMessage(
-					receiver,
- 					objectSpace,
-					esClass, 
-					selector, 
-					method,
-					metaObjectArgs, 
-					receiver.bindingRestrictionsForESObjectReceiver(esClass));
 		}
 
 		public DynamicMetaObject metaObjectToSendMessageToForeignSelf(DynamicMetaObject receiver, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
@@ -2438,7 +2443,7 @@ namespace EssenceSharp.Runtime.Binding {
 				return metaObjectForForeignObjectOperation(
 						receiver,
 						esClass, 
-						metaObjectToSendMessageToESObject(symbolMO, objectSpace, objectSpace.SymbolClass, selector, metaObjectArgs).Expression);
+						metaObjectToSendMessageToESObject(symbolMO, objectSpace.SymbolClass, selector, metaObjectArgs).Expression);
 			}
 			var method = esClass.compiledMethodAt(selector);
 			if (method == null) {
@@ -2480,7 +2485,7 @@ namespace EssenceSharp.Runtime.Binding {
 					return metaObjectForForeignObjectOperation(receiver, esClass, ExpressionTreeGuru.expressionToSendReferenceEquals(Expression.Constant(esClass), args[0].Expression));
 				case CanonicalSelectorSemantics.IsKindOf:
 					var classExpression = Expression.Constant(esClass);
-					var messageSendMO = metaObjectToSendMessageToESObject(classExpression.asDynamicMetaObject(), objectSpace, esClass.Class, symbolFor("includesBehavior:"), args);
+					var messageSendMO = metaObjectToSendMessageToESObject(classExpression.asDynamicMetaObject(), esClass.Class, symbolFor("includesBehavior:"), args);
 					return messageSendMO.Expression.asDynamicMetaObject(receiver.restrictionThatForeignObjectHasSameClassVersion(esClass), receiver.Value);
 
 				case CanonicalSelectorSemantics.AsBehavior:
@@ -3951,7 +3956,7 @@ namespace EssenceSharp.Runtime.Binding {
 							break;
 					}
 					var wrapperMetaObject = new DynamicMetaObject(Expression.Constant(wrapperClass), target.Restrictions, wrapperClass);
-					return dynamicBindingGuru.metaObjectToSendMessageToESObject(wrapperMetaObject, objectSpace, wrapperClass.Class, Selector, args);
+					return dynamicBindingGuru.metaObjectToSendMessageToESObject(wrapperMetaObject, wrapperClass.Class, Selector, args);
 				} else {
 					return target.BindInvokeMember(
 							dynamicBindingGuru.canonicalInvokeMemberBinderFor(

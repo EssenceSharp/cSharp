@@ -1620,7 +1620,6 @@ namespace EssenceSharp.Runtime {
 			base.validate();
 			if (!isInstanceTypeValid) invalidateInstanceType();
 			assertValidInheritanceStructure(Superclass);
-			foreach (var subclass in subclasses) subclass.validate();
 		}
 
 		public virtual ObjectStateArchitecture InstanceArchitecture {
@@ -1788,16 +1787,12 @@ namespace EssenceSharp.Runtime {
 			return objectSpace.symbolFor(new TypeName(hostSystemType).NameWithModifyingSuffix);
 		}
 
-		public override Assembly Assembly {
-			get {	if (assembly == null) return base.Assembly;
-				return assembly;
-			}
-			set {	if (assembly == value) return;
-				assembly = value;
-				if (isInstanceTypeValid) { 
-					var instanceType = InstanceType;
-					if (instanceType == null || assembly != instanceType.Assembly) invalidateInstanceType();
-				}
+		protected override void setAssembly(Assembly newValue) {
+			if (assembly == newValue) return;
+			assembly = newValue;
+			if (isInstanceTypeValid) { 
+				var instanceType = InstanceType;
+				if (instanceType == null || assembly != instanceType.Assembly) invalidateInstanceType();
 			}
 		}
 

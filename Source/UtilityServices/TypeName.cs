@@ -589,7 +589,7 @@ namespace EssenceSharp.UtilityServices {
 							prefix = prefix + outerTypeElement + ".";
 							prefix = prefix + containingTypes.ToArray().compose("+");
 						}
-						throw new PrimInvalidOperandException(errorDescription + " TypeName context = " + prefix);
+						throw new AssemblyBindingFailure(errorDescription + " TypeName context = " + prefix);
 					})) {
 					return null;
 				}

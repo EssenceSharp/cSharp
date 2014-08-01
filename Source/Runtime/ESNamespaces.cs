@@ -851,7 +851,7 @@ namespace EssenceSharp.Runtime {
 			set {	if (value == null) {
 					Assembly = null;
 				} else {
-					Class.ObjectSpace.bindNamespaceToAssemblyNamed(this, new AssemblyName(value));
+					Class.ObjectSpace.bindNamespaceToAssemblyNamed(this,value);
 					Assembly = Class.ObjectSpace.assemblyFor(this, true);
 				}
 			}
@@ -869,9 +869,10 @@ namespace EssenceSharp.Runtime {
 			Assembly = Class.ObjectSpace.assemblyFor(this, true);
 		}
 
-		public virtual Assembly Assembly {
+		public Assembly Assembly {
 			get {	if (assembly == null) {
 					var assm = Class.ObjectSpace.assemblyFor(this, true);
+					// var assm = Class.ObjectSpace.assemblyFor(this, false);
 					if (assm == null) {
 						if (environment != null) {
 							assm = environment.Assembly;
@@ -880,7 +881,11 @@ namespace EssenceSharp.Runtime {
 					assembly = assm ?? typeof(ESObjectSpace).Assembly;
 				}
 				return assembly;}
-			set {assembly = value;}
+			set {setAssembly(value);}
+		}
+
+		protected virtual void setAssembly(Assembly newValue) {
+			assembly = newValue;
 		}
 
 		public ESNamespace Environment {

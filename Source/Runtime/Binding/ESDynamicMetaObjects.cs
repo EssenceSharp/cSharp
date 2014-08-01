@@ -122,6 +122,7 @@ namespace EssenceSharp.Runtime.Binding {
 		public bool createMetaObjectToSendMessage(String messageName, DynamicMetaObject[] args, out DynamicMetaObject messageSendMO) {
 			var esClass = ValueClass;
 			var objectSpace = esClass.ObjectSpace;
+			var dynamicBindingGuru = objectSpace.DynamicBindingGuru;
 			long numArgs = args.Length;
 			var method = esClass.compiledMethodAtSystemSelector(messageName, numArgs);
 			if (method == null) {
@@ -160,13 +161,15 @@ namespace EssenceSharp.Runtime.Binding {
 					messageSendMO = metaObjectToSendDoesNotUnderstand(objectSpace.symbolFor(messageName), args);
 					return false;
 				} else {
-					method = esClass.compiledMethodAt(selector);
-					if (method != null) { 
-						messageSendMO =  DynamicBindingGuru.metaObjectToSendMessage(this, objectSpace, esClass, selector, method, args, this.bindingRestrictionsForESObjectReceiver(esClass));
+					if (dynamicBindingGuru.getMethodOrElseTryGetMetaObjectToInvokeVirtualMethodOfESObject(this, esClass, selector, args, out method, out messageSendMO)) {
 						return true;
-					} else {
+					}
+					if (method == null) { 
 						messageSendMO =  null;
 						return false;
+					} else {
+						messageSendMO =  DynamicBindingGuru.metaObjectToSendMessage(this, objectSpace, esClass, selector, method, args, this.bindingRestrictionsForESObjectReceiver(esClass));
+						return true;
 					}
 				}
 			} else {

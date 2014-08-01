@@ -261,8 +261,15 @@ namespace EssenceSharp.Runtime {
 
 			foreach (var factory in traitFactories) 
 				if (!factory.initializeAll()) return false;
+
+			foreach (var factory in classFactories) {
+				factory.ThisClass.validate();
+				factory.ThisClass.Class.validate();
+			}
+
 			foreach (var factory in classFactories) 
 				if (!factory.initializeAll()) return false;
+
 			foreach (var factory in namespaceFactories) 
 				if (!factory.initializeAll()) return false;
 
@@ -922,11 +929,6 @@ namespace EssenceSharp.Runtime {
 
 		public override bool compileClassMethods() {
 			return compileMethodsFor(ThisMetaclass, ClassMethodsFile);
-		}
-
-		protected override bool initializeThis() {
-			if (!ThisClass.HasSuperclass) ThisClass.validate();
-			return base.initializeThis();
 		}
 
 	}

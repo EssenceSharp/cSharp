@@ -80,7 +80,7 @@ namespace EssenceSharp.Runtime.Binding {
 				case MessageReceiverKind.General:
 					return dynamicBindingGuru.metaObjectToSendMessageToObject(target, Selector, args);
 				case MessageReceiverKind.Self:
-					return dynamicBindingGuru.metaObjectToSendMessageToSelf(target, Selector, args);
+					return dynamicBindingGuru.metaObjectToSendMessageToSelf(target, Selector, args);;
 				case MessageReceiverKind.Super:
 					return dynamicBindingGuru.metaObjectToSendMessageToSuper(target, Selector, args);
 				case MessageReceiverKind.ThisContext:

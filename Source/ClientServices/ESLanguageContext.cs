@@ -80,7 +80,7 @@ namespace EssenceSharp.ClientServices {
 			protoOptions[EssenceSharpOptions.scriptSearchPathsKey]		= searchPathBuilder.ToString();
 
 			options	= new EssenceSharpOptions(protoOptions);
-			options.assemblyNameBindingsDo((qualifiedNsName, assemblyName) => ObjectSpace.bindNamespaceToAssemblyNamed(qualifiedNsName, new AssemblyName(assemblyName)));
+			options.assemblyNameBindingsDo((qualifiedNsName, assemblyName) => ObjectSpace.bindNamespaceToAssemblyNamed(qualifiedNsName, assemblyName));
 			options.assemblyPathBindingsDo((qualifiedNsName, assemblyPath) => ObjectSpace.bindNamespaceToAssemblyAt(qualifiedNsName, new FileInfo(assemblyPath)));
 
 			foreach (var pathnamePrefix in options.LibrarySearchPaths) {
