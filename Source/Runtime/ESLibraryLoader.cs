@@ -263,8 +263,8 @@ namespace EssenceSharp.Runtime {
 				if (!factory.initializeAll()) return false;
 
 			foreach (var factory in classFactories) {
-				factory.ThisClass.validate();
-				factory.ThisClass.Class.validate();
+				factory.ThisClass.activate();
+				factory.ThisClass.Class.activate();
 			}
 
 			foreach (var factory in classFactories) 

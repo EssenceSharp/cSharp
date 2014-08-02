@@ -139,29 +139,29 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		private readonly SymbolRegistry							symbolRegistry			= null;
+		private readonly SymbolRegistry							symbolRegistry;
 		private readonly Dictionary<PrimitiveDomainType, PrimitiveDomain>		primitiveDomainRegistry		= new Dictionary<PrimitiveDomainType, PrimitiveDomain>();  
 		protected readonly Dictionary<Type, ESClass>					typeToClassMap			= new Dictionary<Type, ESClass>();
 		protected readonly Dictionary<String, String>					assemblyNameBindings		= new Dictionary<String, String>();
 		protected readonly Dictionary<AssemblyName, FileInfo>				assemblyPathnameBindings	= new Dictionary<AssemblyName, FileInfo>();
 
-		protected DynamicBindingGuru							dynamicBindingGuru		= null;
-		protected MessageSendBinder.Registry						messageSendBinderRegistry	= null;
-		protected GetVariableValueBinder.Registry					getVariableValueBinderRegistry	= null;
-		protected SetVariableValueBinder.Registry					setVariableValueBinderRegistry	= null;
+		protected DynamicBindingGuru							dynamicBindingGuru;
+		protected MessageSendBinder.Registry						messageSendBinderRegistry;
+		protected GetVariableValueBinder.Registry					getVariableValueBinderRegistry;
+		protected SetVariableValueBinder.Registry					setVariableValueBinderRegistry;
 
-		protected String								configurationProfileName	= "Default";
+		protected IList<String>								activeConfigurationProfileNames;
 		protected ESNamespace								assemblyMap;
 
-		protected DirectoryInfo								essenceSharpPath		= ESFileUtility.defaultEssenceSharpPath();
-		protected DirectoryInfo								configurationPath		= null;
-		protected DirectoryInfo								sharedSourcePath		= null;
-		protected DirectoryInfo								sharedScriptsPath		= null;
-		protected DirectoryInfo								sharedLibrariesPath		= null;
-		protected DirectoryInfo								standardLibraryPath		= null;
+		protected DirectoryInfo								essenceSharpPath;
+		protected DirectoryInfo								configurationPath;
+		protected DirectoryInfo								sharedSourcePath;
+		protected DirectoryInfo								sharedScriptsPath;
+		protected DirectoryInfo								sharedLibrariesPath;
+		protected DirectoryInfo								standardLibraryPath;
 
-		protected ESPathnameBinder							libraryPathBinder		= null;
-		protected ESPathnameBinder							sciptPathBinder			= null;
+		protected ESPathnameBinder							libraryPathBinder;
+		protected ESPathnameBinder							sciptPathBinder;
 
 		public static readonly String							standardLibraryName		= "Standard";
 		protected bool									isStandardLibraryLoaded		= false;
@@ -415,11 +415,6 @@ namespace EssenceSharp.Runtime {
 		}
 
 		#endregion
-
-		public string ConfigurationProfileName {
-			get {return configurationProfileName;}
-			set {configurationProfileName = value ?? "Default";}
-		}
 
 		public ObjectIdentityComparator ObjectIdentityComparator {
 			get {return objectIdentityComparator;}
@@ -1463,7 +1458,6 @@ namespace EssenceSharp.Runtime {
 
 		public ESBehavior classForHostSystemType(TypeName typeName) {
 
-			ESBindingReference binding;
 			var environment = ClrNamespace;
 			var assembly = typeName.getAssembly(false);
 
@@ -1687,35 +1681,15 @@ namespace EssenceSharp.Runtime {
 
 		#region File paths
 
-		protected virtual void setEssenceSharpPath(DirectoryInfo newDefaultEssenceSharpPath) {
-
-			if (Equals(essenceSharpPath, newDefaultEssenceSharpPath)) return;
-			essenceSharpPath = newDefaultEssenceSharpPath;
-
-			configurationPath = new DirectoryInfo(Path.Combine(essenceSharpPath.FullName,		"Config"));
-			sharedSourcePath = new DirectoryInfo(Path.Combine(essenceSharpPath.FullName,		"Source"));
-			sharedScriptsPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Scripts"));
-			sharedLibrariesPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Libraries"));
-
-			libraryPathBinder = new ESPathnameBinder(SharedLibrariesPath, ".lib");
-			sciptPathBinder = new ESPathnameBinder(SharedScriptsPath, ".es");
-
-			if (!pathForLibrary(standardLibraryName, out standardLibraryPath)) standardLibraryPath = new DirectoryInfo(Path.Combine(sharedLibrariesPath.FullName, standardLibraryName));
-
-		}
-
 		public DirectoryInfo EssenceSharpPath {
 			get {return essenceSharpPath;}
 			set {	var newDefaultEssenceSharpPath = value ?? ESFileUtility.defaultEssenceSharpPath();
+				if (essenceSharpPath != null && essenceSharpPath.FullName == newDefaultEssenceSharpPath.FullName) return;
 				setEssenceSharpPath(newDefaultEssenceSharpPath);}
 		}
 
 		public DirectoryInfo ConfigurationPath {
 			get {return configurationPath;}
-		}
-
-		public DirectoryInfo ConfigurationProfilePath {
-			get {return pathForConfigurationProfile(ConfigurationProfileName);}
 		}
 
 		public DirectoryInfo SharedSourcePath {
@@ -1739,7 +1713,8 @@ namespace EssenceSharp.Runtime {
 			if (extension != ".profile") {
 				configurationProfileName = configurationProfileName + ".profile";
 			}
-			return new DirectoryInfo(Path.Combine(ConfigurationPath.FullName, configurationProfileName));
+			var path = new DirectoryInfo(Path.Combine(ConfigurationPath.FullName, configurationProfileName));
+			return path.Exists ? path : null;
 		}
 
 		public bool pathForLibrary(String userLibraryName, out DirectoryInfo libraryPath) {
@@ -1749,6 +1724,65 @@ namespace EssenceSharp.Runtime {
 		
 		public bool pathForScript(String scriptPathameSuffix, out FileInfo scriptPath) {
 			return sciptPathBinder.pathFor(scriptPathameSuffix, out scriptPath);
+		}
+
+		protected virtual void setEssenceSharpPath(DirectoryInfo newDefaultEssenceSharpPath) {
+
+			if (Equals(essenceSharpPath, newDefaultEssenceSharpPath)) return;
+			essenceSharpPath = newDefaultEssenceSharpPath;
+
+			configurationPath = new DirectoryInfo(Path.Combine(essenceSharpPath.FullName,		"Config"));
+			loadActiveConfigurationProfileNames();
+
+			sharedSourcePath = new DirectoryInfo(Path.Combine(essenceSharpPath.FullName,		"Source"));
+			sharedScriptsPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Scripts"));
+			sharedLibrariesPath = new DirectoryInfo(Path.Combine(sharedSourcePath.FullName,		"Libraries"));
+
+			libraryPathBinder = newPathnameBinder(SharedLibrariesPath, ".lib", "library");
+			sciptPathBinder = newPathnameBinder(SharedScriptsPath, ".es", "script");
+
+			if (!pathForLibrary(standardLibraryName, out standardLibraryPath)) standardLibraryPath = new DirectoryInfo(Path.Combine(sharedLibrariesPath.FullName, standardLibraryName));
+
+		}
+
+		protected virtual void loadActiveConfigurationProfileNames() {
+			var activeProfilesListPath = new FileInfo(Path.Combine(ConfigurationPath.FullName, "activeProfiles"));
+			if (!activeProfilesListPath.Exists) return;
+			activeConfigurationProfileNames = new List<String>();
+			using (var stream = activeProfilesListPath.OpenText()) {
+				String profileName = "";
+				do {
+					if (!String.IsNullOrEmpty(profileName)) {
+						var path = pathForConfigurationProfile(profileName);
+						if (path == null) {
+							Console.WriteLine("The requested configuration profile could not be found: " + profileName);
+						} else {
+							activeConfigurationProfileNames.Add(profileName);
+						}
+					}
+					profileName = stream.ReadLine();
+				} while (profileName != null);
+			}
+		}
+
+		protected virtual void activeConfigurationProfilePathsDo(Action<DirectoryInfo> enumerator1) {
+			foreach (var profileName in activeConfigurationProfileNames) {
+				var path = pathForConfigurationProfile(profileName);
+				if (path == null) {
+					Console.WriteLine("The requested configuration profile could not be found: " + profileName);
+				} else {
+					enumerator1(path);
+				}
+			}
+		}
+
+		protected virtual ESPathnameBinder newPathnameBinder(DirectoryInfo defaultSearchPath, String defaultExtension, String searchPathsFilenamePrefix) {
+			var pathBinder = new ESPathnameBinder(defaultSearchPath, defaultExtension, null);
+			var searchPathFilename = searchPathsFilenamePrefix + ".searchPaths";
+			activeConfigurationProfilePathsDo(configProfilePath => {
+				pathBinder.addSearchPathsFrom(new FileInfo(Path.Combine(configProfilePath.FullName, searchPathFilename)));
+			});
+			return pathBinder;
 		}
 
 		#endregion
@@ -2140,7 +2174,7 @@ namespace EssenceSharp.Runtime {
 			publishCanonicalPrimitives();
 			installCanonicalPrimitivesInCanonicalClasses(SymbolRegistry.symbolFor("system primitives"));
 			bindToFileSystem();
-			loadConfiguration();
+			loadActiveConfigurations();
 		}
 
 		protected void createDynamicBinderRegistries() {
@@ -2479,20 +2513,36 @@ namespace EssenceSharp.Runtime {
 			EssenceSharpPath = ESFileUtility.defaultEssenceSharpPath();
 		}
 
-		protected virtual void loadConfiguration() {
-			var assemblyMapPath = new FileInfo(Path.Combine(ConfigurationProfilePath.FullName, "AssemblyMap.es"));
-			if (!assemblyMapPath.Exists) return;
+		protected virtual void loadActiveConfigurations() {
+			activeConfigurationProfilePathsDo(configProfilePath => {
+				var map = loadAssemblyMapFrom(configProfilePath);
+				if (assemblyMap == null) {
+					assemblyMap = map;
+				} else if (map != null) {
+					map.setEnvironment(assemblyMap);
+					assemblyMap = map;
+				}
+			});
+		}
+
+		protected virtual ESNamespace loadAssemblyMapFrom(DirectoryInfo configurationProfilePath) {
+			var assemblyMapPath = new FileInfo(Path.Combine(configurationProfilePath.FullName, "AssemblyMap.es"));
+			if (!assemblyMapPath.Exists) return null;
+			ESNamespace assemblyMap = null;
 			Object value;
 			if (evaluate(assemblyMapPath, SmalltalkNamespace, this, null, out value)) {
-				// Console.WriteLine(value.ToString());
 				var dict = value as ESDictionary;
-				assemblyMap = newNamespace();
-				dict.keysAndValuesDo(
-					(key, assemblyNameString) => {
-						assemblyMap.atPut(ESObject.asHostString(key), new DirectBindingHandle(new AssemblyName(ESObject.asHostString(assemblyNameString)))); 
-						return null;
-					});
+				if (value != null) { 
+					assemblyMap = newNamespace();
+					assemblyMap.setName(symbolFor(configurationProfilePath.Name));
+					dict.keysAndValuesDo(
+						(key, assemblyNameString) => {
+							assemblyMap.atPut(ESObject.asHostString(key), new DirectBindingHandle(new AssemblyName(ESObject.asHostString(assemblyNameString)))); 
+							return null;
+						});
+				}
 			}
+			return assemblyMap;
 		}
 
 		#endregion

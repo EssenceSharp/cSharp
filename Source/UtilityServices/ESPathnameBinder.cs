@@ -50,10 +50,14 @@ namespace EssenceSharp.UtilityServices {
 		public ESPathnameBinder(DirectoryInfo defaultSearchPath) : this(defaultSearchPath, null) {
 		}
 
-		public ESPathnameBinder(DirectoryInfo defaultSearchPath, String defaultExtension) {
+		public ESPathnameBinder(DirectoryInfo defaultSearchPath, String defaultExtension) 
+			: this(defaultSearchPath, defaultExtension, new FileInfo(Path.Combine((defaultSearchPath ?? ESFileUtility.userProfilePath()).FullName, "searchPaths"))) {
+		}
+
+		public ESPathnameBinder(DirectoryInfo defaultSearchPath, String defaultExtension, FileInfo searchPathsFile) {
 			this.defaultSearchPath =  defaultSearchPath ?? ESFileUtility.userProfilePath();
 			this.defaultExtension = defaultExtension == null ? null : (defaultExtension.Length < 1 ? null: defaultExtension);
-			addSearchPathsFrom(new FileInfo(Path.Combine(DefaultSearchPath.FullName, "searchPaths")));
+			addSearchPathsFrom(searchPathsFile);
 		}
 
 		public DirectoryInfo DefaultSearchPath {
@@ -110,6 +114,7 @@ namespace EssenceSharp.UtilityServices {
 		}
 
 		public virtual void addSearchPathsFrom(FileInfo searchPathsFile) {
+			if (searchPathsFile == null) return;
 			if (!searchPathsFile.Exists) return;
 			using (var stream = searchPathsFile.OpenText()) {
 				String searchPath = "";

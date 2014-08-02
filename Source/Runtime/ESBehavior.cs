@@ -242,7 +242,6 @@ namespace EssenceSharp.Runtime {
 		#region Instance variables
 
 		protected ESObjectSpace								objectSpace; 
-		protected bool									constraintsMustBeSatisfied		= false;
 		protected IDictionary<ESSymbol, ESMethod> 					methodDictionary; 
 		protected IDictionary<long, IDictionary<String, ESMethod>>			hostSystemMethodDictionary; 
 		protected TraitUsageExpression							traitUsage;	
@@ -323,8 +322,8 @@ namespace EssenceSharp.Runtime {
 			get {return false;}
 		}
 
-		public virtual void validate() {
-			constraintsMustBeSatisfied = true;
+		public virtual void activate() {
+			// By default, do nothing
 		}
 
 		#endregion
@@ -337,7 +336,6 @@ namespace EssenceSharp.Runtime {
 
 		public override void postCopy() {
 			base.postCopy();
-			constraintsMustBeSatisfied		= false;
 			var oldMethodDictionary			= methodDictionary;
 			methodDictionary = newMethodDictionary();
 			foreach (var kvp in oldMethodDictionary) addMethod(kvp.Value);
@@ -1546,6 +1544,7 @@ namespace EssenceSharp.Runtime {
 
 		protected ESBehavior								superclass; 
 		protected HashSet<ESBehavior>							subclasses;
+		protected bool									constraintsMustBeSatisfied		= false;
 
 		protected TypeName								instanceTypeName; 
 		protected bool									isInstanceTypeLocked			= false;
@@ -1616,8 +1615,8 @@ namespace EssenceSharp.Runtime {
 			environment.atPut(Name, this.asBindingHandle());
 		}
 
-		public override void validate() {
-			base.validate();
+		public override void activate() {
+			constraintsMustBeSatisfied = true;
 			if (!isInstanceTypeValid) invalidateInstanceType();
 			assertValidInheritanceStructure(Superclass);
 		}
@@ -1909,6 +1908,7 @@ namespace EssenceSharp.Runtime {
 
 		public override void postCopy() {
 			base.postCopy();
+			constraintsMustBeSatisfied		= false;
 			subclasses = newSubclassesSet();
 			if (superclass != null) superclass.basicAddSubclass(this);
 		}
@@ -3465,7 +3465,6 @@ namespace EssenceSharp.Runtime {
 
 			public Object _combinedWith_(Object receiver, Object usageExpression) {
 				return ((ESBehavioralTrait)receiver).combinedWith((TraitUsageExpression)usageExpression);
-				return receiver;
 			}
 
 			public Object _combinedWithTrait_(Object receiver, Object trait) {
@@ -3852,12 +3851,10 @@ namespace EssenceSharp.Runtime {
 
 			public Object _combinedWith_(Object receiver, Object usageExpression) {
 				return ((ESAbstractTraitUsageExpression)receiver).combinedWith((TraitUsageExpression)usageExpression);
-				return receiver;
 			}
 
 			public Object _combinedWithTrait_(Object receiver, Object trait) {
 				return ((ESAbstractTraitUsageExpression)receiver).combinedWithTrait((Trait)trait);
-				
 			}
 
 			public Object _combinedWithTransformation_(Object receiver, Object traitTransformation) {

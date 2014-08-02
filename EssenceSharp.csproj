@@ -261,4 +261,16 @@
   <ProjectExtensions>
     <VisualStudio AllowExistingFolder="true" />
   </ProjectExtensions>
+  <PropertyGroup>
+    <PostBuildEvent>if not Exist  "$(UserProfile)\My Documents\Developer\Bin\Essence#\" mkdir  "$(UserProfile)\My Documents\Developer\Bin\Essence#\"
+
+copy "$(TargetDir)*.dll" "$(UserProfile)\My Documents\Developer\Bin\Essence#\"
+copy "$(TargetDir)*.pdb" "$(UserProfile)\My Documents\Developer\Bin\Essence#\"
+
+if not Exist "$(UserProfile)\My Documents\Developer\$(OutDir)" mkdir "$(UserProfile)\My Documents\Developer\$(OutDir)"
+
+copy "$(TargetDir)*.dll" "$(UserProfile)\My Documents\Developer\$(OutDir)\"
+copy "$(TargetDir)*.pdb" "$(UserProfile)\My Documents\Developer\$(OutDir)\"
+</PostBuildEvent>
+  </PropertyGroup>
 </Project>

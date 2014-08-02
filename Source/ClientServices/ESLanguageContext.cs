@@ -103,7 +103,7 @@ namespace EssenceSharp.ClientServices {
 		}
 
 		public override Version LanguageVersion {
-			get {return new AssemblyName(typeof(ESObjectSpace).Assembly.FullName).Version;}
+			get {return typeof(ESObjectSpace).Assembly.GetName().Version;}
 		}
         
 		public override LanguageOptions Options {

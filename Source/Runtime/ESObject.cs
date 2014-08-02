@@ -49,7 +49,7 @@ namespace EssenceSharp.Runtime {
 
 	public class IdentityComparator<ValueType> : IEqualityComparer<ValueType> {
 
-		public new bool Equals(ValueType left, ValueType right) {
+		public bool Equals(ValueType left, ValueType right) {
 			return ReferenceEquals(left, right);
 		}
 
