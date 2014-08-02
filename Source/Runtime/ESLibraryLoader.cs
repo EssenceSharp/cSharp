@@ -351,47 +351,89 @@ namespace EssenceSharp.Runtime {
 				if ((fileEntry.Attributes & FileAttributes.Directory) == FileAttributes.Directory ) {
 					continue;
 				} else {
-					var file = (FileInfo)fileEntry;
+					var sourceFile = (FileInfo)fileEntry;
+					String targetPath;
+					FileInfo targetFile;
 					switch (fileName) {
 
 						case "namespace.configure":
 						case "configure.namespace":
-							file.MoveTo(Path.Combine(file.Directory.FullName, "namespace.def"));
-							renameCount++;
+							targetPath = Path.Combine(sourceFile.Directory.FullName, "namespace.def");
+							targetFile = new FileInfo(targetPath);
+							if (!targetFile.Exists) {
+								sourceFile.MoveTo(targetPath);
+								renameCount++;
+							}
 							break;
 
 						case "trait.configure":
 						case "configure.trait":
-							file.MoveTo(Path.Combine(file.Directory.FullName, "trait.def"));
-							renameCount++;
+							targetPath = Path.Combine(sourceFile.Directory.FullName, "trait.def");
+							targetFile = new FileInfo(targetPath);
+							if (targetFile.Exists) {
+								Console.WriteLine("Deprecated/retired file type; not renamed due to name conflict: " + sourceFile.FullName);
+							} else {
+								sourceFile.MoveTo(targetPath);
+								renameCount++;
+							}
 							break;
 
 						case "classTrait.configure":
 						case "configure.classTrait":
-							file.MoveTo(Path.Combine(file.Directory.FullName, "classTrait.def"));
-							renameCount++;
+							targetPath = Path.Combine(sourceFile.Directory.FullName, "classTrait.def");
+							targetFile = new FileInfo(targetPath);
+							if (targetFile.Exists) {
+								Console.WriteLine("Deprecated/retired file type; not renamed due to name conflict: " + sourceFile.FullName);
+							} else {
+								sourceFile.MoveTo(targetPath);
+								renameCount++;
+							}
 							break;
 
 						case "class.configure":
 						case "configure.class":
-							file.MoveTo(Path.Combine(file.Directory.FullName, "class.def"));
-							renameCount++;
+							targetPath = Path.Combine(sourceFile.Directory.FullName, "class.def");
+							targetFile = new FileInfo(targetPath);
+							if (targetFile.Exists) {
+								Console.WriteLine("Deprecated/retired file type; not renamed due to name conflict: " + sourceFile.FullName);
+							} else {
+								sourceFile.MoveTo(targetPath);
+								renameCount++;
+							}
 							break;
 
 						case "metaclass.configure":
 						case "configure.metaclass":
-							file.MoveTo(Path.Combine(file.Directory.FullName, "metaclass.def"));
-							renameCount++;
+							targetPath = Path.Combine(sourceFile.Directory.FullName, "metaclass.def");
+							targetFile = new FileInfo(targetPath);
+							if (targetFile.Exists) {
+								Console.WriteLine("Deprecated/retired file type; not renamed due to name conflict: " + sourceFile.FullName);
+							} else {
+								sourceFile.MoveTo(targetPath);
+								renameCount++;
+							}
 							break;
 
 						case "instance.methods":
-							file.MoveTo(Path.Combine(file.Directory.FullName, "methods.instance"));
-							renameCount++;
+							targetPath = Path.Combine(sourceFile.Directory.FullName, "methods.instance");
+							targetFile = new FileInfo(targetPath);
+							if (targetFile.Exists) {
+								Console.WriteLine("Deprecated/retired file type; not renamed due to name conflict: " + sourceFile.FullName);
+							} else {
+								sourceFile.MoveTo(targetPath);
+								renameCount++;
+							}
 							break;
 
 						case "class.methods":
-							file.MoveTo(Path.Combine(file.Directory.FullName, "methods.class"));
-							renameCount++;
+							targetPath = Path.Combine(sourceFile.Directory.FullName, "methods.class");
+							targetFile = new FileInfo(targetPath);
+							if (targetFile.Exists) {
+								Console.WriteLine("Deprecated/retired file type; not renamed due to name conflict: " + sourceFile.FullName);
+							} else {
+								sourceFile.MoveTo(targetPath);
+								renameCount++;
+							}
 							break;
 
 						default:

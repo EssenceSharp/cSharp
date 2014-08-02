@@ -48,12 +48,12 @@ script file containing syntactically-valid Essence# code.
 The LibrarySearchPath option can be used (repeatedly) to add a search path for 
 code libraries. Library search paths will be added in the order listed on the 
 command line, and will be used before any library search paths defined by the
-system or in the %EssenceSharpPath%\Source\Libraries\searchPaths file.
+system or by the active set of configuration profiles.
 
 The ScriptSearchPath option can be used (repeatedly) to add a search path for 
 scripts. Script search paths will be added in the order listed on the command 
 line, and will be used before any script search paths defined by the system or 
-in the %EssenceSharpPath%\Source\Scripts\searchPaths file.
+or by the active set of configuration profiles.
 
 The EssenceSharpPath option can be used to change the pathname prefix that will
 be used to find standard system files, such as the Standard Library, other 
