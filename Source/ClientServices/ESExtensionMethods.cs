@@ -331,14 +331,14 @@ namespace Microsoft.Scripting.Hosting {
 			if (context.scriptPathnameFor(scriptPathameSuffix, out scriptPath)) {
 				return engine.CreateScriptSourceFromFile(scriptPath.FullName);
 			}
-			return engine.CreateScriptSourceFromFile(scriptPathameSuffix);
+			return null;
 		}
 
 		public static EssenceSharpContext essenceSharpContext(this ScriptEngine engine) {
 			return (EssenceSharpContext)HostingHelpers.GetLanguageContext(engine);
 		}
 
-		public static ESObjectSpace essenceSharpKernel(this ScriptEngine engine) {
+		public static ESObjectSpace essenceSharpObjectSpace(this ScriptEngine engine) {
 			return engine.essenceSharpContext().ObjectSpace;
 		}
 

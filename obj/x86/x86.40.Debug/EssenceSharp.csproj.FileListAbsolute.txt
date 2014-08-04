@@ -20,4 +20,3 @@ C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\bin\x86
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\bin\x86\40\Debug\Microsoft.Dynamic.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\bin\x86\40\Debug\Microsoft.Scripting.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\bin\x86\40\Debug\Microsoft.Scripting.Debugging.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x86\x86.40.Debug\EssenceSharp.csprojResolveAssemblyReference.cache

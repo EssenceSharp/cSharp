@@ -134,7 +134,7 @@ namespace EssenceSharp.ClientServices {
       
 		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
 		public override ErrorSink GetCompilerErrorSink() {
-			return ErrorSink.Default;
+			return new ErrorCounter();
 		}
 
 		public override ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions compilationOptions, ErrorSink errorSink) {
@@ -146,7 +146,7 @@ namespace EssenceSharp.ClientServices {
 
 			using (var sourceStream = sourceUnit.GetReader()) {
 				switch (sourceUnit.Kind) {
-					default: // None of these distinctions have any utility for Essence; the purpose of the switch statement is simply to document the standard (but useless) options provided by the DLR
+					default: // None of these distinctions have any utility for Essence#; the purpose of the switch statement is simply to document the standard (but useless) options provided by the DLR
 					case Microsoft.Scripting.SourceCodeKind.Unspecified:
 					case Microsoft.Scripting.SourceCodeKind.AutoDetect:
 					case Microsoft.Scripting.SourceCodeKind.Expression:

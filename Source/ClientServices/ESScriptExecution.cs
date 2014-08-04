@@ -32,6 +32,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using EssenceSharp.Properties;
 using EssenceSharp.UtilityServices;
@@ -294,7 +295,7 @@ namespace EssenceSharp.ClientServices {
 			}
 			Object value = null;
 			try {
-				var objectSpace = engine.essenceSharpKernel();
+				var objectSpace = engine.essenceSharpObjectSpace();
 				var environment = objectSpace.findOrCreateNamespace(EnvironmentName);
 				foreach (var nsName in imports) {
 					var ns = objectSpace.findOrCreateNamespace(nsName);
@@ -307,7 +308,12 @@ namespace EssenceSharp.ClientServices {
 				}
 				var compilationOptions = (ESCompilerOptions)engine.GetCompilerOptions();
 				compilationOptions.EnvironmentName = EnvironmentName;
- 				value = runScript(engine, compilationOptions, environment);
+ 				try {
+					value = runScript(engine, compilationOptions, environment);
+				} catch (SyntaxErrorException syntaxError) {
+					value = syntaxError.Message;
+					errors.Add(syntaxError.Message);
+				}
 				Console.WriteLine("");
 				Console.WriteLine(Identity);
 				Console.WriteLine(" => " + value);
@@ -355,7 +361,13 @@ namespace EssenceSharp.ClientServices {
 
 		protected override Object runScript(ScriptEngine engine, ESCompilerOptions compilationOptions, NamespaceObject environment) {
 			var script = engine.CreateScriptSourceFromPathSuffix(pathnameSuffix);
-			return script.Execute(compilationOptions, scriptArgs, out durationToRun);
+			if (script == null) {
+				var message = "Script not found: " + pathnameSuffix;
+				Console.WriteLine(message);
+				return message;
+			} else { 
+				return script.Execute(compilationOptions, scriptArgs, out durationToRun);
+			}
 		}	
 
 	}
