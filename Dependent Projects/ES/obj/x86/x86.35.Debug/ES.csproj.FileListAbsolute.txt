@@ -21,3 +21,5 @@ C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Depende
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.35.Debug\es.application
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.35.Debug\es.exe
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.35.Debug\es.pdb
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\35\Debug\Microsoft.Scripting.ExtensionAttribute.dll
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\35\Debug\Microsoft.Scripting.ExtensionAttribute.pdb

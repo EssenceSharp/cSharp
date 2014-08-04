@@ -1544,7 +1544,7 @@ namespace EssenceSharp.CompilationServices {
 
 		}
 
-		public void compileFor(ESMethod method) {
+		public virtual void compileFor(ESMethod method) {
 			method.Function = functionFor(method.Environment, method.HomeClass);
 		}
 
@@ -1615,16 +1615,18 @@ namespace EssenceSharp.CompilationServices {
 		}
 
  		public override Expression onFailCodeAsCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
-			if (StatementCount > 0) return base.bodyAsCLRExpression(environment, behavior);
-			var parameters = ParameterExpressions;
-			var parametersArray = new Expression[parameters.Count];
-			for (var i = 0; i < parametersArray.Length; i++) parametersArray[i] = parameters[i];
-			var messageClass = Context.ObjectSpace.MessageClass;
-			var message = ExpressionTreeGuru.expressionToCreateMessage(messageClass, Selector, parametersArray);
-			return Expression.Lambda(
-				ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, behavior, Context.ObjectSpace.SymbolRegistry, message), 
-				useTailCallOptimization, 
-				ParameterExpressions);
+			Expression bodyExpression;
+			if (StatementCount > 0) {
+				bodyExpression = base.bodyAsCLRExpression(environment, behavior);
+			} else { 
+				var parameters = ParameterExpressions;
+				var parametersArray = new Expression[parameters.Count];
+				for (var i = 0; i < parametersArray.Length; i++) parametersArray[i] = parameters[i];
+				var messageClass = Context.ObjectSpace.MessageClass;
+				var message = ExpressionTreeGuru.expressionToCreateMessage(messageClass, Selector, parametersArray);
+				bodyExpression = ExpressionTreeGuru.expressionToSendDoesNotUnderstand(Context.SelfParameter, behavior, Context.ObjectSpace.SymbolRegistry, message);
+			}
+			return Expression.Lambda(bodyExpression, useTailCallOptimization, ParameterExpressions);
 		}
 
 		protected override Expression bodyAsCLRExpression(NamespaceObject environment, BehavioralObject behavior) {
@@ -1652,6 +1654,11 @@ namespace EssenceSharp.CompilationServices {
 			}
 			var messageSend = Context.newMessageSendNode(Context.newSelfNode(), message);
 			return Expression.Lambda(messageSend.asCLRExpression(environment, behavior), useTailCallOptimization, ParameterExpressions);
+		}
+
+		public override void compileFor(ESMethod method) {
+			base.compileFor(method);
+			method.InlineOperation.OnFailExpression = InlineOperation.OnFailExpression;
 		}
 
 	}

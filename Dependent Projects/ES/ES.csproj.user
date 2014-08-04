@@ -14,12 +14,14 @@
     <EnableSecurityDebugging>false</EnableSecurityDebugging>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.35.Debug|x86'">
-    <StartArguments>Events</StartArguments>
+    <StartArguments>-n CLR.System -d "Object new initialize"</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.40.Debug|x86'">
-    <StartArguments>OutParameters</StartArguments>
+    <StartArguments>
+    </StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x64.35.Debug|x64'">
-    <StartArguments>-d "CLR.System.IO.Directory allIn: %27.%27"</StartArguments>
+    <StartArguments>
+    </StartArguments>
   </PropertyGroup>
 </Project>

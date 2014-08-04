@@ -240,32 +240,34 @@ namespace EssenceSharp.Runtime {
 				rootNamespaces.Add(rootNamespace);
 			}
 
-			foreach (var factory in traitFactories) 
-				if (!factory.declareAll()) return false;
-			foreach (var factory in classFactories) 
-				if (!factory.declareAll()) return false;
 			foreach (var factory in namespaceFactories) 
 				if (!factory.declareAll()) return false;
-
 			foreach (var factory in traitFactories) 
-				if (!factory.configureAll()) return false;
+				if (!factory.declareAll()) return false;
 			foreach (var factory in classFactories) 
-				if (!factory.configureAll()) return false;
+				if (!factory.declareAll()) return false;
+
 			foreach (var factory in namespaceFactories) 
 				if (!factory.configureAll()) return false;
 
 			foreach (var factory in traitFactories) 
-				if (!factory.compileAll()) return false;
-			foreach (var factory in classFactories) 
+				if (!factory.configureAll()) return false;
+			foreach (var factory in traitFactories) 
 				if (!factory.compileAll()) return false;
 
-			foreach (var factory in traitFactories) 
-				if (!factory.initializeAll()) return false;
+			foreach (var factory in classFactories) 
+				if (!factory.configureAll()) return false;
+
+			foreach (var factory in classFactories) 
+				if (!factory.compileAll()) return false;
 
 			foreach (var factory in classFactories) {
 				factory.ThisClass.activate();
 				factory.ThisClass.Class.activate();
 			}
+
+			foreach (var factory in traitFactories) 
+				if (!factory.initializeAll()) return false;
 
 			foreach (var factory in classFactories) 
 				if (!factory.initializeAll()) return false;
@@ -953,7 +955,7 @@ namespace EssenceSharp.Runtime {
 
 		protected override bool configureClass() {
 			if (ClassConfigurationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Configuring class : " + ThisClass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Configuring class: " + ThisClass.PathnameString);
 			Object value;
 			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile, out value);
 		}
@@ -1018,7 +1020,7 @@ namespace EssenceSharp.Runtime {
 
 		protected override bool configureClass() {
 			if (ClassConfigurationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Configuring instance trait : " + ThisClass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Configuring instance trait: " + ThisClass.PathnameString);
 			Object value;
 			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile, out value);
 		}

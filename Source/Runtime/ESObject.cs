@@ -1018,21 +1018,6 @@ namespace EssenceSharp.Runtime {
 				Debugger.Break();
 				return receiver;
 			}
-		
-			public static Object _show_ (Object receiver) {
-				((ESObject)receiver).show();
-				return receiver;
-			}
-		
-			public static Object _crShow_ (Object receiver) {
-				((ESObject)receiver).crShow();
-				return receiver;
-			}
-		
-			public static Object _showCr_ (Object receiver) {
-				((ESObject)receiver).showCr();
-				return receiver;
-			}
 
 			public static Object _changeClassToThatOf_(Object receiver, Object other) {
 				try { 
@@ -1247,9 +1232,6 @@ namespace EssenceSharp.Runtime {
 				publishPrimitive("perform:with:with:with:with:",			new FuncNs.Func<Object, Object, Object, Object, Object, Object, Object>(_performWith4_));
 				publishPrimitive("perform:withArguments:",				new FuncNs.Func<Object, Object, Object, Object>(_performWithArguments_));
 				publishPrimitive("halt",						new FuncNs.Func<Object, Object>(_halt_));
-				publishPrimitive("show",						new FuncNs.Func<Object, Object>(_show_));
-				publishPrimitive("crShow",						new FuncNs.Func<Object, Object>(_crShow_));
-				publishPrimitive("showCr",						new FuncNs.Func<Object, Object>(_showCr_));
 				publishPrimitive("changeClassToThatOf:",				new FuncNs.Func<Object, Object, Object>(_changeClassToThatOf_));
 
 				

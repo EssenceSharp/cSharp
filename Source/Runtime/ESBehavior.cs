@@ -71,6 +71,7 @@ namespace EssenceSharp.Runtime {
 		HashSet<ESSymbol> allSelectors();
 		bool canUnderstand(ESSymbol selector);
 		ESMethod compiledMethodAt(ESSymbol selector);
+		bool compiledMethodAt(ESSymbol selector, out BehavioralObject homeClass, out ESMethod method);
 
 		void withUnimplementedMessagesSentToSelfDo(Action<ESSymbol> enumerator1);
 		void withUndeclaredVariablesDo(Action<ESSymbol, ESSymbol> enumerator2);
@@ -506,11 +507,19 @@ namespace EssenceSharp.Runtime {
 		}
 		
 		public virtual ESMethod compiledMethodAt(ESSymbol selector) {
+			BehavioralObject homeClass;
 			ESMethod method;
-			if (methodDictionary.TryGetValue(selector, out method)) return method;
-			return traitUsage == null ? 
-				null :
-				traitUsage.compiledMethodAt(selector);
+			compiledMethodAt(selector, out homeClass, out method);
+			return method;
+		}
+		
+		public virtual bool compiledMethodAt(ESSymbol selector, out BehavioralObject homeClass, out ESMethod method) {
+			homeClass = this;
+			if (methodDictionary.TryGetValue(selector, out method)) return true;
+			method = null;
+			if (traitUsage == null) return false;
+			BehavioralObject trait;
+			return traitUsage.compiledMethodAt(selector, out trait, out method);
 		}
 
 		public void withUnimplementedMessagesSentToSelfDo(Action<ESSymbol> enumerator1) {
@@ -2073,10 +2082,9 @@ namespace EssenceSharp.Runtime {
 			if (HasSuperclass) Superclass.allSelectorsAndMethodsDo(enumerator2, exclusionSet);
 		}
 		
-		public override ESMethod compiledMethodAt(ESSymbol selector) {
-			var method = base.compiledMethodAt(selector);
-			if (method != null) return method;
-			return HasSuperclass ? Superclass.compiledMethodAt(selector) : null;
+		public override bool compiledMethodAt(ESSymbol selector, out BehavioralObject homeClass, out ESMethod method) {
+			if (base.compiledMethodAt(selector, out homeClass, out method)) return true;
+			return HasSuperclass ? Superclass.compiledMethodAt(selector, out homeClass, out method) : false;
 		}
 
 		public override bool canUnderstand(ESSymbol selector) {
@@ -3786,7 +3794,14 @@ namespace EssenceSharp.Runtime {
 			return selectors();
 		}
 
-		public abstract ESMethod compiledMethodAt(ESSymbol selector);
+		public ESMethod compiledMethodAt(ESSymbol selector) {
+			BehavioralObject homeClass;
+			ESMethod method;
+			if (compiledMethodAt(selector, out homeClass, out method)) return method;
+			return null;
+		}
+
+		public abstract bool compiledMethodAt(ESSymbol selector, out BehavioralObject homeClass, out ESMethod method);
 
 		public bool canUnderstand(ESSymbol selector) {
 			return includesSelector(selector);
@@ -4333,9 +4348,15 @@ namespace EssenceSharp.Runtime {
 			return getTargetSelector(sourceSelector, out targetSelector) ? subject.includesSelector(targetSelector) : false;
 		}
 
-		public override ESMethod compiledMethodAt(ESSymbol sourceSelector) {
+		public override bool compiledMethodAt(ESSymbol sourceSelector, out BehavioralObject homeClass, out ESMethod method) {
 			ESSymbol targetSelector;
-			return getTargetSelector(sourceSelector, out targetSelector) ? subject.compiledMethodAt(targetSelector) : null;
+			if (getTargetSelector(sourceSelector, out targetSelector)) {
+				return subject.compiledMethodAt(targetSelector, out homeClass, out method);
+			} else {
+				homeClass = null;
+				method = null;
+				return false;
+			}
 		}
 
 
@@ -4474,7 +4495,7 @@ namespace EssenceSharp.Runtime {
 						}
 					}
 					return null;
-				}, null);
+				});
 			}
 
 			foreach (var kvp in newConflicts) newMethodDict.Remove(kvp.Key);
@@ -4523,7 +4544,7 @@ namespace EssenceSharp.Runtime {
 						arityDict[selector] = newMethod;
 					}
 					return null;
-				}, null);
+				});
 			}
 
 			foreach (var kvp in newConflicts) {
@@ -4675,11 +4696,15 @@ namespace EssenceSharp.Runtime {
 
 		public override TraitUsageExpression excluding(ESSymbol selector) {
 			lock (this) { 
+				var newElementDictionary = newElements();
 				foreach (var kvp in elements) {
 					var identity = kvp.Key;
 					var element = kvp.Value;
-					elements[identity] = element.excluding(selector);
+					newElementDictionary[identity] = element.excluding(selector);
+				}
+				if (newElementDictionary.Count > 0) {
 					isReduced = false;
+					elements = newElementDictionary;
 				}
 			}
 			return this;
@@ -4687,11 +4712,15 @@ namespace EssenceSharp.Runtime {
 
 		public override TraitUsageExpression aliasing(ESSymbol sourceSelector, ESSymbol selectorAlias) {
 			lock (this) {
+				var newElementDictionary = newElements();
 				foreach (var kvp in elements) {
 					var identity = kvp.Key;
 					var element = kvp.Value;
-					elements[identity] = element.aliasing(sourceSelector, selectorAlias);
+					newElementDictionary[identity] = element.aliasing(sourceSelector, selectorAlias);
+				}
+				if (newElementDictionary.Count > 0) {
 					isReduced = false;
+					elements = newElementDictionary;
 				}
 			}
 			return this;
@@ -4753,11 +4782,15 @@ namespace EssenceSharp.Runtime {
 			return symbols;
 		}
 
-		public override ESMethod compiledMethodAt(ESSymbol selector) {
+		public override bool compiledMethodAt(ESSymbol selector, out BehavioralObject homeClass, out ESMethod method) {
 			if (!isReduced) reduce();
-			ESMethod method;
-			if (methodDictionary.TryGetValue(selector, out method)) return method;
-			return null;
+			if (methodDictionary.TryGetValue(selector, out method)) {
+				homeClass = method.HomeClass;
+				return true;
+			}
+			homeClass = null;
+			method = null;
+			return false;
 		}
 
 		public override bool includesSelector(ESSymbol selector) {

@@ -1350,13 +1350,13 @@ namespace EssenceSharp.Runtime.Binding {
 			if (exceptionSelectorClasss.IsHostSystemMetaclass) {
 				var exceptionClass = ((ESMetaclass)exceptionSelectorClasss).CanonicalInstance;
 				var exceptionType = exceptionClass.InstanceType;
-				exception = Expression.Parameter(exceptionType, "ex");
+				exception = Expression.Parameter(exceptionType, "$exception");
 				exceptionMO = exception.asDynamicMetaObject();
 				exceptionArgArray = argArrayFor(exceptionMO);
 				catchBlockMO = handleExceptionBlockMO.BindInvoke(canonicalInvokeBinderFor(objectSpace.classOf(handleExceptionBlockMO.Value), selectorValue1), exceptionArgArray);
-				catchBlock = Expression.Catch(exception, catchBlockMO.Expression);
+				catchBlock = Expression.Catch(exception, catchBlockMO.Expression.withCanonicalReturnType());
 			} else { 
-				exception = Expression.Parameter(TypeGuru.exceptionType, "ex");
+				exception = Expression.Parameter(TypeGuru.exceptionType, "$exception");
 				exceptionMO = exception.asDynamicMetaObject();
 				exceptionArgArray = argArrayFor(exceptionMO);
 				catchBlockMO = handleExceptionBlockMO.BindInvoke(canonicalInvokeBinderFor(objectSpace.classOf(handleExceptionBlockMO.Value), selectorValue1), exceptionArgArray);
@@ -1371,18 +1371,15 @@ namespace EssenceSharp.Runtime.Binding {
 										exceptionSelectionPredicate,
 											catchBlockMO.asExpressionWithType(TypeGuru.objectType),
 											Expression.Block(TypeGuru.objectType, Expression.Rethrow(), Expression.Constant(new Object())));
-				catchBlock = Expression.Catch(exception, conditionalExceptionHandler);
+				catchBlock = Expression.Catch(exception, conditionalExceptionHandler.withCanonicalReturnType());
 			}
-			Expression expression = Expression.TryCatch(invokeProtectedBlockMO.Expression, catchBlock);
+			Expression expression = Expression.TryCatch(invokeProtectedBlockMO.Expression.withCanonicalReturnType(), catchBlock);
 			expression = Expression.Block(TypeGuru.objectType, expression.withCanonicalReturnType());
-			return new DynamicMetaObject(
-				expression, 
+			return expression.asDynamicMetaObject(
 				(esClass.InstanceArchitecture == ObjectStateArchitecture.HostSystemObject ?
 					receiver.bindingRestrictionsForForeignObjectReceiver(esClass) :
 					receiver.bindingRestrictionsForESObjectReceiver(esClass))
-							.Merge(handleExceptionBlockMO.asInstanceRestriction())
-							.Merge(exceptionSelectorMO.asInstanceRestriction())
-							.Merge(handleExceptionBlockMO.asInstanceRestriction()), 
+							.Merge(exceptionSelectorMO.asInstanceRestriction()),
 				receiver.Value);
 
 
@@ -2122,7 +2119,8 @@ namespace EssenceSharp.Runtime.Binding {
 			ESMethod method;
 			DynamicMetaObject metaObjectToInvokeVirtualMethod;
 			
-			if (getMethodOrElseTryGetMetaObjectToInvokeVirtualMethodOfESObject(receiver, esClass, selector, metaObjectArgs, out method, out metaObjectToInvokeVirtualMethod)) return metaObjectToInvokeVirtualMethod;
+			if (getMethodOrElseTryGetMetaObjectToInvokeVirtualMethodOfESObject(receiver, esClass, selector, metaObjectArgs, out method, out metaObjectToInvokeVirtualMethod)) 
+				return metaObjectToInvokeVirtualMethod;
 
 			return metaObjectToSendMessage(
 					receiver, 
@@ -2354,16 +2352,27 @@ namespace EssenceSharp.Runtime.Binding {
 		public DynamicMetaObject metaObjectToSendMessageToESSuper(DynamicMetaObject receiver, ESBehavior esClass, ESSymbol selector, DynamicMetaObject[] metaObjectArgs) {
 			var superclass = esClass.Superclass;
 			ESMethod method;
+			bool maySendVirtualMessage = true;
 			if (superclass == null) {
 				method = null;
-			} else { 
-				method = superclass.compiledMethodAt(selector);
-				var homeClass = method.HomeClass;
-				if (homeClass != superclass) { 
+				maySendVirtualMessage = false;
+			} else {
+				BehavioralObject homeClass;
+				if (esClass.compiledMethodAt(selector, out homeClass, out method)) {
 					superclass = homeClass.Superclass;
-					method = superclass == null ? null : superclass.compiledMethodAt(selector);
+					if (superclass == null) {
+						method = null;
+						maySendVirtualMessage = false;
+					} else {
+						method = superclass.compiledMethodAt(selector);
+					}
 				}
 			}
+			if (method == null && maySendVirtualMessage) {
+				DynamicMetaObject metaObjectToInvokeVirtualMethod;
+				if (getMethodOrElseTryGetMetaObjectToInvokeVirtualMethodOfESObject(receiver, superclass, selector, metaObjectArgs, out method, out metaObjectToInvokeVirtualMethod)) 
+					return metaObjectToInvokeVirtualMethod;
+			} 
 			return metaObjectToSendMessage(
 					receiver, 
 					objectSpace,
@@ -2383,9 +2392,8 @@ namespace EssenceSharp.Runtime.Binding {
 				method = null;
 				maySendVirtualMessage = false;
 			} else { 
-				method = superclass.compiledMethodAt(selector);
-				var homeClass = method.HomeClass;
-				if (homeClass != superclass) { 
+				BehavioralObject homeClass;
+				if (esClass.compiledMethodAt(selector, out homeClass, out method)) {
 					superclass = homeClass.Superclass;
 					if (superclass == null) {
 						method = null;

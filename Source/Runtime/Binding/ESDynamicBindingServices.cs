@@ -1239,7 +1239,9 @@ namespace EssenceSharp.Runtime.Binding {
 						Type actualFunctionType) {
 
 			return
-				Expression.Call(
+				Expression.Block(
+					TypeGuru.objectType,
+					Expression.Call(
 						null,
 						TypeGuru.esObjectSpaceType.GetMethod(
 								"throwInvalidFunctionCallException", 
@@ -1249,7 +1251,7 @@ namespace EssenceSharp.Runtime.Binding {
 						Expression.Constant(actualArgCount),
 						Expression.Constant(expectedFunctionType),
 						Expression.Constant(actualFunctionType),
-						Expression.Convert(nilConstant, TypeGuru.exceptionType));
+						Expression.Convert(nilConstant, TypeGuru.exceptionType)));
 		}
 
 		#endregion

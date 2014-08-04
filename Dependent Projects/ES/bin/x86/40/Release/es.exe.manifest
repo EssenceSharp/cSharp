@@ -49,7 +49,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>fcIFpmdKqftaAx+2tIZ+zSPQLBw=</dsig:DigestValue>
+        <dsig:DigestValue>Pbu7cxEe3EuKNj0XrvbMb/RMcCM=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -61,7 +61,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>riIGJCLdga4xegR33CKRArmAtqk=</dsig:DigestValue>
+        <dsig:DigestValue>wNSgJc5INbdiXt6h7M5Pb+azYH4=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -73,31 +73,31 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>MbN3vfjUzcCQ8k722cGYRKLA/ts=</dsig:DigestValue>
+        <dsig:DigestValue>d6DCGzidpEbRhUhjjzkg66AaVbo=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Microsoft.Scripting.dll" size="161792">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Microsoft.Scripting.dll" size="162304">
       <assemblyIdentity name="Microsoft.Scripting" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>iXV+pSj2pVtFQ0bwtJG+oYEOi4Q=</dsig:DigestValue>
+        <dsig:DigestValue>KtBJqKOe0hDdJSktNRl0Ll1T+lQ=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Microsoft.Scripting.Debugging.dll" size="52736">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Microsoft.Scripting.Debugging.dll" size="53248">
       <assemblyIdentity name="Microsoft.Scripting.Debugging" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>BWoFW2woQjE+FML6nVS6FxdOKE8=</dsig:DigestValue>
+        <dsig:DigestValue>Z+kyllIQmt8CV3hfQEKQ9M209n4=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

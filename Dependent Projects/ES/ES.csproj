@@ -18,7 +18,7 @@
     </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
     <IsWebBootstrapper>false</IsWebBootstrapper>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <PublishUrl>C:\Users\Strategesis\Documents\Developer\EssenceSharp\Bin\x86\35\Debug\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -262,7 +262,7 @@
       <HintPath>..\..\..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.Core.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Scripting.ExtensionAttribute" Condition="'$(TargetFrameworkVersion)'=='v3.5'">
-      <HintPath>..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.ExtensionAttribute.dll</HintPath>
+      <HintPath>..\..\..\Codeplex-DLR-1.0\bin\Debug\Microsoft.Scripting.ExtensionAttribute.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Dynamic, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL" Condition="'$(TargetFrameworkVersion)'=='v3.5'">
       <SpecificVersion>False</SpecificVersion>
@@ -300,7 +300,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ES_TemporaryKey.pfx" />
-    <None Include="Help.txt" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

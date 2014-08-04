@@ -1746,7 +1746,7 @@ namespace EssenceSharp.Runtime {
 
 		public void recompile() {
 			if (homeClass == null || methodDeclarationNode == null) return;
-			Function = methodDeclarationNode.functionFor(Environment, HomeClass);
+			methodDeclarationNode.compileFor(this);
 		}
 
 		internal void become(ESMethod other) {
