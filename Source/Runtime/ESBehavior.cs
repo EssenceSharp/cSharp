@@ -4318,7 +4318,7 @@ namespace EssenceSharp.Runtime {
 					}
 				}
 				return subject;
-			}, null);
+			});
 		}
 
 		public override void selectorsAndMethodsDo(FuncNs.Func<object, object, object> enumerator2, HashSet<ESSymbol> exclusionSet) {
@@ -4334,7 +4334,7 @@ namespace EssenceSharp.Runtime {
 					}
 				}
 				return subject;
-			}, null);
+			});
 		}
 
 		public override HashSet<ESSymbol> selectors() {

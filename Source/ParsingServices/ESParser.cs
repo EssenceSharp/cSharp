@@ -1029,7 +1029,16 @@ namespace EssenceSharp.ParsingServices {
 					default:
 						return handledUnexpectedToken(
 									ParseNodeType.MessageChain, 
-									new ParseNodeType[]{ParseNodeType.ExpressionEnd, ParseNodeType.BlockEnd, ParseNodeType.CurlyBraceStructureEnd, ParseNodeType.StatementEnd, ParseNodeType.EndOfSource}, 
+									new ParseNodeType[]{
+										ParseNodeType.KeywordMessage,
+										ParseNodeType.BinaryMessage,
+										ParseNodeType.UnaryMessage,
+										ParseNodeType.ExpressionEnd, 
+										ParseNodeType.BlockEnd, 
+										ParseNodeType.CurlyBraceStructureEnd, 
+										ParseNodeType.StatementEnd, 
+										ParseNodeType.EndOfSource
+									}, 
 									nextToken);
 				}
 			} finally {

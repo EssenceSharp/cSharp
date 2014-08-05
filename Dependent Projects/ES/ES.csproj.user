@@ -14,11 +14,12 @@
     <EnableSecurityDebugging>false</EnableSecurityDebugging>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.35.Debug|x86'">
-    <StartArguments>-n CLR.System -d "Object new initialize"</StartArguments>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.40.Debug|x86'">
     <StartArguments>
     </StartArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.40.Debug|x86'">
+    <StartArguments>C:\Users\Strategesis&gt;es -d "| s | s := ReadStream on: #%281 2 3%29 asHostSystemArray
+. s collect: [:n | n %2a 10]"</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x64.35.Debug|x64'">
     <StartArguments>
