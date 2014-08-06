@@ -1,12 +1,7 @@
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\es.exe.config
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\es.exe.manifest
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\es.application
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\es.exe
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\es.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\EssenceSharp.dll
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\Microsoft.Scripting.dll
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\Microsoft.Dynamic.dll
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\Microsoft.Scripting.Debugging.dll
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\Microsoft.Scripting.dll
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\EssenceSharp.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\Microsoft.Dynamic.pdb
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\Microsoft.Scripting.pdb
@@ -18,3 +13,8 @@ C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Depende
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.40.Debug\es.application
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.40.Debug\es.exe
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\obj\x86\x86.40.Debug\es.pdb
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\es.exe.config
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\es.exe.manifest
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\es.application
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\es.exe
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\Dependent Projects\ES\bin\x86\40\Debug\es.pdb

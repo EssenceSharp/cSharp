@@ -1205,11 +1205,11 @@ namespace EssenceSharp.Runtime {
 			return this == comparand;
 		}    
 
-		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
-			append(NameString);
-		}
-
 		#endregion
+
+		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
+			append(PathnameString);
+		}
 
 		public override T valueBy<T>(Operation<T> operation) {
 		    return operation.applyToNamespace(this);
