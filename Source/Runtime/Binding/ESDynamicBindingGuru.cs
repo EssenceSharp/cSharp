@@ -361,7 +361,7 @@ namespace EssenceSharp.Runtime.Binding {
 				DynamicBindingGuru dynamicBindingGuru;
 				List<DynamicMetaObject> typedArguments;
 
-				if (method.IsArchitecturalBehaviorMethod) {
+				if (esClass.IsMetaclass && method.IsInstanceMethod) {
 					sourceType = esClass.InstanceType;
 					esClass = ((ESMetaclass)esClass).CanonicalInstance;
 				} else {

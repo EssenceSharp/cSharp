@@ -1574,7 +1574,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		internal void bindNamespaceToAssemblyNamed(ESNamespace esNamespace, String assemblyName) {
-			bindNamespaceToAssemblyNamed(esNamespace.PathnameString, assemblyName);
+			bindNamespaceToAssemblyNamed(esNamespace.QualifiedName, assemblyName);
 		}
 	
 		public void bindNamespaceToAssemblyAt(String qualifiedNamespaceName, FileInfo assemblyPath) {
@@ -1585,7 +1585,7 @@ namespace EssenceSharp.Runtime {
 		}
 	
 		public void bindNamespaceToAssemblyAt(ESNamespace esNamespace, FileInfo assemblyPath) {
-			bindNamespaceToAssemblyAt(esNamespace.PathnameString, assemblyPath);
+			bindNamespaceToAssemblyAt(esNamespace.QualifiedName, assemblyPath);
 		}
 
 		public String assemblyNameStringFor(String qualifiedNamespaceName) {
@@ -1599,7 +1599,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public FileInfo assemblyPathFor(ESNamespace esNamespace) {
-			return assemblyPathFor(esNamespace.PathnameString);
+			return assemblyPathFor(esNamespace.QualifiedName);
 		}
 
 		public FileInfo assemblyPathFor(String qualifiedNamespaceName) {
@@ -1639,7 +1639,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public Assembly assemblyFor(ESNamespace esNamespace, bool raiseExceptionOnError) {
-			return assemblyFor(esNamespace.PathnameString, raiseExceptionOnError);
+			return assemblyFor(esNamespace.QualifiedName, raiseExceptionOnError);
 		}
 
 		public Assembly assemblyFor(String qualifiedNamespaceName, bool raiseExceptionOnError) {
@@ -2114,7 +2114,7 @@ namespace EssenceSharp.Runtime {
 			var sb = new StringBuilder();
 			sb.AppendLine("Invalid argument value: ");
 			sb.Append("\tContext = ");
-			sb.Append(esClass.PathnameString);
+			sb.Append(esClass.QualifiedName);
 			sb.Append(">>");
 			sb.AppendLine(opName);
 			sb.Append("\tParameter name = ");

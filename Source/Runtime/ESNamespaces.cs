@@ -507,7 +507,7 @@ namespace EssenceSharp.Runtime {
 		ESSymbol Name {get;}
 		String NameString {get;}
 		ESPathname pathname();
-		String PathnameString {get;}
+		String QualifiedName {get;}
 		String HostSystemNamespace {get;}
 		String HostSystemName {get;}
 		String QualifiedHostSystemName {get;}
@@ -700,7 +700,7 @@ namespace EssenceSharp.Runtime {
 			return pn;
 		}
 
-		public String PathnameString {
+		public String QualifiedName {
 			get {return pathname().ToString();}
 		}
 
@@ -1208,7 +1208,7 @@ namespace EssenceSharp.Runtime {
 		#endregion
 
 		public override void printElementsUsing(uint depth, Action<String> append, Action<uint> newLine) {
-			append(PathnameString);
+			append(QualifiedName);
 		}
 
 		public override T valueBy<T>(Operation<T> operation) {

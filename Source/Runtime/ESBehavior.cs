@@ -135,7 +135,6 @@ namespace EssenceSharp.Runtime {
 	public interface BehavioralObject : MethodBinder, TraitUser, NamespaceObject {
 
 		ESObjectSpace ObjectSpace {get;}
-		bool IsArchitecturalBehavior {get;}
 		bool HasSuperclass {get;}
 		ESBehavior Superclass {get;}
 
@@ -316,10 +315,6 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual bool InstancesCanHaveNamedSlots {
-			get {return false;}
-		}
-
-		public virtual bool IsArchitecturalBehavior {
 			get {return false;}
 		}
 
@@ -1715,7 +1710,7 @@ namespace EssenceSharp.Runtime {
 						var sb = new StringBuilder();
 						sb.AppendLine("Unable to bind to specified host system type:");
 						sb.Append("\tClass = ");
-						sb.AppendLine(PathnameString);
+						sb.AppendLine(QualifiedName);
 						sb.Append("\tHostSystemNamespace = ");
 						sb.AppendLine(HostSystemNamespace);
 						sb.Append("\tHostSystemName = ");
@@ -1949,6 +1944,26 @@ namespace EssenceSharp.Runtime {
 		
 		public override ESBehavior Superclass {
 			get {return superclass;}
+		}
+
+		public void subclassesDo(FuncNs.Func<Object, Object> enumerator1) {
+			var size = subclasses.Count;
+			if (size < 1) return;
+			var subclassArray = new ESBehavior[size];
+			subclasses.CopyTo(subclassArray);
+			for (int i = 0; i < size; i++) enumerator1(subclassArray[i]);
+		}
+
+		public void allSubclassesDo(FuncNs.Func<Object, Object> enumerator1) {
+			var size = subclasses.Count;
+			if (size < 1) return;
+			var subclassArray = new ESBehavior[size];
+			subclasses.CopyTo(subclassArray);
+			for (int i = 0; i < size; i++) {
+				var subclass = subclassArray[i];
+				enumerator1(subclass);
+				subclass.allSubclassesDo(enumerator1);
+			}
 		}
 
 		protected bool canInheritFrom(ObjectStateArchitecture instanceArchitecture, ESBehavioralObject aSuperclass) {
@@ -2425,7 +2440,7 @@ namespace EssenceSharp.Runtime {
 			get {
 				var type = InstanceType;
 				if (!type.IsGenericType) {
-					throw new PrimInvalidOperationException("The receiver's instance type is not a generic type (" + PathnameString + ")");
+					throw new PrimInvalidOperationException("The receiver's instance type is not a generic type (" + QualifiedName + ")");
 				}
 				return type.IsGenericTypeDefinition ? type : type.GetGenericTypeDefinition();
 			}
@@ -2984,10 +2999,6 @@ namespace EssenceSharp.Runtime {
 			base.postCopy();
 			var metaclass = Class;
 			if (metaclass != null) setClass((ESBehavior)metaclass.copy());
-		}
-
-		public override bool IsArchitecturalBehavior {
-			get {return objectSpace == null || this == objectSpace.ClassClass || this == objectSpace.MetaclassClass || this == objectSpace.BehaviorClass;}
 		}
 		
 		public override bool IsClass {

@@ -1709,9 +1709,14 @@ namespace EssenceSharp.Runtime {
 			get {return homeClass;}
 		}
 
-		public bool IsArchitecturalBehaviorMethod {
+		public bool IsClassMethod {
 			get {
-				return homeClass == null ? false : homeClass.IsArchitecturalBehavior;
+				return homeClass == null ? false : homeClass.IsMetaclass;
+			}
+		}
+		public bool IsInstanceMethod {
+			get {
+				return !IsClassMethod;
 			}
 		}
 		

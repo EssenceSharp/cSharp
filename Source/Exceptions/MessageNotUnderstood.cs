@@ -64,7 +64,7 @@ namespace EssenceSharp.Exceptions {
 					objectSpace = messageClass.ObjectSpace;
 					var selector = message.Selector;
 					MemberName = selector == null ? "<nil selector>" : selector.PrimitiveValue;
-					ClassName = objectSpace.classOf(receiver).PathnameString;
+					ClassName = objectSpace.classOf(receiver).QualifiedName;
 					tag = objectSpace.symbolFor("MessageNotUnderstood");
 					messageText = ClassName + " instances do not know how to respond to the message '" + MemberName + "'";
 				}

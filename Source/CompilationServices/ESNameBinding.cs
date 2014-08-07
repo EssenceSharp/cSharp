@@ -82,13 +82,13 @@ namespace EssenceSharp.CompilationServices {
 			}
 			if (methodHomeClass == null) methodHomeClass = environment as BehavioralObject;
 
-			var envName = environment == null ? "??" : environment.PathnameString;
+			var envName = environment == null ? "??" : environment.QualifiedName;
 			var methodName = Context.MethodSelector;
 			if (methodName != null) {
 				if (methodHomeClass == null) {
 					nameContext = envName + " ## " + methodName.PrimitiveValue + " => ";
 				} else {
-					nameContext = methodHomeClass.PathnameString + ">>" + methodName.PrimitiveValue + " => ";
+					nameContext = methodHomeClass.QualifiedName + ">>" + methodName.PrimitiveValue + " => ";
 					methodHomeClass.allInstVarNamesAndIndexesDo((instVarName, index) => {
 						if (instVarNames == null) instVarNames = new HashSet<ESSymbol>();
 						instVarNames.Add(instVarName);

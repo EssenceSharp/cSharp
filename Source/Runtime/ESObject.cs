@@ -312,7 +312,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public String QualifiedClassName {
-			get {return @class == null ? GetType().FullName : @class.PathnameString;}
+			get {return @class == null ? GetType().FullName : @class.QualifiedName;}
 		}
 
 		#region Core
@@ -966,11 +966,11 @@ namespace EssenceSharp.Runtime {
 			}
 		
 			public static Object _identityHash_(Object receiver) {
-				return RuntimeHelpers.GetHashCode(receiver);
+				return (long)RuntimeHelpers.GetHashCode(receiver);
 			}
 		
 			public static Object _hash_(Object receiver) {
-				return RuntimeHelpers.GetHashCode(receiver);
+				return (long)RuntimeHelpers.GetHashCode(receiver);
 			}
 
 			public static Object _ifNotNil_(Object receiver, Object notNilAction) {

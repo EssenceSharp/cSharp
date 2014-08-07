@@ -37,6 +37,7 @@ using Microsoft.Scripting.Hosting;
 using EssenceSharp.Properties;
 using EssenceSharp.UtilityServices;
 using EssenceSharp.Exceptions;
+using EssenceSharp.Exceptions.System;
 using EssenceSharp.Runtime;
 #endregion
 
@@ -365,8 +366,14 @@ namespace EssenceSharp.ClientServices {
 				var message = "Script not found: " + pathnameSuffix;
 				Console.WriteLine(message);
 				return message;
-			} else { 
-				return script.Execute(compilationOptions, scriptArgs, out durationToRun);
+			} else {
+				try { 
+					return script.Execute(compilationOptions, scriptArgs, out durationToRun);
+				} catch (InvalidFunctionCallException ex) {
+					var message = "Script argument mismatch: " + pathnameSuffix;
+					Console.WriteLine(message);
+					return message;
+				}
 			}
 		}	
 

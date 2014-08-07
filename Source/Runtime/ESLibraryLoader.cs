@@ -101,7 +101,7 @@ namespace EssenceSharp.Runtime {
 
 		public void printOn(TextWriter stream) {
 			stream.WriteLine("");
-			stream.Write(Environment.PathnameString);
+			stream.Write(Environment.QualifiedName);
 			stream.Write(": ");
 			switch (Severity) {
 				case Severity.Ignore:
@@ -744,7 +744,7 @@ namespace EssenceSharp.Runtime {
 			if (IsVerbose) Console.WriteLine("Declaring constant: " + name + " in: " + ThisNamespace.NameString);
 			var binding = ThisNamespace.declareVariable(name, DefaultConstantAccessPrivilege, null);
 			if (binding == null) {
-				Console.WriteLine("Name binding collision: " + name + " in: " + ThisNamespace.PathnameString);
+				Console.WriteLine("Name binding collision: " + name + " in: " + ThisNamespace.QualifiedName);
 				return false;
 			}
 			association.Key = binding;
@@ -757,7 +757,7 @@ namespace EssenceSharp.Runtime {
 			if (IsVerbose) Console.WriteLine("Declaring variable: " + name + " in: " + ThisNamespace.NameString);
 			var binding = ThisNamespace.declareVariable(name, DefaultVariableAccessPrivilege, null);
 			if (binding == null) {
-				Console.WriteLine("Name binding collision: " + name + " in: " + ThisNamespace.PathnameString);
+				Console.WriteLine("Name binding collision: " + name + " in: " + ThisNamespace.QualifiedName);
 				return false;
 			}
 			association.Key = binding;
@@ -766,14 +766,14 @@ namespace EssenceSharp.Runtime {
 
 		protected virtual bool configureNamespace() {
 			if (NamespaceConfigurationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Configuring namespace: " + ThisNamespace.PathnameString);
+			if (IsVerbose) Console.WriteLine("Configuring namespace: " + ThisNamespace.QualifiedName);
 			Object value;
 			return evaluateAsSelfExpression(ThisNamespace, ThisNamespace, NamespaceConfigurationFile, out value);
 		}
 
 		protected virtual bool initializeThis() {
 			if (initializerFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Initializing: " + ThisNamespace.PathnameString);
+			if (IsVerbose) Console.WriteLine("Initializing: " + ThisNamespace.QualifiedName);
 			Object value;
 			return evaluate(ThisNamespace, ThisNamespace, InitializerFile, out value);
 		}
@@ -781,7 +781,7 @@ namespace EssenceSharp.Runtime {
 		protected virtual bool initializeConstant(Association<ESBindingReference, FileInfo> association) {
 			var binding = association.Key;
 			var file = association.Value;
-			if (IsVerbose) Console.WriteLine("Initializing constant: " + binding.Key + " in: " + ThisNamespace.PathnameString);
+			if (IsVerbose) Console.WriteLine("Initializing constant: " + binding.Key + " in: " + ThisNamespace.QualifiedName);
 			Object value;
 			var success = evaluate(ThisNamespace, binding, file, out value);
 			if (success) {
@@ -794,7 +794,7 @@ namespace EssenceSharp.Runtime {
 		protected virtual bool initializeVariable(Association<ESBindingReference, FileInfo> association) {
 			var binding = association.Key;
 			var file = association.Value;
-			if (IsVerbose) Console.WriteLine("Initializing variable: " + binding.Key + " in: " + ThisNamespace.PathnameString);
+			if (IsVerbose) Console.WriteLine("Initializing variable: " + binding.Key + " in: " + ThisNamespace.QualifiedName);
 			Object value;
 			var success = evaluate(ThisNamespace, binding, file, out value);
 			if (success) {
@@ -894,7 +894,7 @@ namespace EssenceSharp.Runtime {
 
 		protected virtual bool compileMethodsFor(BehavioralObject methodClass, FileInfo methodDeclarationFile) {
 			if (methodDeclarationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Compiling methods for: " + methodClass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Compiling methods for: " + methodClass.QualifiedName);
 			Object value;
 			return evaluateAsSelfExpression(methodClass, methodClass, methodDeclarationFile, out value);
 		}
@@ -955,14 +955,14 @@ namespace EssenceSharp.Runtime {
 
 		protected override bool configureClass() {
 			if (ClassConfigurationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Configuring class: " + ThisClass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Configuring class: " + ThisClass.QualifiedName);
 			Object value;
 			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile, out value);
 		}
 
 		protected override bool configureMetaclass() {
 			if (MetaclassConfigurationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Configuring metaclass: " + ThisMetaclass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Configuring metaclass: " + ThisMetaclass.QualifiedName);
 			Object value;
 			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassConfigurationFile, out value);
 		}
@@ -1020,14 +1020,14 @@ namespace EssenceSharp.Runtime {
 
 		protected override bool configureClass() {
 			if (ClassConfigurationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Configuring instance trait: " + ThisClass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Configuring instance trait: " + ThisClass.QualifiedName);
 			Object value;
 			return evaluateAsSelfExpression(ThisClass, ThisClass, ClassConfigurationFile, out value);
 		}
 
 		protected override bool configureMetaclass() {
 			if (MetaclassConfigurationFile == null) return true;
-			if (IsVerbose) Console.WriteLine("Configuring class trait: " + ThisMetaclass.PathnameString);
+			if (IsVerbose) Console.WriteLine("Configuring class trait: " + ThisMetaclass.QualifiedName);
 			Object value;
 			return evaluateAsSelfExpression(ThisMetaclass, ThisMetaclass, MetaclassConfigurationFile, out value);
 		}
