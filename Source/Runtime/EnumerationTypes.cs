@@ -94,8 +94,8 @@ namespace EssenceSharp.Runtime {
 		Message,					// A Message instance specifies a message that was or could be be sent, along with the message arguments, if any. 
 								// Instances are created by the run time system when and as needed, although application code may also create and 
 								// use instances. Message instances cannot have programmer-accessible named instance variables.
-		MessageSend,					// A MessageSend serves as a polymorphic inline cache that is directly assessible in Essence# code. It is especially
-								// useful in situations where the message to be sent cannot be known at the time the code using it is compiled.
+		MessageSend,					// A MessageSend serves as a polymorphic inline cache that is directly accessible in Essence# code. It is especially
+								// useful in situations where the message to be sent cannot be known at the time the code that uses it is compiled.
 		Association,					// An Association is conceptually the same thing as a CLR KeyValuePair. Associations cannot have programmer-accessible 
 								// named instance variables.
 		BindingReference,				// A BindingReference is a specialized type of of Association used by Namespaces. BindingReferences cannot have 

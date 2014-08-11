@@ -1620,6 +1620,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public override void activate() {
+			if (constraintsMustBeSatisfied) return;
 			constraintsMustBeSatisfied = true;
 			if (!isInstanceTypeValid) invalidateInstanceType();
 			assertValidInheritanceStructure(Superclass);
@@ -1970,6 +1971,7 @@ namespace EssenceSharp.Runtime {
 			if (aSuperclass == null) return true;
 			var superclass = aSuperclass as ESBehavior;
 			if (superclass == null) return false;
+			superclass.activate();
 			if (!isValidInheritanceRelationship(instanceArchitecture, superclass.InstanceArchitecture)) { 
 				return false;
 			}
