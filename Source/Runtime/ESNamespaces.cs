@@ -1159,7 +1159,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected ESBindingReference searchForBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, HashSet<ESNamespace> transitiveClosure) {
-			if (ReferenceEquals(transitiveClosure,	null)) {
+			if (transitiveClosure == null) {
 				transitiveClosure = new HashSet<ESNamespace>(new ESNamesapceIdentityComparator());
 				transitiveClosure.Add(this);
 			} else if (transitiveClosure.Contains(this)) {
@@ -1170,7 +1170,7 @@ namespace EssenceSharp.Runtime {
 			ESBindingReference binding = localBindingAt(key, requestorPrivilege);
 			if (binding != null) return binding;
 			if (importTransitivity == ImportTransitivity.Transitive) {
-				binding = importedBindingAt(key, (AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), transitiveClosure);
+				binding = importedBindingAt(key, requestorPrivilege, transitiveClosure);
 				if (binding != null) return binding;
 			}
 			return inheritedBindingAt(key, requestorPrivilege, ImportTransitivity.Transitive, transitiveClosure);

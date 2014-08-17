@@ -14,12 +14,10 @@
     <EnableSecurityDebugging>false</EnableSecurityDebugging>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.35.Debug|x86'">
-    <StartArguments>
-    </StartArguments>
+    <StartArguments>Metaprogramming</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x86.40.Debug|x86'">
-    <StartArguments>
-    </StartArguments>
+    <StartArguments>-d "DateAndTime now dayOfWeek"</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'x64.35.Debug|x64'">
     <StartArguments>

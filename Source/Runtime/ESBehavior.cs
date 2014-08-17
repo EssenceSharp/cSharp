@@ -1623,7 +1623,10 @@ namespace EssenceSharp.Runtime {
 			if (constraintsMustBeSatisfied) return;
 			constraintsMustBeSatisfied = true;
 			if (!isInstanceTypeValid) invalidateInstanceType();
-			assertValidInheritanceStructure(Superclass);
+			var superclass = Superclass;
+			if (superclass == null) return;
+			superclass.activate();
+			assertValidInheritanceStructure(superclass);
 		}
 
 		public virtual ObjectStateArchitecture InstanceArchitecture {
@@ -1971,7 +1974,6 @@ namespace EssenceSharp.Runtime {
 			if (aSuperclass == null) return true;
 			var superclass = aSuperclass as ESBehavior;
 			if (superclass == null) return false;
-			superclass.activate();
 			if (!isValidInheritanceRelationship(instanceArchitecture, superclass.InstanceArchitecture)) { 
 				return false;
 			}
@@ -2062,7 +2064,8 @@ namespace EssenceSharp.Runtime {
 			} else {
 				systemSupertype = systemType.GetGenericTypeDefinition();
 			}
-			if (systemSupertype == null) return;
+			if (systemSupertype == null) 
+				return;
 			var newSuperclass = objectSpace.classForHostSystemType(systemSupertype);
 			setSuperclass(newSuperclass);
 		}
@@ -3322,7 +3325,7 @@ namespace EssenceSharp.Runtime {
 
 		#endregion
 
-		#region Internal operations
+		#region General operations
 
 		internal override void setClass(ESBehavior metaClass) {
 			if (metaClass == null) return;
@@ -3353,7 +3356,7 @@ namespace EssenceSharp.Runtime {
 		#region Namespace protocol
 		
 		protected override String AnonymousName {
-			get {return "AnAnonymousTrait";}
+			get {return "AnAnonymousBehaviorTrait";}
 		}
 
 		#endregion
@@ -3627,6 +3630,14 @@ namespace EssenceSharp.Runtime {
 			get {return ObjectStateArchitecture.InstanceTrait;}
 		}
 
+		#region Namespace protocol
+		
+		protected override String AnonymousName {
+			get {return "AnAnonymousInstanceTrait";}
+		}
+
+		#endregion
+
 		public override T valueBy<T>(Operation<T> operation) {
 		    return operation.applyToInstanceTrait(this);
 		}
@@ -3687,8 +3698,76 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected void bindToInstanceTrait() {
+			environment = instanceTrait;
 			instanceTrait.ClassTrait = this;
 		}
+
+		public bool HasInstanceTrait {
+			get {return instanceTrait != null;}
+		}
+
+		#region Namespace protocol
+		
+		protected override String AnonymousName {
+			get {return "AnAnonymousClassTrait";}
+		}
+
+		public override ESSymbol Name {
+			get {if (name == null) {
+					name = HasInstanceTrait ?
+								objectSpace.symbolFor(InstanceTrait.Name.PrimitiveValue + " classTrait") :
+								objectSpace.symbolFor(AnonymousName);
+				}
+				return name;}
+		}
+
+		internal override void invalidateBinding(AccessPrivilegeLevel accessPrivilegeLevel) {
+			// Do nothing
+		}
+		
+		internal override void nameChanged() {
+			name = null;
+		}
+		
+		internal override void hostSystemNameChanged() {
+			// Do nothing
+		}
+		
+		internal override void hostSystemNamespaceChanged() {
+			// Do nothing
+		}
+
+		protected override void basicSetName(ESSymbol newName) {
+			nameChanged();
+		}
+
+		public override void setName(ESSymbol newName) {
+			nameChanged();
+		}
+
+		public override void renameFromTo(ESSymbol prevName, ESSymbol newName) {
+			nameChanged();
+		}
+
+		public override ESPathname pathname() {
+			ESPathname pn = InstanceTrait.pathname();
+			pn.appendExtension(' ', "classTrait");
+			return pn;
+		}
+
+		public override void setEnvironment(ESNamespace newEnvironment) {
+			// Should not implement
+		}
+
+		protected override AccessPrivilegeLevel unbindFromEnvironment() {
+			return AccessPrivilegeLevel.Local;
+		}
+
+		protected override void bindToEnvironment(AccessPrivilegeLevel accessPrivilegeLevel) {
+			// Should not implement
+		}
+
+		#endregion
 
 		public override T valueBy<T>(Operation<T> operation) {
 		    return operation.applyToClassTrait(this);

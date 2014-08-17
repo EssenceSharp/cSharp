@@ -841,12 +841,6 @@ namespace EssenceSharp.Runtime.Binding {
 
 		public static Expression expressionToInvokeESBlock(ESBlock block, Expression[] arguments) {
 			return expressionToInvokeESBlock(Expression.Constant(block), arguments);
-			/*
-			return 
-				Expression.Invoke(
-					Expression.Constant(block.Function).withType(ESCompiledCode.blockFunctionTypeForNumArgs(block.NumArgs)), 
-					arguments);
-			*/
 		}
 
 		public static Expression expressionToInvokeESMethod(Expression methodExpression, Expression[] argumentsWithReceiver) {
