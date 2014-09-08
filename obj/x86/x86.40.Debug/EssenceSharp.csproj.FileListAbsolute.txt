@@ -20,4 +20,3 @@ C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x86
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x86\x86.40.Debug\EssenceSharp.csproj.GenerateResource.Cache
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x86\x86.40.Debug\EssenceSharp.dll
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x86\x86.40.Debug\EssenceSharp.pdb
-C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x86\x86.40.Debug\EssenceSharp.csprojResolveAssemblyReference.cache

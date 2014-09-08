@@ -16,3 +16,4 @@ C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x64
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x64.35.Release\EssenceSharp.csproj.GenerateResource.Cache
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x64.35.Release\EssenceSharp.dll
 C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x64.35.Release\EssenceSharp.pdb
+C:\Users\Strategesis\Documents\Visual Studio 2013\Projects\Essence Sharp\obj\x64.35.Release\EssenceSharp.csprojResolveAssemblyReference.cache

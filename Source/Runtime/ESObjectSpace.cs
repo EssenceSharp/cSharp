@@ -1497,18 +1497,6 @@ namespace EssenceSharp.Runtime {
 				var thisValue = binding.Value.Value;
 				var hostSystemClassInEnv = thisValue as ESClass;
 
-				/*
-				if (hostSystemClassInEnv == null) {
-					environment.removeKey(nameInEnvironment);
-					if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) {
-						environment[nameInEnvironment] = hostSystemClass.asBindingHandle();
-					} else {
-						hostSystemClass = newClass(hostSystemType);
-						hostSystemClass.setEnvironment(environment);
-					}
-				}
-				*/
-
 				if (typeToClassMap.TryGetValue(hostSystemType, out hostSystemClass)) {
 					if (hostSystemClass != hostSystemClassInEnv) {
 						environment[nameInEnvironment] = hostSystemClass.asBindingHandle();
@@ -2558,6 +2546,10 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public bool ensureStartUp(List<String> libraryNames, bool startupVerbosely, bool reportLibraryLoadTime) {
+			return ensureStartUp(libraryNames, startupVerbosely, reportLibraryLoadTime, true);
+		}
+
+		public bool ensureStartUp(List<String> libraryNames, bool startupVerbosely, bool reportLibraryLoadTime, bool loadStandardLibrary) {
 
 			beVerbose = startupVerbosely;
 
@@ -2565,7 +2557,7 @@ namespace EssenceSharp.Runtime {
 			stopwatch.Start();
 
 			List<NamespaceObject> initialRootNamespaces;
-			if (!isStandardLibraryLoaded) {
+			if (loadStandardLibrary && !isStandardLibraryLoaded) {
 				if (beVerbose) Console.WriteLine("Loading standard library...");
 				if (!ESLibraryLoader.load(this, rootNamespace, StandardLibraryPath, startupVerbosely, true, out initialRootNamespaces)) {
 					Console.WriteLine("Bootstrap load of the Standard Library failed from " + StandardLibraryPath.FullName);

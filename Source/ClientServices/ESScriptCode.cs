@@ -44,12 +44,19 @@ namespace EssenceSharp.ClientServices {
 	public abstract class ESScriptCode : ScriptCode {
 
 		protected SourceUnit		sourceUnit;
+		protected ESObjectSpace		objectSpace;
+		protected ESCompilerOptions	esCompilerOptions;
 		protected NamespaceObject	bindingNamespace;
+		protected ErrorSink		errorSink;
 		protected TimeSpan		durationToRun			= TimeSpan.Zero;
 
-		public ESScriptCode(SourceUnit sourceUnit, NamespaceObject bindingNamespace) : base(sourceUnit) {
-			this.sourceUnit			= sourceUnit;
-			this.bindingNamespace		= bindingNamespace;
+		public ESScriptCode(SourceUnit sourceUnit, ESObjectSpace objectSpace, ESCompilerOptions esCompilerOptions, ErrorSink errorSink) : base(sourceUnit) {
+			this.sourceUnit					= sourceUnit;
+			this.objectSpace				= objectSpace;
+			this.esCompilerOptions				= esCompilerOptions;
+			this.errorSink					= errorSink;
+			bindingNamespace				= esCompilerOptions.getEnvironment(objectSpace);	
+			if (bindingNamespace == null) bindingNamespace	= objectSpace.SmalltalkNamespace;
 		}
 
 		public abstract CodeKind Kind {
@@ -84,6 +91,8 @@ namespace EssenceSharp.ClientServices {
 			}
 		}
 
+		protected abstract bool compile(Scope scope);
+
 		public override Object Run(Scope scope) {
 			return Run(scope, null);
 		}
@@ -100,8 +109,7 @@ namespace EssenceSharp.ClientServices {
 
 		protected ESBlock		block;
 
-		public ESBlockScriptCode(SourceUnit sourceUnit, NamespaceObject bindingNamespace, ESBlock block) : base(sourceUnit, bindingNamespace) {
-			this.block		= block;
+		public ESBlockScriptCode(SourceUnit sourceUnit, ESObjectSpace objectSpace, ESCompilerOptions esCompilerOptions, ErrorSink errorSink) : base(sourceUnit, objectSpace, esCompilerOptions, errorSink) {
 		}
 
 		public override CodeKind Kind {
@@ -116,9 +124,23 @@ namespace EssenceSharp.ClientServices {
 			get {return block;}
 		}
 
-		public override Object Run(Scope scope, Object[] arguments) {
-			if (block == null) return null;
+		protected override bool compile(Scope scope) {
 			bindToScope(scope);
+			var parsingOptions	= esCompilerOptions.ParsingOptions;
+			switch (esCompilerOptions.ExpectedSourceSyntax) {
+				case CompilationUnitKind.SelfExpression:
+					return objectSpace.compileSelfExpression(sourceUnit, parsingOptions, bindingNamespace, esCompilerOptions.Receiver, errorSink, out block);
+				case CompilationUnitKind.BlockDeclaration:
+					return objectSpace.compile(sourceUnit, parsingOptions, bindingNamespace, esCompilerOptions.Receiver, errorSink, out block);
+				default:
+				case CompilationUnitKind.MethodDeclaration:
+					return false;
+			}
+		}
+
+		public override Object Run(Scope scope, Object[] arguments) {
+			compile(scope);
+			if (block == null) return null;
 			Object value;
 			var stopwatch = new Stopwatch();
 			stopwatch.Start();
@@ -136,12 +158,11 @@ namespace EssenceSharp.ClientServices {
 
 	public class ESMethodScriptCode : ESScriptCode {
 
+		protected Object		messageReceiver;
 		protected ESMethod		method;
-		protected Object		defaultReceiver;
 
-		public ESMethodScriptCode(SourceUnit sourceUnit, NamespaceObject bindingNamespace, Object defaultReceiver, ESMethod method) : base(sourceUnit, bindingNamespace) {
-			this.defaultReceiver	= defaultReceiver;
-			this.method		= method;
+		public ESMethodScriptCode(SourceUnit sourceUnit, ESObjectSpace objectSpace, ESCompilerOptions esCompilerOptions, ErrorSink errorSink) : base(sourceUnit, objectSpace, esCompilerOptions, errorSink) {
+			messageReceiver		= esCompilerOptions.Receiver;
 		}
 
 		public override CodeKind Kind {
@@ -156,24 +177,31 @@ namespace EssenceSharp.ClientServices {
 			get {return method;}
 		}
 
-		public Object DefaultReceiver {
-			get {return defaultReceiver;}
+		public Object MessageReceiver {
+			get {return messageReceiver;}
+		}
+
+		protected override bool compile(Scope scope) {
+			bindToScope(scope);
+			var parsingOptions	= esCompilerOptions.ParsingOptions;
+			var methodClass		= (ESBehavioralObject)bindingNamespace;
+			return objectSpace.compileMethod(sourceUnit, parsingOptions, methodClass, esCompilerOptions.getMethodProtocol(objectSpace), errorSink, out method);
 		}
 
 		public override Object Run(Scope scope) {
-			return Run(scope, DefaultReceiver, null);
+			return Run(scope, MessageReceiver, null);
 		}
 
 		public override Object Run(Object[] arguments) {
-			return Run(null, DefaultReceiver, arguments);
+			return Run(null, MessageReceiver, arguments);
 		}
 		public override Object Run(Scope scope, Object[] arguments) {
-			return Run(scope, DefaultReceiver, arguments);
+			return Run(scope, MessageReceiver, arguments);
 		}
 
 		public Object Run(Scope scope, Object receiver, Object[] arguments) {
+			compile(scope);
 			if (method == null) return null;
-			bindToScope(scope);
 
 			Object value;
 			var stopwatch = new Stopwatch();

@@ -418,4 +418,102 @@ namespace EssenceSharp.CompilationServices {
 
 	}
 
+	public class ESCompilationError {
+		protected FileInfo sourceFile;
+		protected NamespaceObject environment;
+		protected String errorDescription;
+		protected SourceSpan errorSpan;
+		protected int errorCode;
+		protected Severity severity;
+
+		public ESCompilationError(
+			FileInfo sourceFile,
+			NamespaceObject environment,
+			String errorDescription,
+			SourceSpan errorSpan,
+			int errorCode,
+			Severity severity) {
+
+			this.sourceFile		= sourceFile;
+			this.environment	= environment;
+			this.errorDescription	= errorDescription;
+			this.errorSpan		= errorSpan;
+			this.errorCode		= errorCode;
+			this.severity		= severity;
+		}
+
+		public String Key {
+			get {return sourceFile.FullName;}
+		}
+
+		public FileInfo SourceFile {
+			get {return sourceFile;}
+		}
+
+		public NamespaceObject Environment {
+			get {return environment;}
+		}
+
+		public String ErrorDescription {
+			get {return errorDescription;}
+		}
+
+		public SourceSpan ErrorSpan {
+			get {return errorSpan;}
+		}
+
+		public int ErrorCode {
+			get {return errorCode;}
+		}
+
+		public Severity Severity {
+			get {return severity;}
+		}
+
+		public void addTo(IDictionary<String, List<ESCompilationError>> compilationErrors) {
+			List<ESCompilationError> errorList;
+			if (!compilationErrors.TryGetValue(Key, out errorList)) {
+				errorList = new List<ESCompilationError>();
+				compilationErrors[Key] = errorList;
+			}
+			errorList.Add(this);
+		}
+
+		public void printOn(TextWriter stream) {
+			stream.WriteLine("");
+			stream.Write(Environment.QualifiedName);
+			stream.Write(": ");
+			switch (Severity) {
+				case Severity.Ignore:
+					stream.Write("Note: [");
+					break;
+				case Severity.Warning:
+					stream.Write("Warning: [");
+					break;
+				case Severity.Error:
+					stream.Write("Error: [");
+					break;
+				case Severity.FatalError:
+					stream.Write("Fatal error: [");
+					break;
+			}
+			stream.Write(ErrorSpan.ToString());
+			stream.Write("] ");
+			stream.Write(ErrorDescription);
+			if (errorCode > 0) {
+				stream.Write(" (error code = " + ErrorCode);
+				stream.Write(")");
+			}
+			stream.WriteLine();
+		}
+
+		public override string ToString() {
+			var sb = new StringBuilder();
+			var stream = new StringWriter(sb);
+			printOn(stream);
+			return sb.ToString();
+		}
+
+	}
+
 }

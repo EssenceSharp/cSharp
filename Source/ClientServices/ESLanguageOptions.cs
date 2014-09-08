@@ -51,7 +51,7 @@ namespace EssenceSharp.ClientServices {
 		protected bool				showClrExceptions		= true;
 		protected bool				providePerformanceStats		= false;
 		protected bool				allowAdaptiveCompilation	= true;
-		protected int				compilationThreshold		= -1;
+		protected int				compilationThreshold		= 5;
 		protected List<String>			scriptSearchPaths;
 		protected DirectoryInfo			essenceSharpPath;
 		protected List<String>			librarySearchPaths		= new List<String>();

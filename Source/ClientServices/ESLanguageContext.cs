@@ -140,9 +140,6 @@ namespace EssenceSharp.ClientServices {
 		public override ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions compilationOptions, ErrorSink errorSink) {
 
 			var esCompilerOptions = (ESCompilerOptions)compilationOptions;
-			var parsingOptions = esCompilerOptions.ParsingOptions;
-			var environment = esCompilerOptions.getEnvironment(ObjectSpace);	
-			if (environment == null) environment = ObjectSpace.SmalltalkNamespace;
 
 			using (var sourceStream = sourceUnit.GetReader()) {
 				switch (sourceUnit.Kind) {
@@ -154,22 +151,12 @@ namespace EssenceSharp.ClientServices {
 					case Microsoft.Scripting.SourceCodeKind.Statements:
 					case Microsoft.Scripting.SourceCodeKind.InteractiveCode:
 					case Microsoft.Scripting.SourceCodeKind.File:
-						ESBlock block = null;
-						ESMethod method = null;
 						switch (esCompilerOptions.ExpectedSourceSyntax) {
 							case CompilationUnitKind.SelfExpression:
-								return librariesLoaded && ObjectSpace.compileSelfExpression(sourceUnit, parsingOptions, environment, esCompilerOptions.Receiver, errorSink, out block) ?
-									new ESBlockScriptCode(sourceUnit, environment, block) :
-									new ESBlockScriptCode(sourceUnit, environment, null);
 							case CompilationUnitKind.BlockDeclaration:
-								return librariesLoaded && ObjectSpace.compile(sourceUnit, parsingOptions, environment, esCompilerOptions.Receiver, errorSink, out block) ?
-									new ESBlockScriptCode(sourceUnit, environment, block) :
-									new ESBlockScriptCode(sourceUnit, environment, null);
+								return new ESBlockScriptCode(sourceUnit, ObjectSpace, esCompilerOptions, errorSink);
 							case CompilationUnitKind.MethodDeclaration:
-								var methodClass = (ESBehavior)environment;
-								return librariesLoaded && ObjectSpace.compileMethod(sourceUnit, parsingOptions, methodClass, esCompilerOptions.getMethodProtocol(ObjectSpace), errorSink, out method) ?
-									new ESMethodScriptCode(sourceUnit, methodClass, esCompilerOptions.Receiver, method) :
-									new ESMethodScriptCode(sourceUnit, methodClass, esCompilerOptions.Receiver, null);
+								return new ESMethodScriptCode(sourceUnit, ObjectSpace, esCompilerOptions, errorSink);
 						}
 						return null;
 				}
