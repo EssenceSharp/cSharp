@@ -2154,29 +2154,27 @@ namespace EssenceSharp.Runtime {
 			}
 		}
 
-		protected ESBindingReference bindingForSubclassAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, HashSet<ESNamespace> transitiveClosure) {
+		protected ESBindingReference bindingForSubclassAt(String key, AccessPrivilegeLevel requestorPrivilege, HashSet<ESNamespace> transitiveClosure) {
 			ESBindingReference binding = localBindingAt(key, requestorPrivilege);
-			if (binding != null) return binding;
+			if (binding != null && requestorPrivilege >= binding.AccessPrivilegeLevel) return binding;
 			binding = importedBindingAt(key, (AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), transitiveClosure);
 			if (binding != null) return binding;
 			return superclass == null ? 
 				null : 
 				superclass.bindingForSubclassAt(key, 
 					(AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
-					importTransitivity, 
 					transitiveClosure);
 		}
 
-		protected override ESBindingReference inheritedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, HashSet<ESNamespace> transitiveClosure) {
+		protected override ESBindingReference inheritedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, HashSet<ESNamespace> transitiveClosure) {
 			ESBindingReference binding = null;
 			if (superclass != null) {
 				binding = superclass.bindingForSubclassAt(
 						key, 
-						(AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
-						importTransitivity, 
+						(AccessPrivilegeLevel)Math.Max((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
 						transitiveClosure);
 			}
-			return binding ?? base.inheritedBindingAt(key, requestorPrivilege, importTransitivity, transitiveClosure);
+			return binding ?? base.inheritedBindingAt(key, requestorPrivilege, transitiveClosure);
 
 		}
 

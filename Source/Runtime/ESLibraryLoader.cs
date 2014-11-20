@@ -169,13 +169,13 @@ namespace EssenceSharp.Runtime {
 				factory.ThisClass.Class.activate();
 			}
 
+			foreach (var factory in namespaceFactories) 
+				if (!factory.initializeAll()) return false;
+
 			foreach (var factory in traitFactories) 
 				if (!factory.initializeAll()) return false;
 
 			foreach (var factory in classFactories) 
-				if (!factory.initializeAll()) return false;
-
-			foreach (var factory in namespaceFactories) 
 				if (!factory.initializeAll()) return false;
 
 			if (compilationErrors.Count > 0) {

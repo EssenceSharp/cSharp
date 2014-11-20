@@ -659,15 +659,15 @@ namespace EssenceSharp.Runtime {
 			#region Primitive Definitions
 
 			public Object _size_(Object receiver) {
-				return ((ESDictionary)receiver).size();
+				return ((ESIdentityDictionary)receiver).size();
 			}
 
 			public Object _isEmpty_(Object receiver) {
-				return ((ESDictionary)receiver).isEmpty;
+				return ((ESIdentityDictionary)receiver).isEmpty;
 			}
 
 			public Object _associationAt_(Object receiver, Object key) {
-				return ((ESDictionary)receiver).associationAt(key);
+				return ((ESIdentityDictionary)receiver).associationAt(key);
 			}
 
 			public Object _associationAtIfAbsent_(Object receiver, Object key, Object absentAction) {
@@ -676,64 +676,64 @@ namespace EssenceSharp.Runtime {
 			}
 
 			public Object _at_(Object receiver, Object key) {
-				return ((ESDictionary)receiver).at(key);
+				return ((ESIdentityDictionary)receiver).at(key);
 			}
 
 			public Object _atIfAbsent_(Object receiver, Object key, Object absentAction) {
-				return ((ESDictionary)receiver).atIfAbsent(key, asFunctor0(absentAction));
+				return ((ESIdentityDictionary)receiver).atIfAbsent(key, asFunctor0(absentAction));
 			}
 
 			public Object _atIfAbsentPut_(Object receiver, Object key, Object computeValueToBeAdded) {
-				return ((ESDictionary)receiver).atIfAbsentPut(key, asFunctor0(computeValueToBeAdded));
+				return ((ESIdentityDictionary)receiver).atIfAbsentPut(key, asFunctor0(computeValueToBeAdded));
 			}
 
 			public Object _add_(Object receiver, Object newAssociation) {
-				return ((ESDictionary)receiver).add((ESAssociation)newAssociation);
+				return ((ESIdentityDictionary)receiver).add((ESAssociation)newAssociation);
 			}
 
 			public Object _atPut_(Object receiver, Object key, Object newValue) {
-				((ESDictionary)receiver).atPut(key, newValue);
+				((ESIdentityDictionary)receiver).atPut(key, newValue);
 				return newValue;
 			}
 
 			public Object _atImmutablyPut_(Object receiver, Object key, Object newValue) {
-				((ESDictionary)receiver).atImmutablyPut(key, newValue);
+				((ESIdentityDictionary)receiver).atImmutablyPut(key, newValue);
 				return newValue;
 			}
 
 			public Object _includesKey_(Object receiver, Object key) {
-				return ((ESDictionary)receiver).includesKey(key);
+				return ((ESIdentityDictionary)receiver).includesKey(key);
 			}
 
 			public Object _removeKey_(Object receiver, Object key) {
-				return ((ESDictionary)receiver).removeKey(key);
+				return ((ESIdentityDictionary)receiver).removeKey(key);
 			}
 
 			public Object _removeKeyIfAbsent_(Object receiver, Object key, Object notFoundAction) {
-				return ((ESDictionary)receiver).removeKeyIfAbsent(key, asFunctor0(notFoundAction));
+				return ((ESIdentityDictionary)receiver).removeKeyIfAbsent(key, asFunctor0(notFoundAction));
 			}
 
 			public Object _associationsDo_(Object receiver, Object enumerator1) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator1);
-				((ESDictionary)receiver).associationsDo(association => f1(association));
+				((ESIdentityDictionary)receiver).associationsDo(association => f1(association));
 				return receiver;
 			}
 
 			public Object _keysDo_(Object receiver, Object enumerator1) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator1);
-				((ESDictionary)receiver).keysDo(key => f1(key));
+				((ESIdentityDictionary)receiver).keysDo(key => f1(key));
 				return receiver;
 			}
 
 			public Object _valuesDo_(Object receiver, Object enumerator1) {
 				FuncNs.Func<Object, Object> f1 = asFunctor1(enumerator1);
-				((ESDictionary)receiver).valuesDo(key => f1(key));
+				((ESIdentityDictionary)receiver).valuesDo(key => f1(key));
 				return receiver;
 			}
 
 			public Object _keysAndValuesDo_(Object receiver, Object enumerator2) {
 				FuncNs.Func<Object, Object, Object> f2 = asFunctor2(enumerator2);
-				((ESDictionary)receiver).keysAndValuesDo((key, value) => f2(key, value));
+				((ESIdentityDictionary)receiver).keysAndValuesDo((key, value) => f2(key, value));
 				return receiver;
 			}
 

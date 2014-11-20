@@ -246,7 +246,7 @@ namespace EssenceSharp.Runtime {
 				if (array.IsImmutable) throw new ImmutableObjectException();
 				var slots = array.IndexedSlots;
 				var slotIndex = ((long)slotIndexObject) - 1;
-				slots[slotIndex] = (byte)newValue;
+				slots[slotIndex] = (byte)(long)newValue;
 				return newValue;
 			}
 		
@@ -743,7 +743,7 @@ namespace EssenceSharp.Runtime {
 				if (array.IsImmutable) throw new ImmutableObjectException();
 				var slots = array.IndexedSlots;
 				var slotIndex = ((long)slotIndexObject) - 1;
-				slots[slotIndex] = (ushort)newValue;
+				slots[slotIndex] = (ushort)(long)newValue;
 				return newValue;
 			}
 		
@@ -919,7 +919,7 @@ namespace EssenceSharp.Runtime {
 				if (array.IsImmutable) throw new ImmutableObjectException();
 				var slots = array.IndexedSlots;
 				var slotIndex = ((long)slotIndexObject) - 1;
-				slots[slotIndex] = (uint)newValue;
+				slots[slotIndex] = (uint)(long)newValue;
 				return newValue;
 			}
 		

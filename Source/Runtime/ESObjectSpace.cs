@@ -1754,6 +1754,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		protected virtual void activeConfigurationProfilePathsDo(Action<DirectoryInfo> enumerator1) {
+			if (activeConfigurationProfileNames == null) return;
 			foreach (var profileName in activeConfigurationProfileNames) {
 				var path = pathForConfigurationProfile(profileName);
 				if (path == null) {
@@ -2475,6 +2476,8 @@ namespace EssenceSharp.Runtime {
 
 			addPrimitiveDomain(new CLR_System_Exception_Primitives());
 			addPrimitiveDomain(new CLR_System_Collections_List_1_Object_Primitives());
+
+			addPrimitiveDomain(new EssenceSharp.Source.Examples.ExamplePrimitives.Domain());
 
 		}
 

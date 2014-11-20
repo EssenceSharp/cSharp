@@ -18,7 +18,7 @@
     </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
     <IsWebBootstrapper>false</IsWebBootstrapper>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <PublishUrl>C:\Users\Strategesis\Documents\Developer\EssenceSharp\Bin\x86\35\Debug\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>

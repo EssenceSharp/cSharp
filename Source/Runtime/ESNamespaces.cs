@@ -1129,17 +1129,20 @@ namespace EssenceSharp.Runtime {
 							specificImportSpec.NameInSource, 
 							AccessPrivilegeLevel.Public,
 							specificImportSpec.Transitivity,
-							source == this ? null : transitiveClosure);
+							// ImportTransitivity.Transitive,
+							key == specificImportSpec.NameInSource ? transitiveClosure : null);
+					if (binding != null) return binding;
 				}
 			}
-			if (binding == null) {
-				foreach (var importSpec in generalImports) {
-					if ((int)requestorPrivilege >= (int)importSpec.AccessPrivilegeLevel) {
-						var source = importSpec.Source as ESNamespace;
+			foreach (var importSpec in generalImports) {
+				if ((int)requestorPrivilege >= (int)importSpec.AccessPrivilegeLevel) {
+					var source = importSpec.Source as ESNamespace;
+					if (source != this) { 
 						binding = source.searchForBindingAt(
 								key, 
 								AccessPrivilegeLevel.Public,
 								importSpec.Transitivity,
+								// ImportTransitivity.Transitive,
 								transitiveClosure);
 						if (binding != null) return binding;
 					}
@@ -1148,38 +1151,37 @@ namespace EssenceSharp.Runtime {
 			return binding;
 		}
 
-		protected virtual ESBindingReference inheritedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, HashSet<ESNamespace> transitiveClosure) {
-			return environment == null ? 
+		protected virtual ESBindingReference inheritedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, HashSet<ESNamespace> transitiveClosure) {
+			return (environment == null || environment == this) ? 
 				null : 
 				environment.searchForBindingAt(
 						key, 
-						(AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
-						importTransitivity,
+						(AccessPrivilegeLevel)Math.Max((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
+						ImportTransitivity.Transitive,
 						transitiveClosure);
 		}
 
 		protected ESBindingReference searchForBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, ImportTransitivity importTransitivity, HashSet<ESNamespace> transitiveClosure) {
 			if (transitiveClosure == null) {
 				transitiveClosure = new HashSet<ESNamespace>(new ESNamesapceIdentityComparator());
-				transitiveClosure.Add(this);
 			} else if (transitiveClosure.Contains(this)) {
 				return null;
-			} else {
-				transitiveClosure.Add(this);
 			}
 			ESBindingReference binding = localBindingAt(key, requestorPrivilege);
-			if (binding != null) return binding;
+			if (binding != null && requestorPrivilege >= binding.AccessPrivilegeLevel) return binding;
 			if (importTransitivity == ImportTransitivity.Transitive) {
+				transitiveClosure.Add(this);
 				binding = importedBindingAt(key, requestorPrivilege, transitiveClosure);
 				if (binding != null) return binding;
 			}
-			return inheritedBindingAt(key, requestorPrivilege, ImportTransitivity.Transitive, transitiveClosure);
+			binding = inheritedBindingAt(key, requestorPrivilege, transitiveClosure);
+			return binding;
 		}
 
 		public ESBindingReference localBindingAt(String key, AccessPrivilegeLevel requestorPrivilege) {
-			ESBindingReference association;
-			if (bindings.TryGetValue(key, out association)) {
-				if ((int)requestorPrivilege >= (int)association.AccessPrivilegeLevel) return association;
+			ESBindingReference binding;
+			if (bindings.TryGetValue(key, out binding)) {
+				if ((int)requestorPrivilege >= (int)binding.AccessPrivilegeLevel) return binding;
 			}
 			return null;
 		}

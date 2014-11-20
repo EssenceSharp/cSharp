@@ -217,6 +217,7 @@ namespace EssenceSharp.Runtime {
 		SinglePrecision,				
 		DoublePrecision,				
 		QuadPrecision,	
+		Examples,
 		CLR_System_Object,
 		CLR_System_Type,
 		CLR_System_Array,
