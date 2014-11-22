@@ -163,6 +163,8 @@ namespace EssenceSharp.Runtime {
 		#region Compiling Methods
 
 		ESMethod compileMethod(ESSymbol protocol, TextReader sourceStream);
+		void recompile();
+		void recompileAll();
 
 		#endregion
 
@@ -2156,25 +2158,26 @@ namespace EssenceSharp.Runtime {
 
 		protected ESBindingReference bindingForSubclassAt(String key, AccessPrivilegeLevel requestorPrivilege, HashSet<ESNamespace> transitiveClosure) {
 			ESBindingReference binding = localBindingAt(key, requestorPrivilege);
-			if (binding != null && requestorPrivilege >= binding.AccessPrivilegeLevel) return binding;
-			binding = importedBindingAt(key, (AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), transitiveClosure);
+			if (binding != null) return binding;
+			binding = importedBindingAt(key, AccessPrivilegeLevel.InHierarchy, transitiveClosure);
 			if (binding != null) return binding;
 			return superclass == null ? 
 				null : 
-				superclass.bindingForSubclassAt(key, 
-					(AccessPrivilegeLevel)Math.Min((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
+				superclass.bindingForSubclassAt(
+					key, 
+					AccessPrivilegeLevel.InHierarchy, 
 					transitiveClosure);
 		}
 
-		protected override ESBindingReference inheritedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, HashSet<ESNamespace> transitiveClosure) {
+		protected override ESBindingReference inheritedBindingAt(String key, HashSet<ESNamespace> transitiveClosure) {
 			ESBindingReference binding = null;
 			if (superclass != null) {
 				binding = superclass.bindingForSubclassAt(
 						key, 
-						(AccessPrivilegeLevel)Math.Max((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
+						AccessPrivilegeLevel.InHierarchy, 
 						transitiveClosure);
 			}
-			return binding ?? base.inheritedBindingAt(key, requestorPrivilege, transitiveClosure);
+			return binding ?? base.inheritedBindingAt(key, transitiveClosure);
 
 		}
 

@@ -160,7 +160,6 @@ namespace EssenceSharp.Runtime {
 
 			foreach (var factory in classFactories) 
 				if (!factory.configureAll()) return false;
-
 			foreach (var factory in classFactories) 
 				if (!factory.compileAll()) return false;
 
@@ -172,11 +171,15 @@ namespace EssenceSharp.Runtime {
 			foreach (var factory in namespaceFactories) 
 				if (!factory.initializeAll()) return false;
 
-			foreach (var factory in traitFactories) 
+			foreach (var factory in traitFactories) { 
+				if (compilationErrors.Count < 1) factory.recompile();
 				if (!factory.initializeAll()) return false;
+			}
 
-			foreach (var factory in classFactories) 
+			foreach (var factory in classFactories) { 
+				if (compilationErrors.Count < 1) factory.recompile();
 				if (!factory.initializeAll()) return false;
+			}
 
 			if (compilationErrors.Count > 0) {
 				Console.WriteLine("Class library compilation error report:");
@@ -194,6 +197,9 @@ namespace EssenceSharp.Runtime {
 				Console.Write(compilationErrors.Count);
 				Console.WriteLine(" compilation errors.");
 				Console.WriteLine("");
+			} else {
+				foreach (var factory in traitFactories) factory.recompile();
+				foreach (var factory in classFactories) factory.recompile();
 			}
 
 			foreach (var factory in traitFactories) 
@@ -800,6 +806,11 @@ namespace EssenceSharp.Runtime {
 			if (IsVerbose) Console.WriteLine("Compiling methods for: " + methodClass.QualifiedName);
 			Object value;
 			return evaluateAsSelfExpression(methodClass, methodClass, methodDeclarationFile, out value);
+		}
+
+		public void recompile() {
+			MetaclassObject.recompile();
+			ClassObject.recompile();
 		}
 
 		public void reportUndeclaredVariables() {

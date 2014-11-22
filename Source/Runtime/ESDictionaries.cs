@@ -328,6 +328,7 @@ namespace EssenceSharp.Runtime {
 		where KeyType : class
 		where ValueType : class {
 
+
 		protected Dictionary<KeyType, AssociationType>							bindings				= null;
  
 		protected ESAbstractDictionary(ESBehavior esClass) : base(esClass) {
@@ -457,7 +458,7 @@ namespace EssenceSharp.Runtime {
 		}
 
 		public virtual void removeAll() {
-			bindings = new Dictionary<KeyType, AssociationType>();
+			bindings = newBindings(3, bindings.Comparer);
 		}
 
 		public void associationsDo(FuncNs.Func<AssociationType, Object> enumerator1) {

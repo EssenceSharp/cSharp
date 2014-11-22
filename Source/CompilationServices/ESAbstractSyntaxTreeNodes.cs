@@ -1096,7 +1096,7 @@ namespace EssenceSharp.CompilationServices {
 			} else {
 				var clrVarDeclarations = new List<ParameterExpression>();
 				Scope.localVariablesDo(
-					delegate (StackResidentVariableDeclaration declaration) {
+					(StackResidentVariableDeclaration declaration) => {
 						if (declaration.OccurrenceCount > 0) 
 							clrVarDeclarations.Add(declaration.asCLRDeclarationExpression());
 					});
@@ -1281,7 +1281,7 @@ namespace EssenceSharp.CompilationServices {
 				var catchBlock = Expression.Catch(exception, handleNonLocalReturnExpression);
 				return Expression.Block(
 					Context.ReturnValueParameter.Type,
-					new []{Context.SelfParameter, Context.ReturnValueParameter},
+					new []{Context.SelfParameter, Context.ReturnValueParameter, Context.ThisContextParameter},
 					Expression.Assign(Context.SelfParameter, Expression.Constant(Context.SelfValue).withType(TypeGuru.objectType)),
 					Expression.TryCatch(Expression.Assign(Context.ReturnValueParameter, bodyExpression.withType(Context.ReturnValueParameter.Type)), catchBlock),
 					Expression.Label(Context.ReturnTarget, Context.ReturnValueParameter));
@@ -1457,6 +1457,7 @@ namespace EssenceSharp.CompilationServices {
 							Expression.Block(TypeGuru.objectType, Expression.Rethrow(), exceptionReturnValue)));
 			var catchBlock = Expression.Catch(exception, handleNonLocalReturnExpression);
 			return  Expression.Block(
+					new []{Context.ThisContextParameter},
 					Expression.TryCatch(body.asCLRExpression(environment, behavior), catchBlock),
 					Expression.Label(Context.ReturnTarget, Context.SelfParameter));
 		}

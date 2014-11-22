@@ -111,10 +111,10 @@ namespace EssenceSharp.CompilationServices {
 					var nsResidentVar = declareNamespaceVariable(ns, nonLocalName, null);
 					nonLocalVar.occurrencesDo(occurrence => occurrence.Declaration = nsResidentVar);
 					if (environment == null && methodHomeClass == null) continue;
-					// /*
-					if (nonLocalName.PrimitiveValue == "Semaphore")
+					/*
+					if (nonLocalName.PrimitiveValue == "symbolTag")
 						Console.WriteLine();
-					// */
+					*/
 					var binding = nonLocalName.bindingInNamespaceIfAbsent(ns, AccessPrivilegeLevel.Local, ImportTransitivity.Transitive, null);
 					if (binding == null) {
 						if (undeclared == null) undeclared = new HashSet<ESSymbol>();

@@ -1151,12 +1151,12 @@ namespace EssenceSharp.Runtime {
 			return binding;
 		}
 
-		protected virtual ESBindingReference inheritedBindingAt(String key, AccessPrivilegeLevel requestorPrivilege, HashSet<ESNamespace> transitiveClosure) {
+		protected virtual ESBindingReference inheritedBindingAt(String key, HashSet<ESNamespace> transitiveClosure) {
 			return (environment == null || environment == this) ? 
 				null : 
 				environment.searchForBindingAt(
 						key, 
-						(AccessPrivilegeLevel)Math.Max((int)requestorPrivilege, (int)AccessPrivilegeLevel.InHierarchy), 
+						AccessPrivilegeLevel.InHierarchy, 
 						ImportTransitivity.Transitive,
 						transitiveClosure);
 		}
@@ -1168,14 +1168,13 @@ namespace EssenceSharp.Runtime {
 				return null;
 			}
 			ESBindingReference binding = localBindingAt(key, requestorPrivilege);
-			if (binding != null && requestorPrivilege >= binding.AccessPrivilegeLevel) return binding;
+			if (binding != null) return binding;
 			if (importTransitivity == ImportTransitivity.Transitive) {
 				transitiveClosure.Add(this);
 				binding = importedBindingAt(key, requestorPrivilege, transitiveClosure);
 				if (binding != null) return binding;
 			}
-			binding = inheritedBindingAt(key, requestorPrivilege, transitiveClosure);
-			return binding;
+			return inheritedBindingAt(key, transitiveClosure);
 		}
 
 		public ESBindingReference localBindingAt(String key, AccessPrivilegeLevel requestorPrivilege) {
