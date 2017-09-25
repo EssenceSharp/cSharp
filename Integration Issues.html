@@ -1,0 +1,136 @@
+<div class="wikidoc">
+<h1>Integration Issues</h1>
+<p>Unlike the situation with most programming languages, an Essence# programmer is expected to add to and even change
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>, <a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">
+classes</a>, <a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">
+traits</a>&nbsp;and methods in the language&rsquo;s <a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+standard library</a>. And the same would be true of any <a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">classes</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;or methods
+ defined (owned) by those who publish <a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+class libraries</a>&nbsp;meant to be shared with and used by others (whether &ldquo;open source&rdquo; or otherwise.)</p>
+<p>But that creates a problem whenever the time comes to acquire and integrate with a later version of a class library for which the programmer isn&rsquo;t the principal author, but which he nevertheless extends or even modifies.</p>
+<p>The Essence#&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">Standard Class Library</a>&nbsp;is one example where the problem of integration occurs. So&nbsp;let's examine the case of integrating
+ with new releases of Essence# as a good&nbsp;example of the issues and/or problems raised by the need to integrate with new releases of &quot;the same&quot; class library,&nbsp;and explain the&nbsp;recommended solutions:&nbsp;</p>
+<h2>Integrating with&nbsp;new&nbsp;releases of Essence#</h2>
+<p>The installer for each new release of Essence# will use&nbsp;the same default installation path, which means that, unless you choose a different installation path each time, or relocate the installation folder for the previous release each time, each&nbsp;installation
+ of a new release of Essence# will be installed on top of the installation folder at the default installation location, and that folder will&nbsp;contain the files for a previous release, unless you take action to prevent it.</p>
+<p>If you don't take action prevent the installation of a new release from overwriting a previous one, then<strong> any
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">classes</a>&nbsp;or
+<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">
+traits</a>&nbsp;in the&nbsp;<a title="Standard Library" href="https://essencesharp.codeplex.com/wikipage?title=Standard%20Library&referringTitle=Documentation">Standard Library</a>--or in any other class libraries that are part of the standard Essence# installation--that
+ were previously installed at the same location will have their methods and configuration definitions completely overwritten by the installation of a new release.
+</strong>You can prevent such overwriting by&nbsp;using<strong>&nbsp;</strong>a different installation path, or else by relocating the folder(s) containing the previous installation before installing the new release.</p>
+<p>In contrast, any&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation"> classes</a>&nbsp;or&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;added
+ locally, or removed as part of the new release, would not be affected by installing a new release on top of a previous release.
+<strong>However, the fact that&nbsp;any&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>&nbsp;or&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;that
+ have been obsoleted and removed from a new release won't be removed from the files residing in the selected installation location (when installing a&nbsp;new release on top of a previous release) may cause serious problems.</strong></p>
+<p>There are several ways to prevent such problems:</p>
+<ul>
+<li><span style="font-size:11px">Choose a different installation path for each new release.</span>
+</li><li><span style="font-size:11px">Create a copy of the files/folders created by the Essence# installe</span><span style="font-size:11px">r</span><span style="font-size:11px">, and use those as your working environment.&nbsp;</span><span style="font-size:11px">Of
+ course, this approach&nbsp;</span><span style="font-size:11px">requires manually changing the value of the %EssenceSharpPath% environment variable so that it points to your working copy of the Essence#
+<a href="https://essencesharp.codeplex.com/wikipage?title=Standard%20Library&referringTitle=Installation%20Instructions">
+standard library</a>&nbsp;and other files, and also requires deleting or relocating the installation folder(s) of any previous release that already inhabits the location you choose when running the installation program for the new release, so this approach&nbsp;may
+ be too burdensome.</span> </li><li><span style="font-size:11px">Never change anything in the hierarchy of %EssenceSharpPath%\Source\Libraries\Standard.lib,
+<strong>and always delete or relocate the folder(s) that contain the previous release before installing the new one</strong>. It is important to note that this does not mean you can't change
+<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">
+classes</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;or
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>&nbsp;in the&nbsp;<a title="Standard Library" href="https://essencesharp.codeplex.com/wikipage?title=Standard%20Library&referringTitle=Documentation">Standard Library</a>; it just means you can't do it by directly modifying the files and folders
+ that reside in the hierarchy under %EssenceSharpPath%\Source\Libraries\Standard.lib. &nbsp;There is another, better way to extend or modify the
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>&nbsp;or&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;defined
+ by the Essence# <a href="https://essencesharp.codeplex.com/wikipage?title=Standard%20Library&referringTitle=Installation%20Instructions">
+standard library</a>. To see what that is, read on.</span> </li></ul>
+<h2>Managing Conflicts Between Class Libraries And/Or Projects, And Different Releases/Versions Thereof</h2>
+<p>To understand the recommended&nbsp;solution patterns, it is first necessary to understand how&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">class libraries</a>&nbsp;work in Essence#:</p>
+<p>An Essence# class library is a container of&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">namespaces</a>, which in turn are containers of&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">classes</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;and/or
+ other <a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>. Of course, that&rsquo;s pretty much the definition of both of those terms in most modern programming languages, so there's nothing new there.</p>
+<p>Here&rsquo;s where Essence# diverges from the norm:</p>
+<ul>
+<li>An Essence# class is also a namespace. It has all the same behavior, capabilities, features and functions as an Essence# namespace. And Essence#
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>&nbsp;and&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;are<em>
+ objects</em>. So they can be sent messages&nbsp;<em>at run time</em>. And those messages can modify or even totally redefine the namespace, class or trait&nbsp;to which they are sent.
+</li><li>It&rsquo;s possible for the same class, trait or namespace to reside in multiple
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>&ndash;even under different names&ndash;because the&nbsp;<em>identity</em>&nbsp;of a class, trait or namespace&nbsp;<em>at runtime</em>&nbsp;is a function of its identity as an object, and not a function of its name.
+</li><li>And it&rsquo;s also possible for the same <a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>&nbsp;and&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;to
+ be defined/declared in different <a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+class libraries</a>. Two different Essence# <a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+class libraries</a>&nbsp;may define completely different&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;and
+ methods, or they may define all the same ones, or (far more likely) they may mostly define different
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;and methods,
+ but have some (usually small) overlap. This is possible because <a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;and methods&nbsp;are
+ not created and grouped together&nbsp;<a href="http://en.wikipedia.org/wiki/Declarative_programming">declaratively</a>, but instead by means of&nbsp;<a href="http://www.smalltalk.org/articles/article_20100320_a3_Getting_The_Message.html">message sending</a>.
+ If namespaces, classes and methods were defined&nbsp;<a href="http://en.wikipedia.org/wiki/Declarative_programming">declaratively</a><em>,</em>&nbsp;then any differences between how they are declared in one class library and the way they are defined in another
+ would create a&nbsp;<a href="http://en.wikipedia.org/wiki/Contradiction">logical contradiction</a>, because logical declarations are&nbsp;<em>universal invariants</em>&nbsp;which must hold everywhere for all time. Since Essence#
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>&nbsp;and&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;are
+ intrinsically&nbsp;<em>dynamic</em>, differing definitions do not create a system panic: The system is designed to permit such things to&nbsp;<em>change over time</em>. So, if &ldquo;the same&rdquo; class can differ from itself from one moment to the next
+ as the program runs, then it can certainly differ from itself with respect to how it is defined in various and sundry class libraries. Therefore, such differences need not&ndash;and do not&ndash;cause any errors at compile time.
+</li><li>An Essence# code base can and does contain what would, in a static language where classes are defined&nbsp;<a href="http://en.wikipedia.org/wiki/Declarative_programming"><em>declaratively</em>&nbsp;</a>so that their name, form and behavior are&nbsp;<em>invariants</em>&nbsp;of
+ the system, have to be treated as &ldquo;logical contradictions,&rdquo; and so disallowed as compilation errors. In Essence#, one dynamically specifies which
+<a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+class libraries</a>&nbsp;will be loaded into the execution environment,&nbsp;<em>and in what order</em>. That is how different
+<a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+class libraries</a>&nbsp;are merged together into a unified whole&nbsp;<em>for a specific invocation of a program</em>, where the last library loaded &ldquo;wins&rdquo; any disagreement over the definition of a namespace, class, trait or method. Even better,
+ a class library that merely wants to extend a class by adding a method can do so without a) knowing all the methods defined for the class by any other class library, and b) without thereby deleting all those methods it knows nothing about. The same is true
+ for any methods it modifies. To put it another way, Essence# does not operate using the &ldquo;closed world assumption&rdquo; that if a class library does not assert a fact about a class, then that fact must be false.&nbsp;<strong>The messages a class library
+ sends that construct or modify a namespace, class or trait are never interpreted by the system as the final and complete definition of the namespace, class or trait, to the exclusion of the &ldquo;declarations&rdquo; made in other class libraries about the
+ same class.</strong> </li><li>Finally, Essence# <a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+class libraries</a>&nbsp;are always stored separately from each other. That means they can change independently of each other, even when they define, or modify the properties of, the same namespace, class, trait or method. That also means that that a new version
+ of one library has no effect on the code of another, ever&ndash;even if they define the same namespace, class, trait or method. Yes, they still may conflict with respect to the form, structure or behavior of a namespace, class or trait, but such conflicts
+ would only matter when both are loaded into the same execution context. More importantly,&nbsp;<em>such conflicts can be resolved by yet another class library whose sole purpose and function is to modify the namespaces, classes, traits and methods that have
+ been loaded into the execution environment so that they operate together usefully, and as intended by whoever put them together into a unified solution</em>.
+</li></ul>
+<p><strong>Key facts:</strong></p>
+<ul>
+<li><span style="font-size:11px">If two class libraries that are loaded into the same&nbsp;</span><em style="font-size:11px">execution context</em><span style="font-size:11px">&nbsp;declare &quot;the same&quot; namespace, &quot;the same&quot; class or &quot;the same&quot; trait, then that
+ namespace, class or trait will only be created once. Any modifications to a&nbsp;namespace, class or trait made by any&nbsp;class library will affect that trait, class or namespace globally within the&nbsp;</span><em style="font-size:11px">execution context</em><span style="font-size:11px">&nbsp;of
+ the running program. <strong>A namespace, class or trait defined in one class library is &quot;the same&quot; as one defined&nbsp;in another if their fully-qualified names are identical.</strong></span>
+</li><li><span style="font-size:11px">Therefore, if you create a class library named </span>
+<em style="font-size:11px">Standard.Local</em><span style="font-size:11px"> as a sibling of&nbsp;</span><em style="font-size:11px">%EssenceSharpPath%\Source\Libraries\Standard.lib</em><span style="font-size:11px">, then any
+</span><a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation" style="font-size:11px">classes</a><span style="font-size:11px">,&nbsp;</span><a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation" style="font-size:11px">traits</a><span style="font-size:11px">&nbsp;or&nbsp;</span><a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation" style="font-size:11px">namespaces</a><span style="font-size:11px">&nbsp;you
+ define in your &quot;Standard.Local&quot; library that have the same fully-qualified names&nbsp;as any class, trait or namespace&nbsp;in the &quot;Standard.lib&quot; library will be declaring, defining, configuring&nbsp;and/or adding methods to the exact same
+</span><a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation" style="font-size:11px">classes</a><span style="font-size:11px">,&nbsp;</span><a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation" style="font-size:11px">traits</a><span style="font-size:11px">&nbsp;or&nbsp;</span><a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation" style="font-size:11px">namespaces</a><span style="font-size:11px">&nbsp;as
+ are defined in the&nbsp;&quot;Standard.lib&quot; library. And since the&nbsp;</span><a title="Library Loader" href="https://essencesharp.codeplex.com/wikipage?title=Library%20Loader&referringTitle=Documentation" style="font-size:11px">library loader</a><span style="font-size:11px">&nbsp;always
+ compiles what's in the &quot;Standard.lib&quot; library first, any&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;or
+ methods you specify in your &quot;Standard.Local&quot; library will modify&nbsp;any defined in the &quot;Standard.lib&quot; library. That means you can easily--and without fear of conflicts or collisions when installing a new release--add new instance variables, add new methods,
+ or even change existing methods of any class or trait defined in the &quot;Standard.lib&quot; library just by specifying such changes in some other
+</span><a title="Class Libraries" href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation" style="font-size:11px">class library</a><span style="font-size:11px">.</span>
+</li><li><span style="font-size:11px">It should be noted that the methods declared for a class or trait in the &quot;methods.instance&quot; or in the &quot;methods.class&quot; files for a class or trait do not have to be duplicated in their entirety when redefining them in some other
+</span><a title="Class Libraries" href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation" style="font-size:11px">class library</a><span style="font-size:11px">; you need only declare&nbsp;those
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;or methods
+ you are adding, or re-declare those you are changing.</span> </li></ul>
+<p>So Essence# handles integration conflicts by a) keeping the &ldquo;(source or object) code of record&rdquo; of
+<a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+class libraries</a>&nbsp;distinct from each other&nbsp;<em>permanently</em>, and not just as a necessity of packaging and/or distribution, b) enabling full dynamic control over which
+<a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+class libraries</a>&nbsp;are loaded into the execution environment created when a program is launched, and providing full control over the order in which the
+<a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+class libraries</a>&nbsp;will be loaded, and c) using and embracing the dynamic malleability of objects, including those that are
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>,<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">&nbsp;classes</a>,&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Traits&referringTitle=Documentation">traits</a>&nbsp;or&nbsp;methods,
+ instead of fighting against it.</p>
+<h2>Guidelines</h2>
+<p>In light of the above, it is recommended that the following guidelines be followed:</p>
+<ul>
+<li><span style="font-size:11px">Use different values of the %EssenceSharpPath% environment variable for binding to different releases/versions, different applications, different projects or different frameworks (or any combination thereof.)</span>
+</li><li><span style="font-size:11px">Use different&nbsp;</span><a title="Class Libraries" href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation" style="font-size:11px">class libraries</a><span style="font-size:11px">&nbsp;(perhaps
+ with related names) to hold the code for&nbsp;different releases/versions, applications, projects or frameworks (e.g, NinjaTrader.7 vs. NinjaTrader.8, or Squeak.compat vs.&nbsp;VisualWorks.compat.)</span>
+</li><li><span style="font-size:11px">Use different </span><a title="Class Libraries" href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation" style="font-size:11px">class library</a><span style="font-size:11px">&nbsp;and/or
+ script search paths.</span> </li><li><span style="font-size:11px">Use different <a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>&nbsp;(preventing such conflicts is the primary motivation for having
+<a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespaces</a>&nbsp;in the first place.)</span> </li><li>Use different <a href="https://essencesharp.codeplex.com/wikipage?title=Configuration%20Profiles&referringTitle=Documentation">
+configuration profiles</a>. </li><li><span style="font-size:11px">Use a source code control/versioning system. &nbsp;The code that defines the initial state of an Essence# execution environment resides in the file system as source code (text,) so there's no reason not to do this.</span>
+</li></ul>
+</div><div class="ClearBoth"></div>

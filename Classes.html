@@ -1,0 +1,174 @@
+<div class="wikidoc">
+<h1>Behaviors, classes and metaclasses</h1>
+<p>In Essence#, a <em>class</em> is a specialized type of <em>namespace.</em> However, since the semantics and behavior of namespaces are explained in the documentation section on
+<a href="/wikipage?title=namespaces&referringTitle=Classes">namespaces</a>, this section will only discuss the specific semantics and behavior of classes.<br>
+<br>
+In addition to being a namespace, an Essence# class will&nbsp;play&nbsp;at least two of the following, semantically-distinct&nbsp;roles:</p>
+<ol>
+<li><strong>Creator of instances</strong>, all of which will have the same <em>behavior</em> and the same
+<a href="/wikipage?title=object%20state%20architecture&referringTitle=Classes">object state architecture</a>. To have &quot;the same behavior&quot; means that the instances will respond to the same set of messages in the same way, provided the instances have the same
+ state when they receive the same message. To &quot;have the same <a href="/wikipage?title=object%20state%20architecture&referringTitle=Classes">
+object state architecture</a>&quot; means that the instances will have the same memory layout, &quot;shape,&quot; syntactic structure and/or bit-pattern semantics. In other words, it means the instances of the class&nbsp;will use the same syntax to structure/organize the
+ bits/bytes that represent their value, and that the structure of those bits/bytes will be interpreted semantically in the same way.
+</li><li><strong>Manager/repository of the definition of the <a href="/wikipage?title=object%20state%20architecture&referringTitle=Classes">
+object state architecture</a></strong> of the instances it creates, and/or whose behavior it defines.
+</li><li><strong>Manager/repository of the definition of the <em>behavior</em> of the instances it creates</strong>, where &quot;behavior&quot; means the set of messages to which the instances of the class can respond, and the semantics that the instances will use when responding
+ to a message. </li></ol>
+<p>Of course, not all values are instantiable. There is no way to &quot;create an instance&quot; of primitive values, because such objects are
+<em>immediate values</em> that are not allocated on the heap, and so aren't referenced by means of pointer indirection. Nevertheless, such values can and do have Essence# classes that a) specify the
+<a href="/wikipage?title=object%20state%20architecture&referringTitle=Classes">object state architecture</a> of the values for which they serve as the class, and b) define the behavior (in Essence# code) of such values.<br>
+<br>
+Essence# has 3 different &quot;types&quot; of &quot;classes.&quot; Pay attention, because this gets tricky in parts:</p>
+<ul>
+<li><strong>Behaviors:</strong>
+<ul>
+<li>
+<p>An instance of the class Behavior is a proto-class.</p>
+</li><li>
+<p>Behavior instances have no name, and so cannot bind to a containing namespace the way that an instance of the class Class can.</p>
+</li><li>
+<p>Although it is legal to create direct instances of Behavior, it should only be necessary for specialized purposes, especially when doing advanced metaprogramming.</p>
+</li><li>
+<p>The class Behavior is a Class (it's an instance of the class Class--but only indirectly by way of inheritance.)</p>
+</li><li>
+<p>The class Behavior is the direct superclass of the classes Class and Metaclass.</p>
+</li></ul>
+</li><li><strong>Classes:</strong>
+<ul>
+<li>
+<p>The instances of the class Class (whether direct, or indirect by way of inheritance) are referred to as &quot;classes,&quot; and correspond more closely to the semantics of the term 'class' as used in most other programming languages than the other two types of &quot;classes&quot;
+ do.</p>
+</li><li>
+<p>The class Class&nbsp;is itself a Class (it's an instance of itself--but only indirectly by way of inheritance.)</p>
+</li><li>
+<p>The instances of a class are usually not themselves classes, with one prominent exception (see below.)</p>
+</li><li>
+<p>Unlike a Behavior or a Metaclass, a class (instance of the class Class) has a name--independently of being stored as a namespace entry.</p>
+</li></ul>
+</li><li><strong>Metaclasses </strong>(here's where it gets tricky, so read slowly and think about each point):
+<ul>
+<li>
+<p>The class Metaclass&nbsp;is itself a Class (an instance of the class Class--but only indirectly by way of inheritance.)</p>
+</li><li>
+<p>The instances of the class Metaclass are referred to as &quot;metaclasses.&quot;</p>
+</li><li>
+<p><span style="font-size:11px">A </span><em style="font-size:11px">metaclass</em> is called that because it<em style="font-size:11px">&nbsp;</em>is<span style="font-size:11px"><span style="font-size:11px">&nbsp;the class of a class. This is the only common
+ case where the instances of a class are themselves also classes. If you think this enables the creation of&nbsp;a &quot;</span></span><span style="font-size:11px">M&ouml;bius strip&quot; type structure, you're right. And that fact has practical consequences.</span></p>
+</li><li>
+<p>The class of a string is the class String, but the class of the class String is the String metaclass, which is an instance of the class Metaclass. You can consider the class of the class String a metaclass because it's the class of a class, or because it
+ is an instance of the class Metaclass. Or both. Both interpretations are correct, independently.&nbsp;</p>
+</li><li>
+<p>There is only&nbsp;one <em>canonical instance</em> of a metaclass (pseudo-singleton pattern,) which is traditionally referred to as&nbsp;its&nbsp;<em>sole instance</em> (although that term is a misnomer, because a metaclass may actually have more than one
+ instance.)</p>
+</li><li>
+<p><span style="font-size:11px">The </span><strong style="font-size:11px">class</strong><span style="font-size:11px"> of the class Metaclass is the metaclass of the class Metaclass...which is at the same time an
+</span><strong style="font-size:11px">instance</strong><span style="font-size:11px"> of the class Metaclass. If you decide to get a cup of coffee while you ponder that, we'll understand. Draw yourself a picture. And we warned you that there was the possibility
+ of a &quot;<span style="font-size:11px">M&ouml;bius strip&quot; type structure, and that that fact had practical consequences. We also warned you that this would get tricky.</span></span></p>
+</li><li>
+<p>Unless its <em>canonical instance</em> has no superclass, the superclass of a metaclass is the class of the superclass of its canonical instance.</p>
+</li><li>
+<p>Metaclasses don't have their own names, but instead derive a name from the name of their canonical instance. If the name of the class that is the canonical instance of a metaclass is &quot;String,&quot; then the name of the metaclass will be &quot;String class.&quot; And so
+ the name of the class of the class Metaclass is &quot;Metaclass class.&quot; And &quot;Metaclass class&quot; is itself an instance of Metaclass. Go get another cup of coffee.</p>
+</li><li>
+<p>The &quot;environment&quot; (containing namespace) of a Metaclass is its canonical instance. That's why the methods defined by a metaclass can see the &quot;class variables&quot; defined by its canonical instance, and can also see any global variables imported by its canonical
+ instance.</p>
+</li></ul>
+</li></ul>
+<p><br>
+<strong>Key points:</strong></p>
+<ul>
+<li>
+<p>All &quot;classes&quot; are themselves an instance of a class.</p>
+</li><li>
+<p>The class 'Object' has no superclass, but the superclass of the class of the class 'Object' is the class 'Class.' The same is true for any &quot;root class&quot; that has no superclass. And that's the twist that creates the&nbsp;<span style="font-size:11px">&quot;</span><span style="font-size:11px">M&ouml;bius
+ strip.&quot;&nbsp;See the next point to see the ramifications.</span></p>
+</li><li>
+<p>The class of which any class is an instance inherits from the class Class, because all metaclasses are sublcasses of the class Class--usually indirectly--even though they are also direct instances of the class Metaclass.&nbsp;<em>That's</em> why any class&nbsp;can
+ legitimately be called a &quot;class,&quot; even though all classes are either instances of a metaclass or else are instances of the class Metaclass.</p>
+</li><li>
+<p>Because a class is itself an instance of a class, a class can have instance variables--which are not at all the same as the instance variables it defines for&nbsp;its instances. And a class can also have its own methods, distinct&nbsp;from the ones it defines
+ for its instances. And those &quot;class methods&quot; can be invoked by dynamic dispatch, just like instance methods--because they are in fact the instance methods defined by the class of the class. And the behavior and instance variables&nbsp;of a class can be defined
+ and modified by application programmers. For example, one can add methods to a metaclass which define behavior that is specific to the metaclass' canonical instance--and that behavior can be inherited and/or overridden by the metaclasses of the subclasses
+ of a class.</p>
+</li></ul>
+<h2>Configuring classes</h2>
+<p>To set (or change) the name of a class, send it the message <strong>#name:</strong>
+<em>aSymbol</em> (where the symbol that is the message argument is the desired class name.)
+<br>
+<br>
+To specify the superclass of a class, send it the message <strong>#superclass:</strong>
+<em>aClass</em> (with a class as the message argument.)<br>
+<br>
+To set or change the namespace that contains a class, send it the message <strong>
+#environment:</strong> <em>aNamespace</em> (with a namespace as the message argument.)<br>
+<br>
+To set or change the <em>instance architecture</em> of a class (that is, to specify whether the instances of a class will or will not have named instance variables, and/or whether its instances will have indexed slots (be array like,) or whether its instances
+ will be instances of some CLR type,) send the message <strong>#instanceArchitecture:</strong>
+<em>aSymbol</em> to the class. The valid Symbols that can be used as arguments to the message are all listed in the documentation section on
+<a href="/wikipage?title=object%20state%20architecture&referringTitle=Classes">object state architecture</a>.<br>
+<br>
+To specify the names of the instance variables that the instances of a class will have, send the message
+<strong>#instanceVariableNames:</strong> <em>anArrayOfSymbols</em> to the class, as in the following example:</p>
+<blockquote>
+<pre> DateAndTime instanceVariableNames: #(date nanosecondsSinceStartOfDay timeZone).
+</pre>
+</blockquote>
+<p>Sending the message #instanceVariableNames: to a class will automatically set its instance architecture to #NamedSlots,
+<strong>if</strong> its current instance architecture isn't one that already permits named instance variables.</p>
+<p>More useful examples:</p>
+<blockquote>
+<pre>&quot;Set the instanceArchitecture of a class to #HostSystemObject:&quot;<br>
+OrderedCollection instanceArchitecture: #HostSystemObject.
+</pre>
+</blockquote>
+<blockquote>
+<pre>&quot;Explicitly set the name of the CLR namespace of the CLR type that the class should represent:&quot;<br>
+OrderedCollection hostSystemNamespace: #System.Collections.Generic.</pre>
+</blockquote>
+<blockquote>
+<pre>&quot;Set the unqualified name of the represented CLR type (so that it will be different from the name of the Essence# class.) The type name in the example is semantically equivalent to the C# type 'List&lt;System.Object&gt;', which uses <a title="Documentation on generic types in C#" href="http://msdn.microsoft.com/en-us/library/512aeb7t.aspx" target="_blank">generic type</a> syntax to specify a List whose elements are statically-typed as System.Object:&quot;<br>
+OrderedCollection hostSystemName: 'List`1[[System.Object]]'.</pre>
+</blockquote>
+<blockquote>
+<pre>&quot;Set the CLR type that an Essence# will represent using a single message send (the type name in the example is semantically equivalent to the C# type 'System.Collections.Generic.List&lt;System.Object&gt;', which uses <a title="Documentation on generic types in C#" href="http://msdn.microsoft.com/en-us/library/512aeb7t.aspx" target="_blank">generic type</a> syntax to specify a System.Collections.Generic.List whose elements are statically-typed as System.Object):&quot;</pre>
+<pre>OrderedCollection instanceType: 'System.Collections.Generic.List`1[[System.Object]]' asHostSystemType.</pre>
+<p>&nbsp;</p>
+</blockquote>
+<p><strong>Sending any of the above&nbsp;messages automatically sets the instance architecture of the class to #HostSystemObject.</strong></p>
+<p>Essence# comprehensively and pervasively expects that the names of CLR types will be in the form accepted&nbsp;and used by the CLR's reflection classes. See
+<a title="System.Type documentation" href="http://msdn.microsoft.com/en-us/library/system.type.aspx" target="_blank">
+Microsoft's documentation of System.Type</a>&nbsp;for the details.</p>
+<h2>Adding methods to classes</h2>
+<p>In the case of a class whose <em>instance architecture</em> is #HostSystemObject, it's probable that some (and perhaps all) of the
+<em>aspects</em> defined or inherited by the CLR type represented by the Essence# class will be automatically added &quot;on demand&quot; (when and as needed) to the Essence# class as &quot;virtual&quot; methods. That happens as part of Essence#'s DLR CallSite processing. The
+ methods that will be virtually added in this manner include methods that will get or set any non-private fields and/or properties defined or inherited by the CLR type, methods that will invoke any non-private methods defined or inherited by the CLR type that
+ have no parameters, and methods that will invoke any non-private methods defined or inherited by the CLR type that have just one parameter. Such virtual methods are always added in pairs: The name of one will begin with a capital letter (conforming to .Net
+ naming conventions,) and the name of the other will begin with an initial lower-case letter (conforming to Essence# naming conventions.)
+<br>
+<br>
+Defining Essence# methods that will invoke methods of a CLR type that have more than one parameter is documented in the section on
+<a href="/wikipage?title=Using%20CLR%20Types&referringTitle=Classes">Using CLR Types</a>.<br>
+<br>
+Methods can be added to classes programmatically at run time by sending messages to the class to which the methods should be added:<br>
+<br>
+Given a <em>string</em> whose text is a syntactically-valid method declaration, sending the following message to a class will compile the method and add it to the class:
+<strong>#compileMethodInProtocol:</strong> <em>protocolSymbol</em> <strong>fromString:</strong>
+<em>methodDeclarationString</em> (where <em>protocolSymbol</em> is a symbol that names the method protocol, and
+<em>methodDeclarationString</em> is a string whose text is a syntactically-valid method declaration, as in the following example:</p>
+<ul>
+<li><em>targetClass</em> compileMethodInProtocol: #examples fromString: 'example1 ^3 &#43; 4'.
+</li></ul>
+<p><br>
+But that would be doing it the hard way. There are two easier ways. One of them would be to send the message #protocol:method: to the target class, with a
+<a href="https://essencesharp.codeplex.com/wikipage?title=Method%20Literals&referringTitle=Syntax">
+method literal</a>&nbsp;as the second argument:</p>
+<ul>
+<li><em>targetClass</em> protocol: #examples method: [## example1 ^3 &#43; 4]. </li></ul>
+<p><br>
+But what would usually be the <em>best</em> way would be to declare the method in a
+<em>class library,&nbsp;</em>as explained in the section that documents <a href="/wikipage?title=class%20libraries&referringTitle=Classes">
+class libraries</a>.<br>
+<br>
+<em><br>
+The essence of OOP: It's all messages, all the time.</em></p>
+</div><div class="ClearBoth"></div>

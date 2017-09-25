@@ -1,0 +1,262 @@
+<div class="wikidoc">
+<h1>Using CLR Types</h1>
+<p>There are several&nbsp;issues that you will encounter when using Essence# that involve CLR types:</p>
+<ul>
+<li>Obtaining&nbsp;a CLR type as a value that can be stored in a variable, passed as a parameter or sent messages;
+</li><li>Sending messages to instances of a CLR type; </li><li><a href="https://essencesharp.codeplex.com/wikipage?title=Passing%20Blocks%20As%20Arguments%20To%20Parameters%20Requiring%20A%20CLR%20Delegate&referringTitle=Documentation">Passing blocks as arguments to parameters requiring a&nbsp;CLR delegate</a>;
+</li><li>Raising or handling CLR Events; </li><li>Invoking CLR methods that have &quot;out&quot; or &quot;ref&quot; parameters; </li><li>Converting a value from one CLR type to another; </li><li>Creating an array type with any desired element type; </li><li>Created closed generic types derived from open generic type definitions; </li><li>Creating instances of a CLR type </li></ul>
+<p>All of those things can be done in Essence#. This article will tell you how to do them.</p>
+<h2>Obtaining A CLR Type As An Essence# Value</h2>
+<p>The <a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">
+Essence# class</a>&nbsp;<em>CLR.System.Type</em> (in the Essence# <a href="https://essencesharp.codeplex.com/wikipage?title=Namespaces&referringTitle=Documentation">
+namespace</a>&nbsp;<em>CLR.System</em>, which corresponds to the .Net namespace <em>
+System</em>) has many class messages that answer commonly-used CLR types. For example, the Essence# expression&nbsp;<em>Type string</em>&nbsp;evaluates to the .Net object that represents the .Net type
+<em>System.String</em> and the Essence# expression&nbsp;<em>Type timeSpan</em>&nbsp;evaluates to the .Net object that represents the .Net type
+<em>System.TimeSpan</em>. [<strong>Note</strong>: The messages <em>string</em> and
+<em>timeSpan</em>&nbsp;sent to the <a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">
+Essence# class</a>&nbsp;that represents the CLR class&nbsp;<em>Type</em>&nbsp;are unique to Essence#; the actual .Net class&nbsp;<a href="http://msdn.microsoft.com/en-us/library/System.Type(v=vs.110).aspx">System.Type</a>&nbsp;doesn't support them. You can
+ add Essence#-specific instance methods or class methods to any .Net class or struct; they just won't be available outside of Essence#.]</p>
+<p>Of course, if you have an instance of a CLR&nbsp;type, you can just send it the message #getType (which is a message to which&nbsp;all .Net objects will respond.) Another way to get a CLR type is to send the message #instanceType to the
+<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">
+Essence# class</a>&nbsp;that represents CLR values having that type.</p>
+<p>If the CLR type can&rsquo;t be obtained using one of the techniques explained above, the fallback is to encode the&nbsp;<a href="http://msdn.microsoft.com/en-us/library/system.type.assemblyqualifiedname(v=vs.110).aspx">assembly-qualified name</a>&nbsp;of
+ the type in a string, and then send the string the message #asHostSystemType, as shown in the following example:</p>
+<pre><code>'System.IO.ErrorEventArgs, System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
+        asHostSystemType</code></pre>
+<p>&nbsp;</p>
+<p>In most cases (but not all,) the #asHostSystemType message will fail if the fully-qualified name of the assembly is not provided. Two&nbsp;exceptions to that would be&nbsp;when the type is in the mscorlib assembly or in the EssenceSharp assembly.</p>
+<h2>Automatic Binding To Methods, Properties and Fields Of CLR Types</h2>
+<p>There is no need to do anything in order to use most of the CLR's &quot;primitive types.&quot; The Essence# runtime system handles them automatically and transparently. Specifically, the CLR types bool, char, byte, sbyte, ushort, short, uint, int, ulong, long, float,
+ double, decimal and string can be used in Essence# code as though they were native Essence# values--although Essence# does not have any way to syntactically express literal values that are instances of the CLR value type
+<em>String,</em> but instead uses its own <em>mutable</em> String and <em>immutable</em> Symbol values.
+<br>
+<br>
+The Essence# run time system's dynamic binding&nbsp;subsystem&nbsp;automatically converts between Essence# String/Symbol objects and CLR String values/char array objects as needed. It also auto-converts between Essence# array objects and CLR array objects when
+ and as needed--if possible, which it may not be (see below.) And it auto-converts CLR enumeration constants into Essence# Symbol instances whenever Essence# code sends a message to a CLR enumeration constant, and auto-converts Essence# Symbol values into CLR
+ enumeration constants when and as needed. It also automatically performs&nbsp;number type conversions, and any conversions defined by implicit or explicit conversion operators defined by a CLR type.&nbsp;<strong>It will also&nbsp;convert Essence# blocks into
+ CLR functions with the required parameter type signature.</strong></p>
+<p>In the case of a class whose&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Object%20State%20Architecture&referringTitle=Documentation">instance architecture</a>&nbsp;is #HostSystemObject, it's probable that some (and perhaps all) of the&nbsp;<em>aspects</em>&nbsp;defined
+ or inherited by the CLR type represented by the Essence# class will be automatically added &quot;on demand&quot; (when and as needed) to the Essence# class as &quot;virtual&quot; methods. That happens as part of Essence#'s DLR CallSite processing. The methods that will be virtually
+ added in this manner include methods that will get or set any non-private fields and/or properties defined or inherited by the CLR type, methods that will invoke any non-private methods defined or inherited by the CLR type that have no parameters, and methods
+ that will invoke any non-private methods defined or inherited by the CLR type that have just one parameter. Such virtual methods are always added in pairs: The name of one will begin with a capital letter (conforming to .Net naming conventions,) and the name
+ of the other will begin with an initial lower-case letter (conforming to Essence# naming conventions.)</p>
+<p>There is also a small set of Essence# message selectors that will be auto-translated by the Essence# dynamic binding logic into semantically-equivalent CLR code, when such messages are sent to an instance of a CLR type and the Essence# class that represents
+ that type neither defines nor inherits a method bound to that message selector. The full set of such message selectors is fully documented in the section on
+<a href="https://essencesharp.codeplex.com/wikipage?title=Message%20selectors%20with%20canonical%20semantics&referringTitle=Using%20CLR%20Types" target="_blank">
+message selectors with canonical semantics</a>,&nbsp;but here are a few worth highlighting:</p>
+<ul>
+<li><strong>size</strong>
+<ul>
+<li>If sent to any CLR array or collection, answers the size of the array or collection.
+</li></ul>
+</li><li><strong>at:</strong> <em>anIndexOrKey</em>
+<ul>
+<li>If sent to any CLR array, indexable collection or Dictionary, answers the value bound to the index or key provided as the message argument.
+</li></ul>
+</li><li><strong>at:</strong> <em>anIndexOrKey</em> <strong>put:</strong> <em>aValue</em>
+<ul>
+<li>If sent to any CLR array, indexable collection or Dictionary, sets the value bound to the index or key provided as the first message argument to the value provided by the second message argument.
+</li></ul>
+</li><li><strong>at:</strong> <em>aKey</em> <strong>ifAbsent:</strong> <em>aZeroArgBlock</em>
+<ul>
+<li>If sent to a CLR Dictionary, answer the value bound to the key provided by the first message argument
+<em>if there is one,</em> otherwise answers the result of evaluating the second argument (as an anonymous function; the argument may be either an Essence# block object,
+<em>or</em> it may be a CLR delegate whose return type is System.Object.) </li></ul>
+</li><li><strong>do:</strong> <em>aOneArgBlock</em>
+<ul>
+<li>If sent to any CLR array or collection, evaluates the argument once for each element of the receiver, with each such element as the argument to the block. If the receiver is a CLR Dictionary, then the elements that will be enumerated will be the
+<em>values</em> stored in the Dictionary, not the KeyValuePairs. </li></ul>
+</li><li><strong>from:</strong> <em>beginIndex</em> <strong>to:</strong> <em>endIndex</em>
+<strong>do:</strong> <em>aOneArgBlock</em>
+<ul>
+<li>If sent to a CLR array or indexable collection, evaluates the final message argument for each element of the receiver in the range of indices specified by the first and second message arguments (in numerical order.)
+</li></ul>
+</li><li><strong>keysDo:</strong> <em>aOneArgBlock</em>
+<ul>
+<li>If sent to any CLR Dictionary, evaluates the argument for each key of the Dictionary, with each such key as the argument to the block.
+</li></ul>
+</li><li><strong>keysAndValuesDo:</strong> <em>aTwoArgBlock</em>
+<ul>
+<li>If sent to any CLR Dictionary, evaluates the argument for each KeyValuePair of the Dictionary, with the key and the value of each such KeyValuePair as the first and second arguments (respectively) to the block.
+</li></ul>
+</li></ul>
+<h2>Defining User-Defined Primitive Methods</h2>
+<p>Although there are many cases where there is no need to define Essence# methods to get or set the fields or properties of an instance of a CLR type, nor to invoke its methods, such is unfortunately not always the case (as mentioned above.)&nbsp;The reason
+ for that is simply because of the differences between the message name syntax used by Essence# and other CLR-based languages (and most other languages, for that matter.) Although one could theoretically have a deterministic &quot;method name translation&quot; function
+ that auto-converts Essence# message selectors such as &quot;displayOn:at:with:&quot; to &quot;displayOnAtWith,&quot; such &quot;translations&quot; would only have any significant probability of &quot;working&quot; when those who write the code in the &quot;foreign&quot; (non-Essence#) language do so with
+ the specific intent of having the method names they use match those that would be generated by such a hypothetical Essence# &quot;method name translation&quot; function. Nor would it be wise to attempt to do such translations in the reverse direction. So we rejected
+ that design in favor of an alternative: User-defined primitive methods.</p>
+<p>Here's an example of a <em>primitive method declaration</em>&nbsp;(where the construct
+<em>primitiveSpecification</em> must be replaced by syntax that is correct for a specific type of primitive):</p>
+<p><code><em><strong>&nbsp; &nbsp; doSomethingPrimitive: methodArg</strong></em></code><br>
+<br>
+<code><em>&nbsp; &nbsp; &nbsp; &nbsp; &lt;primitiveSpecification&gt;</em></code><br>
+<br>
+<code><em>&nbsp; &nbsp; &nbsp; &nbsp; self handlePrimitiveFailure</em></code></p>
+<p>The syntax that primitives of all types share is that the primitive specification must be enclosed by a left angle bracket on the left and right angle bracket on the right, and the angle-bracket-enclosed primitive specification must be the first (but not
+ necessarily the only) statement in the method (and so it must immediately follow the method header and variable declaration list, if there is one.)</p>
+<p>There are 10&nbsp;different types of <em>user-defined primitives</em>, the syntax of which is identical to that of
+<em>system primitives</em>&nbsp;(which will not be discussed further here) except for what can/must occur in between the enclosing angle brackets (see above.) Method declaration syntax--including for primitive methods of both major types--is fully specified
+ in the <a href="/wikipage?title=syntax&referringTitle=Using%20CLR%20Types">syntax</a> documentation. But here is a synopsis:</p>
+<p>The semantics of all types of primitive methods is also the same with respect to the fact that any code following the angle-bracket-enclosed primitive specification will only be executed if the primitive
+<em>fails</em> (although the term 'fails' means different things for different types of primitives.)&nbsp;</p>
+<p>In the context of a <em>user-defined primitive</em>, &quot;failure&quot; specifically&nbsp;refers to&nbsp;a
+<em>dynamic binding failure</em> (which you can think of as a failure of dynamic method dispatch). It does not encompass cases where&nbsp;the invoked function raises its own exception. Such exceptions are never suppressed by the run time system when&nbsp;<em>user-defined
+ primitives</em> are <em>successfully</em> invoked,&nbsp;where &quot;successfully invoked&quot; means that the specified CLR method, property or field was located&nbsp;by the dynamic binding subsystem, and the arguments passed in were found to be type-compatible with
+ the method's (or property's) formal parameter signature, and the <em>dynamic invocation operation</em> does not fail for some other reason. A user-primitive that does a divide-by-zero or attempts to reference the value of a null pointer does not qualify as
+ a <em>dynamic binding failure</em>.</p>
+<p>In the case of user-defined primitives, if there is no code that follows the &quot;<em>&lt;primitiveSpecification&gt;</em>&quot; construct,&nbsp;then the message #doesNotUnderstand: will be sent to the object that was the receiver of the message if the primitive &quot;fails.&quot;&nbsp;What
+ that means is that&nbsp;user-defined primitives have default &quot;primitive failure logic&quot; (which really sort of means &quot;method not found&quot; or &quot;method not invocable with those arguments&quot; logic,) although that default failure logic&nbsp;is not explicitly specified
+ in the source code. However, the&nbsp;default primitive failure logic can be overridden by defining your own failure logic following the &quot;<em>&lt;primitiveSpecification&gt;</em>&quot; construct. There's no need to wrap the call to the primitive in an exception
+ handler to suppress the primitive failure error; just define your own failure logic following the &quot;<em>&lt;primitiveSpecification&gt;</em>&quot; construct, which can be as simple as returning
+<em>self, </em>or as complex as coding the functionality of the failed primitive in Essence#.</p>
+<p>Although user-defined primitives will work when used with <em>any</em> Essence# class, the rest of this discussion assumes that they are being used with instances of CLR types as their receiver, and are not being used with instances of &quot;native&quot; Essence#
+ objects.</p>
+<p>There is more detailed information on configuring Essence# classes so that they represent a CLR type (and thereby govern the behavior of instances of that type when Essence# code sends messages to those instances, and so that they have&nbsp;the ability&nbsp;to
+ create instances of that type) in the documentation of <a href="/wikipage?title=classes&referringTitle=Using%20CLR%20Types">
+classes</a> and <a href="/wikipage?title=namespaces&referringTitle=Using%20CLR%20Types">
+namespaces</a>.</p>
+<h3><em>Type conversion</em> Primitives</h3>
+<p>A type-conversion primitive can be used to convert an instance of one CLR type to that of another. &nbsp;The primitive will succeed or fail for all the same reasons the same operation would if performed using&nbsp;C# code.</p>
+<p>Example primitive spec (with enclosing angle brackets): <strong>&lt;convertTo:
+<em>CLRTypeName</em>&gt;</strong></p>
+<p>The primitive will fail if the&nbsp;<em>CLRTypeName </em>cannot be resolved to a CLR type when the primitive is invoked. The name may be as syntactically simple as
+<em>String</em> or as complex as a fully-specified&nbsp;assembly-qualified type name. The more information provided in the type name, the more likely the primitive&nbsp;will succeed.</p>
+<p><em>Note: Essence# cares far less about the &quot;type&quot; of a value than the CLR does, but even so, converting from one type to another may change which operations are available, how the available operations will work, and which primitives (e.g, native CLR methods)
+ will accept the value as an argument.</em></p>
+<h3><em>GetField</em> Primitives</h3>
+<p>A <strong>getField</strong> primitive can be used to get the value of a named field (instance variable)&nbsp;of a CLR object or value.&nbsp;&nbsp;&nbsp;The primitive&nbsp;will succeed or fail for all the same reasons the same operation would if performed&nbsp;using&nbsp;C#
+ code.</p>
+<p>Example primitive spec (with enclosing angle brackets):&nbsp;<strong>&lt;getField:&nbsp;<em>fieldName</em>&gt;</strong></p>
+<p>The <em>fieldName</em> identifier must exactly match (including capitalization) the name of a field defined or inherited by the receiver's CLR type.</p>
+<h3><em>GetProperty</em> Primitives</h3>
+<p>A <strong>getProperty </strong>primitive can be used to get the value of a named property&nbsp;of a CLR object or value.&nbsp;&nbsp;&nbsp;The primitive&nbsp;will succeed or fail for all the same reasons the same operation would if performed&nbsp;using&nbsp;C#
+ code.</p>
+<p>Example primitive spec (with enclosing angle brackets):&nbsp;<strong>&lt;getProperty:&nbsp;<em>propertyName</em>&gt;</strong></p>
+<p>The&nbsp;<em>propertyName&nbsp;</em>identifier must exactly match (including capitalization) the name of a property&nbsp;defined or inherited by the receiver's CLR type.</p>
+<h3><em>SetField</em> Primitives</h3>
+<p>A <strong>setField&nbsp;</strong>primitive can be used to set the value of a named field (instance variable)&nbsp;of a CLR object or value &nbsp; The primitive&nbsp;will succeed or fail for all the same reasons the same operation would if performed&nbsp;using&nbsp;C#
+ code.</p>
+<p>Example primitive spec (with enclosing angle brackets):&nbsp;<strong>&lt;setField:&nbsp;<em>fieldName&gt;</em></strong></p>
+<p>The&nbsp;<em>fieldName</em>&nbsp;identifier must exactly match (including capitalization) the name of a field defined or inherited by the receiver's CLR type.</p>
+<h3><em>SetProperty</em> Primitives</h3>
+<p>A&nbsp;<strong>setProperty</strong> primitive can be used to&nbsp;set the value of a named property&nbsp;of a CLR object or value.&nbsp; &nbsp;The primitive&nbsp;will succeed or fail for all the same reasons the same operation would if performed&nbsp;using&nbsp;C#
+ code.</p>
+<p>Example primitive spec (with enclosing angle brackets):&nbsp;<strong>&lt;setProperty:&nbsp;<em>propertyName</em>&gt;</strong></p>
+<p>The&nbsp;<em>propertyName&nbsp;</em>identifier must exactly match (including capitalization) the name of a property&nbsp;defined or inherited by the receiver's CLR type.</p>
+<h3><em>InvokeField</em> Primitives</h3>
+<p>An <strong>invokeField&nbsp;</strong>primitive can be used to invoke a delegate (CLR anonymous function) stored in a&nbsp;named field&nbsp;of a CLR object or value.&nbsp;&nbsp;&nbsp;The primitive&nbsp;will succeed or fail for all the same reasons the same
+ operation would if performed&nbsp;using&nbsp;C# code.</p>
+<p>Example primitive spec (with enclosing angle brackets):&nbsp;<strong>&lt;invokeField:&nbsp;<em>fieldName</em>&gt;</strong></p>
+<p>The&nbsp;<em>fieldName</em>&nbsp;identifier must exactly match (including capitalization) the name of a field defined or inherited by the receiver's CLR type.</p>
+<p>The <em>arity</em>&nbsp;(number of method parameters) of the Essence# method and the invoked CLR delegate (anonymous&nbsp;function)&nbsp;must be the same, as must the sequence of the parameters.</p>
+<h3><em>InvokeProperty</em> Primitives</h3>
+<p>An&nbsp;<strong>invokeProperty </strong>primitive can be used to&nbsp;invoke a delegate (CLR anonymous function) returned by&nbsp;a&nbsp;named property&nbsp;of a CLR object or value.&nbsp;&nbsp;&nbsp;The primitive&nbsp;will succeed or fail for all the same
+ reasons the same operation would if performed&nbsp;using&nbsp;C# code.</p>
+<p>Example primitive spec (with enclosing angle brackets):&nbsp;<strong>&lt;invokeProperty:&nbsp;<em>propertyName</em>&gt;</strong></p>
+<p>The&nbsp;<em>propertyName&nbsp;</em>identifier must exactly match (including capitalization) the name of a property&nbsp;defined or inherited by the receiver's CLR type.</p>
+<p>The&nbsp;<em>arity</em>&nbsp;(number of method parameters) of the Essence# method and the invoked CLR delegate (anonymous&nbsp;function)&nbsp;must be the same, as must the sequence of the parameters.</p>
+<h3><em>InvokeEvent</em>&nbsp;Primitives</h3>
+<p>An&nbsp;<strong>invokeEvent&nbsp;</strong>primitive can be used to&nbsp;invoke a CLR event&nbsp;defined (or inherited) by the type of a CLR object or value.&nbsp;&nbsp;&nbsp;The primitive&nbsp;will succeed or fail for all the same reasons the same operation
+ would if performed&nbsp;using&nbsp;C# code.</p>
+<p>Example primitive spec (with enclosing angle brackets):&nbsp;<strong>&lt;invokeEvent:&nbsp;<em>eventName</em>&gt;</strong></p>
+<p>The&nbsp;<em>eventName&nbsp;</em>identifier must exactly match (including capitalization) the name of an event field or property defined or inherited by the receiver's CLR type.</p>
+<p>The&nbsp;<em>arity</em>&nbsp;(number of method parameters) of the Essence# method and the invoked CLR event handler delegate&nbsp;must be the same, as must the sequence of the parameters.</p>
+<h3><em>InvokeMethod</em> Primitives</h3>
+<p>An&nbsp;<strong>invokeMethod </strong>primitive can be used to&nbsp;invoke a method defined (or inherited) by the type of a CLR object or value.&nbsp;&nbsp;&nbsp;The primitive&nbsp;will succeed or fail for all the same reasons the same operation would if
+ performed&nbsp;using&nbsp;C# code.</p>
+<p>Example primitive spec (with enclosing angle brackets):&nbsp;<strong>&lt;invokeMethod:&nbsp;<em>methodName</em>&gt;</strong></p>
+<p>The&nbsp;<em>methodName&nbsp;</em>identifier must exactly match (including capitalization) the name of a method&nbsp;defined or inherited by the receiver's CLR type.</p>
+<p>The&nbsp;<em>arity</em>&nbsp;(number of method parameters) of the Essence# method and the invoked CLR&nbsp;method&nbsp;must be the same, as must the sequence of the parameters.</p>
+<h3><em>CreateInstance</em> Primitives</h3>
+<p>A &quot;create instance&quot;<strong>&nbsp;</strong>primitive is actually just an <strong>
+invokeMethod</strong> primitive whose &quot;method name&quot; argument is the identifier <strong>
+new</strong>. It can be used to create an instance of a CLR type (if such an operation is considered legal by the CLR, which it may not be.)
+<strong>The message receiver must be an Essence# class that represents a CLR type.</strong>&nbsp; In other words, this primitive must be an Essence# &quot;class method&quot; (a method defined by the metaclass of the class.) The primitive works by binding to and invoking
+ one of the constructors defined by the CLR type represented by the canonical instance of the receiver (which is a metaclass.)</p>
+<p>Example primitive spec (with enclosing angle brackets):&nbsp;<strong>&lt;invokeMethod:&nbsp;new&gt;</strong></p>
+<p>The&nbsp;<em>arity</em>&nbsp;(number of method parameters) of the Essence# method and the invoked CLR constructor&nbsp;must be the same, as must the sequence of the parameters.&nbsp;</p>
+<h2>Creating Instances Of CLR Types</h2>
+<p>If a CLR type has a zero-argument constructor, you can create an instance of it by sending it the message #new. If it has a one-argument constructor, then you can create an instance of it by sending it the message #new:
+<em>anArgument</em>, where <em>anArgument</em> must be type-compatible with one or more the type's one-argument constructors, where &quot;type-compatible&quot; means:</p>
+<ul>
+<li>a) the constructor's parameter type is assignable from the type of the run time argument, or
+</li><li>b) there's an implicit or explicit type conversion operator defined from the type of the argument to the type of the constructor's formal parameter, or else
+</li><li>c) the Essence# dynamic binding subsystem supports conversion from the argument type to the parameter type&nbsp;(as explained both above and below.)
+</li></ul>
+<p>Invoking type constructors that have&nbsp;two or more arguments requires defining a user-defined primitive for the&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">Essence# class</a>&nbsp;that represents
+ the&nbsp;CLR type whose instances are to be created,&nbsp;as explained&nbsp;in the section on&nbsp;<em>user-defined primitives&nbsp;</em>(above.)</p>
+<p>Alternatively, you can send an instance creation message to the&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">Essence# class</a>&nbsp;that represents a&nbsp;CLR type. There&nbsp;are three&nbsp;ways to
+ get&nbsp;that <a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">
+Essence# class</a>:</p>
+<ul>
+<li>Send the message #class to an&nbsp;instance of the type. </li><li>Send the message #asClass to the CLR type object. </li><li>Define an&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">Essence# class</a>&nbsp;configured to represent the desired type, as explained in the
+<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">
+documentation section on classes</a>. </li></ul>
+<p>Sending the message #new to the&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">Essence# class</a>&nbsp;that represents a CLR type is equivalent to sending the message #new to the type itself.&nbsp;The
+ same applies to&nbsp;sending the message #new: <em>anArgument</em> to an&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">Essence# class</a>&nbsp;that represents a CLR type.</p>
+<p>Other instance creation messages, of a more complex nature, which will create instances of a CLR type can also be sent to an
+<a href="https://essencesharp.codeplex.com/wikipage?title=Classes&referringTitle=Documentation">
+Essence# class</a>&nbsp;that represents a CLR type, but <em>user-defined primitive</em> methods must be defined for each such message,&nbsp;as explained in the section on
+<em>user-defined primitives&nbsp;</em>(above.)</p>
+<h2>Argument/Parameter Type Conversion</h2>
+<p>Formally&ndash;in other words, in theory&ndash;Essence# is dynamically typed: The &ldquo;type&rdquo; of an expression is simply the&nbsp;<a href="http://en.wikipedia.org/wiki/Power_set">powerset</a>&nbsp;of all messages that can be sent to the expression
+ without causing a method-binding error. And that&nbsp;is also true in practice, in that the compiler permits any message to be sent to any expression, and in the fact that the compiler permits any expression to be assigned to any variable or passed as any
+ argument in any message, and in the fact that typing errors are&nbsp;only discovered and reported at run time.</p>
+<p>But that does&nbsp;<strong>not</strong>&nbsp;mean that any expression can be passed as any argument in any message to any receiver without causing any run-time type errors, even in cases where the only&nbsp;messages that will be sent to the value of an&nbsp;argument
+ won&rsquo;t result in a method binding error. That constraint&nbsp;<em>does</em>&nbsp;hold in many&nbsp;other implementations of dynamic languages, and it&nbsp;<em>does</em>&nbsp;hold when the method that will be invoked by the message is an Essence# method.&nbsp;<strong>But
+ it does not hold when the &ldquo;method&rdquo; that will be invoked is a method defined by a CLR type.</strong></p>
+<p>As should be clear from reading the above material, in Essence# a method of a CLR type is effectively just a
+<em>user primitive</em>&ndash;although the <em>user&nbsp;primitive</em>&nbsp;may be a
+<em>virtual method</em> that&nbsp;does not need to be formally defined as a method in the Essence# source code, because the dynamic binding subsystem automatically binds Essence# messages to the&nbsp;methods of CLR types that require less than 2 arguments,
+ to the&nbsp;constructors of CLR types that require zero&nbsp;arguments or that require only argument, and to any non-private properties or fields of a CLR type.</p>
+<p>It is generally the case in all dynamic language&nbsp;implementations&nbsp;that&nbsp;&ldquo;primitive methods&rdquo;&nbsp;will fail if the types of the&nbsp;arguments are not what the (statically-typed) primitives&nbsp;require&ndash;even if the primitive
+ could have performed its intended operation simply by sending (using dynamic message dispatch) the right messages to the argument. Primitives generally don&rsquo;t send messages to their arguments using dynamic message dispatch. And the methods of CLR types
+ certainly do not.</p>
+<p>Fortunately, the Essence# dynamic binding system will&ndash;if it can&ndash;automatically do the required type conversions for you:&nbsp;As explained above in the section on
+<em>virtual method binding</em>,&nbsp;the run time system's dynamic binding subsystem&nbsp;automatically converts between Essence# String/Symbol objects and CLR String values/char array objects as needed. It also auto-converts between Essence# array objects
+ and CLR array objects when and as needed--if possible, which it may not be (see below.) And it auto-converts CLR enumeration constants into Essence# Symbol instances whenever Essence# code sends a message to a CLR enumeration constant, and auto-converts Essence#
+ Symbol values into CLR enumeration constants when and as needed. It also automatically performs&nbsp;number type conversions, and any conversions defined by implicit or explicit conversion operators defined by a CLR type.&nbsp;<strong>It will even convert
+ Essence# blocks into CLR functions with the required parameter type signature.</strong></p>
+<p>But the Essence# dynamic binding system isn&rsquo;t magic. It can&rsquo;t handle all cases. It&rsquo;s simply not possible to convert any type into any other type. And even when it is, the run time system may not have the information required to do it correctly.
+ And in other cases, the logic to do the required conversion simply hasn't been implemented, for one reason or another.</p>
+<h3>CLR Array Types</h3>
+<p>One common case where a conversion might be possible, but the dynamic binding system doesn&rsquo;t attempt to do it, involves arrays. From the point of view of the CLR, an Essence# array is an array whose elements have the type&nbsp;System.Object (which
+ is how the CLR sees an instance of the Essence# class Array,) or the type System.Byte (a ByteArray,) or the type System.UInt16 (a HalfWordArray,) or the type System.UInt32 (a WordArray,) or the type System.UInt64 (a LongWordArray,) or the type System.Single
+ (a FloatArray,) or the type System.Double (a DoubleArray,) or the type System.Decimal (a QuadArray) or the type String (a Pathname.)</p>
+<p>Unfortunately, there are many methods of CLR types that require an array having elements of some type other than the ones supported by Essence#. If the CLR method parameter requires an array whose element type is not the same as that of the corresponding
+ argument at run time, then the binding to the method will fail.</p>
+<p>Fortunately, if the conversion of the array to one with&nbsp;the required type is possible (because all the elements can be converted to the required CLR type,) you can code that conversion yourself in Essence#. The following example shows how:</p>
+<pre>| clrSourceArray elementType arrayType argument|
+		
+&quot;Step 1: Convert the Essence# array into a CLR array:&quot;
+clrSourceArray := #('one' 'two' 'three') asHostSystemArray.
+
+&quot;Step 2: Get the desired element type of the array to be passed as an argument:&quot;
+elementType := System.Type string.
+
+&quot;Step 3: Create a CLR array type with the necessary element type:&quot;
+arrayType := elementType makeArrayType.
+
+&quot;Step 4: Create the CLR array having the correct size and element type:&quot;
+argument:= arrayType new: clrSourceArray size.
+
+&quot;Step 5: Copy the elements of the source array into the array that will be used as an argument:&quot;
+1 to: clrSourceArray size do: [:index | argument at: index put: (clrSourceArray at: index)].
+^argument</pre>
+<p>&nbsp;</p>
+<p>Or you could just send the message #asHostSystemArrayWithElementType: to the Essence# array, as in the following example:</p>
+<pre>#('one' 'two' 'three') asHostSystemArrayWithElementType: System.Type string<br> </pre>
+<h2>Passing Blocks As Arguments To Parameters Requiring A CLR Delegate</h2>
+<p>Please see the article on&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Passing%20Blocks%20As%20Arguments%20To%20Parameters%20Requiring%20A%20CLR%20Delegate&referringTitle=Documentation">Passing Blocks As Arguments To Parameters Requiring
+ A CLR Delegate</a>.</p>
+<h2>Raising And/Or Handling CLR Events</h2>
+<p>Please see the article on&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=CLR%20Events&referringTitle=Documentation">CLR Events</a>.</p>
+<h2>Handling &quot;out&quot; or &quot;ref&quot; parameters</h2>
+<p>Please see the article on&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Invoking%20CLR%20methods%20that%20have%20%E2%80%9Cout%E2%80%9D%20or%20%E2%80%9Cref%E2%80%9D%20parameters&referringTitle=Documentation">invoking CLR methods that have
+ &ldquo;out&rdquo; or &ldquo;ref&rdquo; parameters</a>.</p>
+<h1>CLR Generic Types</h1>
+<p>Please see the article on using <a href="https://essencesharp.codeplex.com/wikipage?title=CLR%20Generic%20Types">
+CLR Generic Types</a>.</p>
+<p><em>The essence of OOP: It's all messages, all the time.</em></p>
+</div><div class="ClearBoth"></div>

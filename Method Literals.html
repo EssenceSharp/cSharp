@@ -1,0 +1,49 @@
+<div class="wikidoc">
+<p>A <em>method literal</em> is a <a href="/wikipage?title=method%20declaration&referringTitle=Method%20Literals">
+method declaration</a> surrounded by enclosing syntax so that it can be embedded as a literal value in an Essence#&nbsp;<a href="/wikipage?title=expression&referringTitle=Method%20Literals">expression</a>.<br>
+<br>
+The EBNF for <em>method literals:</em></p>
+<pre>MethodLiteral       = &quot;[&quot;, <a href="https://essencesharp.codeplex.com/wikipage?title=Method%20Declarations">MethodDeclaration</a>, &quot;]&quot;;<br><br></pre>
+<p>&nbsp;</p>
+<p>A <em>method literal</em>&nbsp;must be enclosed between a single beginning&nbsp;&quot;[&quot;&nbsp;character and a single ending &quot;]&quot; character, making its syntax rather similar to that of a
+<em>block</em>. The key difference between the syntax of a <em>block</em> and the syntax of a
+<em>method literal</em> is that the construct that immediately follows the beginning &quot;[&quot; character must be unambiguously a
+<em>method header</em>. And that, in fact, is one of the reasons that the &quot;##&quot; (<em>method header</em>)
+<em>token</em> exists, and is required in some cases, but optional in others: When the &quot;##&quot; token is required, it's because its absence would create syntactical ambiguity, such&nbsp;that it would not be possible for the parser to distinguish a
+<em>block</em>&nbsp;from&nbsp;a <em>method literal</em>.</p>
+<p>For more information on the syntax of a <a href="https://essencesharp.codeplex.com/wikipage?title=Method%20Declarations">
+method declaration</a>, please see the <a href="https://essencesharp.codeplex.com/wikipage?title=Method%20Declarations">
+article on that topic</a>.</p>
+<p>Methods defined in Essence# <a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+class libraries</a>&nbsp;declare methods as&nbsp;<em>method literals</em>, instead of as&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Method%20Declarations">method declarations</a>&nbsp;that are the root of their respective parse trees. Using
+ method literals for that purpose obviates any need to encode method names as filenames; or alternatively, it obviates any need to define a special syntax for dealing with sequences of
+<a href="https://essencesharp.codeplex.com/wikipage?title=Method%20Declarations">
+method declarations</a>, or for <em>syntactically</em> embedding method declarations inside of class declarations. So there's no need for a special &quot;file in&quot; syntax, nor any need for a special parser that can consume a special &quot;file in format.&quot;.</p>
+<p>That said, the ANSI standard does require that a <em>conforming implementation</em> support the
+<em>Smalltalk Interchange Format</em>. Essence# does not currently support that format, but will do so before it leaves
+<em>beta</em>.</p>
+<h2>Using Class Specifications</h2>
+<p>A <a href="https://essencesharp.codeplex.com/wikipage?title=Method%20Declarations">
+method declaration</a>&nbsp;may optionally use a class specification construct--but only if a method header token is also used. That means a
+<em>method literal</em> may also use&nbsp;a class specification construct, since its syntax is defined as an embedding of a&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Method%20Declarations">method declaration</a>&nbsp;enclosed in between
+ the tokens &quot;[&quot; and &quot;]&quot;.</p>
+<p>The presence or absence of the <em>class specification construct</em>&nbsp;<strong>may</strong> change&nbsp;the behavior of the compiler:</p>
+<p>If there is no <em>class specification</em> in the <em>method header</em>, then whether or not the compiler will attempt to bind non-local variable references depends upon how the compiler is invoked. If the compiler is&nbsp;not provided with a binding context
+ for non-local variables when it's invoked, and if there is no class specification in the method header to provide one, then the compiler&nbsp;won't check whether any references to non-local variables might be undeclared (however, that check is always performed
+ whenever a method is added to a class or trait.)</p>
+<p>On the other hand, if the <em>method header</em> includes a class specification, then the compiler will always attempt to bind references to non-local variables, using&nbsp;whichever class is specified by the
+<em>class specification construct</em> as the binding context. In that case, any undeclared variables will be treated as compilation errors.</p>
+<p>In other words, the compiler interprets the presence of a&nbsp;<em>class specification construct</em> in a
+<em>method header</em> as a command to verify that there would be no undeclared variables referenced by the method it's compiling, if that method were to be added to the specified class. Conversely, it interprets the absence of a
+<em>class specification</em> as a command to defer any such checks until the method is actually added to a class or trait.</p>
+<p>When compiling either <a href="https://essencesharp.codeplex.com/wikipage?title=Self%20expressions&referringTitle=Syntax">
+self expressions</a>&nbsp;or &quot;do its&quot; (initializers or scripts,) the compiler is not configured to provide any default binding context for
+<a href="https://essencesharp.codeplex.com/wikipage?title=Method%20Declarations">
+method declarations</a>--and therefore is also not configured to do so for <em>method literals</em>. That's because there's no way to know a priori what the &quot;right&quot; binding context might be in such cases.</p>
+<p>Since methods are checked for any references to undeclared variables when they are added to a class or to a trait (which is usually the proper time, because that's when the right binding context is known absolutely,) there are no system integrity issues
+ raised by this binding paradigm. And that's why the <em>method literals</em> in &quot;methods.instance&quot; and &quot;methods.class&quot; files don't use
+<em>class specification constructs</em> in their method headers. There's no need, really.</p>
+<p>However, there are compilation use cases other than compiling &quot;methods.instance&quot; and &quot;methods.class&quot; files. And some of those use cases do require that the compiler bind all variable references during initial compilation--which is why
+<em>class specification</em> syntax is present as on option for <em>method headers</em>.</p>
+<p>&nbsp;</p>
+</div><div class="ClearBoth"></div>

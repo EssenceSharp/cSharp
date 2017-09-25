@@ -1,0 +1,276 @@
+<div class="wikidoc">
+<h1>How To Use ES, The Essence# Script Runner</h1>
+<h2>Core Concepts</h2>
+<p><strong>ES</strong> is a command-line program which can be used to run a script written in Essence#. It must be run using the Windows Command Prompt (which can be launched from the traditional desktop Start menu: Start-&gt;Programs-&gt;Accessories-&gt;Command
+ Prompt,) or from some other command-line shell program, such&nbsp;as PowerShell. If you are not familiar with command-line shell programs such as the Windows Command Prompt program, it is highly recommended that you use the internet to teach yourself the basics.</p>
+<p>The name of the <strong>ES</strong> executable file is <strong>es.exe</strong>, which means that the way to invoke it using the&nbsp;Windows Command Prompt is to enter &quot;&lt;pathnamePrefix&gt;es&quot; as a command in the Command Prompt window,&nbsp;where &lt;pathnamePrefix&gt;
+ is either an absolute filename path, or else a path relative to the current&nbsp;working directory of the Commmand Prompt window. If the system finds
+<strong>es.exe</strong> in the filesystem&nbsp;at the location specified by &lt;pathnamePrefix&gt; (which could be an empty string,) then Windows will&nbsp;execute the program.</p>
+<p>If you use the <em><strong>Essence#Setup.exe</strong></em> program (available from the DOWNLOADS tab on the Essence# Codeplex&nbsp;site) to install Essence#--and use the default installation directories--then the executables and the .DLLs for all supported
+ system profiles (all combinations of processor architecture and .Net framework version) can be found at the following&nbsp;location:</p>
+<ul>
+<li>%UserProfile%\My Documents\Developer\EssenceSharp\Bin\ </li></ul>
+<p>The construct <em>%UserProfile%</em> is a reference to a Windows <em>system environment variable.</em> It evaluates to the home directory of the currently logged-in Windows user.<br>
+<br>
+The binaries for each specific combination of processor architecture (x86 or x64) and .Net framework version are located in subfolders with obvious names.<br>
+<br>
+If you don't use the default installation directories, then the location of the <strong>
+es.exe</strong> program&nbsp;will depend on the location you chose instead of <em>
+%UserProfile%\My Documents\Developer\EssenceSharp\</em> during the installation.<br>
+<br>
+Also, note that there is a (Windows) system environment variable that defines a set of search paths that the Command Prompt (and most other command-line interpreters) will use when attempting to find the .exe (or .com) executable file that corresponds to the
+ name of a command. It would be rather helpful to either place <strong>es.exe</strong> in one of the directories specified by one of those search paths, or else to modify the
+<em>%PATH%</em> system environment variable to add the path to the folder where you decide to keep your working copy of
+<strong>es.exe</strong>. The procedure to accomplish that can easily be found on the internet.</p>
+<p>More detailed <a href="https://essencesharp.codeplex.com/wikipage?title=Installation%20Instructions&referringTitle=Documentation">
+installation instructions</a>&nbsp;for Essence# are available on the <a href="https://essencesharp.codeplex.com/documentation">
+documentation</a>&nbsp;tab.<br>
+<br>
+A future version of the <strong>ES</strong> program will optionally act as a REPL (read-evaluate-print loop) tool, but the current version does not. Consequently, entering command-line arguments is necessary in order to run a script. If
+<strong>ES</strong> is launched without any command-line arguments that specify the script to be run, it simply compiles the
+<a href="/wikipage?title=standard%20library&referringTitle=Running%20A%20Script">
+standard library</a> and reports any syntax or semantic errors that the compiler or
+<a href="/wikipage?title=library%20loader&referringTitle=Running%20A%20Script">library loader</a> may find in the code or structure of the
+<a href="/wikipage?title=standard%20library&referringTitle=Running%20A%20Script">
+standard library</a>. It will also compile any additional <a href="/wikipage?title=class%20libraries&referringTitle=Running%20A%20Script">
+class libraries</a> specified by the command-line arguments, and report any errors that may be found therein (if any.)</p>
+<h2>Alternative to using ES</h2>
+<p>There are many use cases where running a script from the command line would not be a good solution. Any .Net program can be coded&nbsp;to run Essence# scripts directly--and access the results as objects, or pass in parameters as objects--the same way that
+<strong>ES</strong> does it. &nbsp;</p>
+<p>The&nbsp;<a title="DLR" href="https://dlr.codeplex.com/">Dynamic Language Runtime</a>&nbsp;(DLR) defines a standard API which enables any .Net program to execute scripts written in any DLR-hosted programming language. The documentation for doing that is
+ available on the DLR's&nbsp;<a title="DLR" href="https://dlr.codeplex.com/">site right here on Codeplex</a>.&nbsp;Or&nbsp;of course,&nbsp;you could just browse the C# source code for ES, which necessarily shows how to use all the important features of the
+ API.</p>
+<h2>Basic Usage Instructions</h2>
+<p>A single invocation of ES may&nbsp;run no scripts at all (as mentioned above,) a single script, or any number of additional scripts. Each such script will execute serially, one after the other in the same order specified by the command-line arguments. All
+ scripts executed by the same invocation of <strong>ES</strong> will all run in the same execution context--meaning any changes a script makes to the state of the object memory and/or to the set of loaded
+<a href="/wikipage?title=class%20libraries&referringTitle=Running%20A%20Script">class libraries</a> will be visible to any script that runs afterwards. That provides a form of &quot;piping,&quot; although a more traditional implementation of script pipes is planned for
+ a future release.<br>
+<br>
+There are two ways to specify the script to be run. The script can be expressed as a literal code snippet whose source code appears right in the command line, or it can be specified as the pathname of a file that contains the source code of the script.<br>
+<br>
+To run a script specified as a literal code snippet, it is necessary to use the &quot;-d&quot; command line option (which is mnemonic for &quot;do It&quot;). The script's source code must immediately follow the &quot;-d&quot; (although there must be at least one intervening space character.)
+ Unless the script text is a single word (which is legal,) it will be necessary to enclose the text of a script literal with a beginning and ending double-quote character. Here's an example (with the Command Prompt's &quot;prompt&quot; string also shown as a prefix):<br>
+<br>
+<em>C:\Users\Strategesis&gt;es -d &quot;3 &#43; 4&quot;</em><br>
+<br>
+To run a script specified using the pathname of a file containing the source code of the script, simply provide the file's pathname as a command-line argument. There is no need to use any preceding &quot;-x&quot;-style option flags in front of the pathname--nor are any
+ defined that mean &quot;interpret the next command-line argument as the pathname of a script file.&quot;<br>
+<br>
+Pathnames used to specify files that contain script source code can be absolute path names, or they can be pathnames relative to a set of search paths. By default, there are two such search paths, which will be searched in the following order:<br>
+<br>
+1. The current working directory of the Command Prompt. This search path is implemented by the
+<strong>ES</strong> tool itself, not by the Essence# runtime system.<br>
+<br>
+2. %UserProfile%\My Documents\Developer\EssenceSharp\Source\Scripts. This search path is built in to the Essence# runtime system.<br>
+<br>
+<strong>IMPORTANT:</strong> Although the pathname prefix <em>%UserProfile%\My Documents\Developer\EssenceSharp</em>&nbsp;<br>
+is the default value used by the Essence# runtime system,&nbsp;<a href="/wikipage?title=library%20loader&referringTitle=Running%20A%20Script">library loader</a>&nbsp;and the ES tool, it can
+<br>
+be changed in one of two ways: By setting the value of the <em>EssenceSharpPath</em> environment variable,<br>
+or by using a command-line argument to do the same. Unless a command-line argument is used to set
+<br>
+the path to some temporarily-different value, the runtime system,&nbsp;<a href="/wikipage?title=library%20loader&referringTitle=Running%20A%20Script">library loader</a>&nbsp;and the
+<strong>ES</strong> tool <br>
+will use whatever pathname is specified as the value of the <em>EssenceSharpPath</em> environment variable
+<br>
+as the path prefix for finding the shared class libraries and shared scripts (and if that environment<br>
+variable is not defined, then they will use the default path as specified above.) If a command-line
+<br>
+argument is used to specify the <em>EssenceSharpPath</em>, then the value specified by that command-line
+<br>
+argument will be used--but only for that invocation of <strong>ES</strong>. The syntax for the command-line argument
+<br>
+for specifying the <em>EssenceSharpPath</em> is explained below.<br>
+<br>
+<strong>The Essence# installation program (Essence#Setup.exe) defines the <em>EssenceSharpPath</em> environment variable for you, using whatever path you choose when installing the Essence#
+<a href="/wikipage?title=Standard%20Library&referringTitle=Running%20A%20Script">
+Standard Library</a>.</strong><br>
+<br>
+Other script search paths can optionally be added to the list of search paths that will be used. One way to do that is to list additional search paths in any of the &quot;script.searchPaths&quot; files specified&nbsp;by any of the active
+<a href="https://essencesharp.codeplex.com/wikipage?title=Configuration%20Profiles&referringTitle=Documentation">
+configuration profiles</a>&nbsp;that have been defined. For more information, see the section on<a href="https://essencesharp.codeplex.com/wikipage?title=Configuration%20Profiles&referringTitle=Documentation"> configuration profiles</a> (under the
+<a href="https://essencesharp.codeplex.com/documentation">Documentation</a>&nbsp;tab.)<br>
+<br>
+The pathnames listed in the search paths file for scripts must be absolute paths, but may contain
+<br>
+environment variable references such as <em>%UserProfile%</em>, <em>%MyScripts%</em> or
+<em>%WhateverEnvVarYouWantToDefine%</em>.</p>
+<p>The search paths will be checked in the order listed in the file, but &quot;.&quot; (the current working directory of the shell) will always be checked first, whereas
+<em>%EssenceSharpPath%\Source\Scripts</em> will always be checked last (an invariant imposed by the Essence# runtime system.)</p>
+<p>There is no requirement that script files have any particular filename extension, but the system always checks to see whether it may be able to find a file with the extension &quot;.es&quot; if no file can be found using the pathname specified by the user, and the
+ user-specified pathname does not already end with &quot;.es&quot;.</p>
+<p>There are a variety of example scripts that reside in the Source\Scripts\Examples folder. These include&nbsp;Benchmark.es, Reversi.es and MapIt.es. The Benchmark.es script counts from 0 to 100,000,000 using a while loop, the Reversi.es script simply sends
+ the message #copyReversed to a String literal, and the MapIt <br>
+script illustrates scripts that require arguments (the syntax and other requirements for that are
+<br>
+explained below.)</p>
+<p>Two or more scripts can be executed using a single invocation of the ES tool, as in the following<br>
+example (which shows the Command Prompt's &quot;prompt&quot; string as a prefix of the invocation of the
+<br>
+ES tool):</p>
+<p><em>C:\Users\Strategesis&gt;es Reversi&nbsp;Benchmark</em><br>
+<br>
+Try it.</p>
+<h2>Execution Architecture</h2>
+<p>When the <strong>ES</strong> command executes, its first task is to parse/interpret any command line arguments that may have been specified. Its second task is to initialize the Essence# runtime system, which involves the following steps (most of which are
+ actually handled by the Essence# runtime system itself):<br>
+<br>
+1. Start up the DLR &quot;script runtime.&quot; A script runtime is a standard part of the <a href="/wikipage?title=Dynamic%20Language%20Runtime&referringTitle=Running%20A%20Script">
+Dynamic Language Runtime</a> (DLR) architecture, and is not specific to Essence#. An application may start up any number of independent DLR script runtimes. Each script runtime provides comprehensive isolation from all other script runtimes, and is conceptually
+ similar to a .Net &quot;AppDomain,&quot; although an AppDomain can host multiple script runtimes. The Codeplex
+<a href="/wikipage?title=Dynamic%20Language%20Runtime&referringTitle=Running%20A%20Script">
+Dynamic Language Runtime</a> site provides extensive documentation on this topic.<br>
+<br>
+2. Create and initialize an Essence# script engine. A script engine is a standard part of the DLR architecture. There can be any number of different script engines running within any given script runtime, each of which provides an
+<em>independent</em> execution context for running scripts written in a particular programming language. The Codeplex
+<a href="/wikipage?title=Dynamic%20Language%20Runtime&referringTitle=Running%20A%20Script">
+Dynamic Language Runtime</a> site provides extensive documentation on this topic.
+<br>
+<br>
+3. Create the canonical Essence# <a href="/wikipage?title=namespaces&referringTitle=Running%20A%20Script">
+namespaces</a> and classes, and install the canonical primitive methods in their respective classes. This step is actually performed automatically as part of the process of initializing the Essence# script engine. Note that the canonical classes and primitive
+ methods need not be specified as formal class or method declarations (source code) in the
+<a title="Standard Library" href="https://essencesharp.codeplex.com/wikipage?title=Standard%20Library&referringTitle=Documentation">
+Standard Library</a>, because the Essence# runtime system installs them a-priori. So the first three steps do not involve compiling or executing any code written in Essence#.<br>
+<br>
+4. Load Essence#'s <a href="/wikipage?title=Standard%20Library&referringTitle=Running%20A%20Script">
+Standard Library</a>, which involves compiling methods written in Essence# and executing scripts written in Essence# whose purpose is to initialize the Essence# runtime environment (consisting of
+<a href="/wikipage?title=namespaces&referringTitle=Running%20A%20Script">namespaces</a> and the values they contain, such as classes and other global variables.) For more information on the Essence#
+<a href="/wikipage?title=Standard%20Library&referringTitle=Running%20A%20Script">
+Standard Library</a>, please see the [documentation] section.<br>
+<br>
+5. Load any optional user-defined Essence# <a href="/wikipage?title=class%20libraries&referringTitle=Running%20A%20Script">
+class libraries</a>, if any were specified as command-line arguments. For more information on user-defined
+<a href="/wikipage?title=class%20libraries&referringTitle=Running%20A%20Script">class libraries</a>, please see [documentation] section.</p>
+<h2>Advanced Usage Instructions</h2>
+<h3>Script arguments</h3>
+<p>Essence# scripts can have arguments, and <strong>ES</strong> lets you specify the values of any such arguments and then passes those argument values in to the script when it executes the script.
+<br>
+<br>
+Of course, it wouldn't be useful (and in fact would fail with an error) to pass arguments to a script that hasn't been written to receive them. So here's an example of a script that will accept two arguments (the text of the example should be identical to that
+ of the &quot;MapIt&quot; script that is&nbsp;included in the Essence# distribution):<br>
+<br>
+<em>:array :factor | array collect: [:each | each * factor]</em><br>
+<br>
+The first script argument should be an array, and the second should be a number. When executed with suitable arguments, the script will evaluate to a new array whose elements were computed by multiplying the elements of the input array by the specified factor.<br>
+<br>
+Here's how to run the script using ES:<br>
+<br>
+<em>es -d &quot;:array :factor | array collect: [:each | each * factor]&quot;&nbsp;-a &quot;#(2 3 5 8 13 21 34)&quot; -a 2</em><br>
+<br>
+The script output should be the array #(4 6 10 16 26 68).<br>
+<br>
+The syntax for scripts that accept arguments is the same as the syntax for Blocks that have arguments, except that there isn't any enclosing left square bracket nor any enclosing right square bracket. This difference in syntax between the two cases makes it
+ possible to have scripts whose output value is a Block, because it creates a deterministic syntactical distinction between &quot;evaluate the following code&quot; and &quot;construct a Block that runs the following code when asked to do so.&quot;</p>
+<p>The arguments to a script do not have to be literal code snippets. They can also be the result&nbsp;of evaluating a named script (i.e., one that can be found in the file system at one of the currently-defined script search paths.) To do that, use the &quot;-A&quot;
+ option instead of the &quot;-a&quot; option,&nbsp;as in the following example:</p>
+<p><em>es scriptThatRequiresOneArgument -A scriptThatEvaluatesToTheDesiredArgumentValue</em></p>
+<h3>Setting the script's default namespace</h3>
+<p>By default, scripts are compiled and executed using the system default namespace as their name-binding scope. The system default namespace contains the core classes of the
+<a title="Standard Library" href="https://essencesharp.codeplex.com/wikipage?title=Standard%20Library&referringTitle=Documentation">
+Standard Library</a>, such as Object, Behavior, Block and Array. To have the script compiled using a different default namespace, use the &quot;-n &lt;namespaceName&gt;&quot; command-line argument, where &lt;namespaceName&gt; should be a fully-qualified namespace name,
+ such as CLR.Sytem or Refactory.XML.ParsingServices. Here's an example:<br>
+<br>
+<em>es -n CLR.System -d &quot;Random new next&quot;</em><br>
+<br>
+If you try the example, the result should be a random number printed to the Console. It works by creating an instance of the class System.Random (part of .Net Base Class Library [BCL]) and sending it the message #next. The same result could have been achieved
+ without specifying the default namespace, but in that case the name of the class Random would have had to be fully qualified:<br>
+<br>
+<em>es -d &quot;CLR.System.Random new next&quot;</em><br>
+<br>
+If the namespace specified as the operand of the &quot;-n&quot; argument does not exist, it will be automatically created (as will any containing namespaces that don't already exist.) That's so that a script can be used to populate/configure a new namespace, without
+ knowing or caring about the name of the namespace that it will be configuring.<br>
+<br>
+If more than one script is specified in the command-line arguments, the relative ordering of the scripts and the &quot;-n&quot; arguments is important: If the &quot;-n &lt;namespaceName&quot; option occurs before any scripts (whether such scripts are specified as filenames or
+ as literal text,) then the specified namespace will be the one used by default for any later-specified scripts that don't specify their own namespace. However, any &quot;-n &lt;namespaceName&gt;&quot; option that occurs following a script in the list of command-line
+ arguments applies only to whatever script precedes it in the list, and does not apply to any other scripts.
+<br>
+<br>
+The following example illustrates the semantics:<br>
+<br>
+<em>es -n CLR.Collections -d &quot;Console writeLine: 'Hello'&quot; -n CLR.System</em><br>
+<br>
+Although the default namespace is initially specified to be &quot;CLR.Collections&quot; in the above example, that default is overridden
+<em>solely for the &quot;Console writeLine: 'Hello'&quot; script</em> by the option &quot;-n CLR.System&quot; that follows it. However, &quot;CLR.Collections&quot; would still be the default namespace for any scripts that might follow the &quot;Console writeLine: 'Hello'&quot; script, unless any
+ such script also has a following &quot;-n &lt;namespaceName&gt;&quot; option that overrides the default that was set by the first option shown in the example.</p>
+<h3>Importing namespaces</h3>
+<p>By default, the importing of <a href="/wikipage?title=namespaces&referringTitle=Running%20A%20Script">
+namespaces</a> is specified in the configuration code of each namespace, as explained in the site documentation for
+<a href="/wikipage?title=class%20libraries&referringTitle=Running%20A%20Script">class libraries</a>. However, it is possible to specify the import of namespaces dynamically when using ES to run scripts. That can be accomplished using the &quot;-i &lt;namespaceNameList&gt;&quot;
+ option, which will cause the namespaces named in the semicolon-&nbsp;or comma-separated&nbsp;list of namespaces that follows the &quot;-i&quot; argument to be imported into whatever namespace has been specified as that script's default namespace (which could be a different
+ namespace for each script specified in the list of command-line arguments.)<br>
+<br>
+Here's an example:<br>
+<br>
+<em>es -i CLR.System -d &quot;Console writeLine: Random new next printString&quot;</em><br>
+<br>
+Any import options that precede the first script establish the default list of namespaces that will be imported into all scripts specified to be executed for that invocation of ES. If it's necessary to have additional namespaces imported into one or more of
+ the scripts that occur later in the list of command-line arguments, that can be accomplished by inserting another &quot;-i &lt;nsNameList&gt;&quot; option following the script which needs the additional namespace(s) imported (that option specification must occur
+<em>before</em> any even later scripts are specified.)</p>
+<h3>Loading class libraries</h3>
+<p>By default, ES will load only the Essence# <a title="Standard Library" href="https://essencesharp.codeplex.com/wikipage?title=Standard%20Library&referringTitle=Documentation">
+Standard Library</a>. Other <a href="/wikipage?title=class%20libraries&referringTitle=Running%20A%20Script">
+class libraries</a> can be loaded by using the &quot;-l &lt;libraryNameList&gt;&quot; option. The &quot;&lt;libraryNameList&gt;&quot; must be a semicolon- or comma-separated&nbsp;list of library names (which may have only one member,) as shown in the following example:<br>
+<br>
+<em>es GenerateTradingSignals -l MarketAnalysis;MSExcel</em> <br>
+<br>
+The example asks ES to load the <a href="/wikipage?title=class%20libraries&referringTitle=Running%20A%20Script">
+class libraries</a> &quot;MarketAnalysis&quot; (which perhaps contains your own Essence# code to analyze price charts which your GenerateTradingSignals script uses to issue buy and sell signals) and &quot;MSExcel&quot; (which perhaps contains code that enables you to store the
+ script's output in Excel spreadsheets.)<br>
+<br>
+The relative ordering of the &quot;-l &lt;libraryNameList&gt;&quot; option with respect to any other command-line options makes no difference, because class libraries will all be loaded into the execution context before any scripts are executed.</p>
+<p><a title="Class Libraries" href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">Class libraries</a>&nbsp;are resolved using search paths, in the same way that script files are, except that the search paths
+ for scripts and the search paths for&nbsp;<a title="Class Libraries" href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">class libraries</a>&nbsp;are separate and distinct. The two class library search paths
+ that the runtime system defines by default are the following (listed in the same order they will be searched):</p>
+<ul>
+<li><span style="font-size:11px">&quot;.&quot; (the current working directory of the command shell)</span>
+</li><li><span style="font-size:11px">%EssenceSharpPath%\Source\Libraries</span> </li></ul>
+<p>Also, just as is the case for script search paths, additional class library search paths can be added by listing them&nbsp;in any of the &quot;library.searchPaths&quot;&nbsp;files specified&nbsp;by any of the active&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Configuration%20Profiles&referringTitle=Documentation">configuration
+ profiles</a>&nbsp;that have been defined. For more information, see the section on<a href="https://essencesharp.codeplex.com/wikipage?title=Configuration%20Profiles&referringTitle=Documentation">&nbsp;configuration profiles</a>&nbsp;(under the&nbsp;<a href="https://essencesharp.codeplex.com/documentation">Documentation</a>&nbsp;tab.)</p>
+<h3>Adding&nbsp;ad-hoc class library search paths</h3>
+<p>The &quot;-L&quot; command line option can be used to&nbsp;add a class library search path &quot;ad hoc&quot; (meaning that it will be effective only during the invocation of ES where the command-line option is specified.) The &quot;-L&quot; option requires an operand which is a valid
+ pathname. The pathname may use environment variable references (e.g, &quot;%UserProfile%\CurrentProject\Libraries&quot;).</p>
+<p>Library search paths will be added (and therefore searched) in the same order in which they occur in the list of command-line arguments. &nbsp;All such search paths will be added (and therefore searched) before any that are added by the runtime system, or
+ that are specified in the %EssenceSharpPath%\Source\Libraries\searchPaths file.</p>
+<h3>Adding&nbsp;ad-hoc script&nbsp;search paths</h3>
+<p>The &quot;-s&quot; command line option can be used to&nbsp;add a script&nbsp;search path &quot;ad hoc&quot; (meaning that it will be effective only during the invocation of ES where the command-line option is specified.) The &quot;-s&quot; option requires an operand which is a valid
+ pathname. The pathname may use environment variable references (e.g, &quot;%UserProfile%\CurrentProject\Scripts&quot;).</p>
+<p>Script&nbsp;search paths will be added (and therefore searched) in the same order in which they occur in the list of command-line arguments. &nbsp;All such search paths will be&nbsp;added (and therefore searched) before any that are added by the runtime
+ system, or that are specified&nbsp;by the active set of [configuration profiles].</p>
+<h3>Setting the EssenceSharpPath ad hoc</h3>
+<p>The &quot;-p&quot; command-line option can be used to set the EssenceSharpPath transiently--effective only for&nbsp;the invocation of ES in which the option is specified--to anywhere on the local file system, as specified by the operand of the &quot;-p&quot; option (which,
+ of course, must be a valid pathname.)</p>
+<p>The pathname operand may use environment variable references. Note that using this command-line option changes which standard library will be used, and it also changes which shared libraries and shared scripts will be available, including any specified by
+ the Libraries\searchPaths file and/or by the Scripts\searchPaths file.</p>
+<h3>Enabling timing reports</h3>
+<p>By default, ES does not report the duration of time required to load the class libraries nor to run each specified script. To get such &quot;time to run&quot; reports, use the flag option &quot;-t&quot; (it's a flag, so it has no operand.) Note that the reported script run
+ time includes the time required to find the specified script file and compile it, which is probably trivial relative to the run time of a decent benchmark, but probably overwhelms the actual &quot;run time&quot; of trivial scripts.<br>
+<br>
+Example:<br>
+<br>
+<em>es -t Benchmark</em></p>
+<h3>Enabling verbose reporting</h3>
+<p>To get a verbose play-by-play report of each step taken by the <a href="/wikipage?title=library%20loader&referringTitle=Running%20A%20Script">
+library loader</a> as it loads the libraries, use the -v flag option (it's a flag, so it has no operands.) Example:<br>
+<br>
+<em>es -v -l MyBigLibraryThatHasSyntaxErrors</em><br>
+<br>
+As with all flag options in command-line tools that are POSIX conformant, all flag options can be specified together as a group. So the following two examples enable both the &quot;timing reports&quot; option and the &quot;verbose progress reporting&quot; option:<br>
+<br>
+<em>es -tv</em><br>
+<em>es -vt</em></p>
+<h2>POSIX compliance and Windows conventions for command-line options</h2>
+<p>The ES tool has been designed for POSIX compliance. However, because most of those who use it will probably be using it on Windows, it also supports the standard Windows conventions for command-line options. That means the &quot;/&quot; character can be used in place
+ of the leading &quot;-&quot; character for each and every command-line option supported by ES, and it means that the &quot;?&quot; character can be used in place of the POSIX-standard &quot;h&quot; character (to request help/documentation.)
+<br>
+<br>
+So the following examples all do the same thing (request ES to print out help/documentation to the console):<br>
+<br>
+<em>es -h</em><br>
+<em>es /h</em><br>
+<em>es -?</em><br>
+<em>es /?</em><br>
+<br>
+<em><br>
+The essence of OOP: It's all messages, all the time.</em></p>
+</div><div class="ClearBoth"></div>

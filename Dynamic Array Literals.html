@@ -1,0 +1,30 @@
+<div class="wikidoc">
+<p>Unlike <a href="/wikipage?title=static%20array%20literals&referringTitle=Dynamic%20Array%20Literals">
+static array literals</a>, which can only have a restricted set of literal values as elements, a
+<em>dynamic array literal</em> may include the value of any Essence# statement as an element. To support that, the syntax of
+<em>dynamic array literals</em> must be significantly different than that of <a href="/wikipage?title=static%20array%20literals&referringTitle=Dynamic%20Array%20Literals">
+static array literals</a>.<br>
+<br>
+Here's the EBNF for <em>dynamic array literals:</em> <br>
+<br>
+<em>DynamicArrayLiteral = &quot;{&quot; &nbsp;[{Statement, OptionalWhitespace, &quot;.&quot;}, FinalStatement, [&quot;.&quot;] &quot;}&quot;;</em><br>
+<br>
+A <em>dynamic array literal</em> must begin with a single &quot;{&quot; character, which may optionally be followed by a sequence of Essence# statements separated from each other by a &quot;.&quot; character. The final statement in the sequence may optionally be followed by a
+ &quot;.&quot; character. The final character of a <em>dynamic array literal</em> must be a single &quot;}&quot; character.<br>
+<br>
+The value of each element of the <a href="https://essencesharp.codeplex.com/wikipage?title=Array&referringTitle=Standard%20Library">
+array</a>&nbsp;that will be constructed by the <em>dynamic array literal</em> is the value of each statement in the statement sequence as specified in the
+<em>dynamic array literal</em> (in the same order, of course.) As with any Essence#
+<a href="https://essencesharp.codeplex.com/wikipage?title=Array&referringTitle=Standard%20Library">
+array</a>, any objects may be elements of the <a href="https://essencesharp.codeplex.com/wikipage?title=Array&referringTitle=Standard%20Library">
+array</a>, without restriction.<br>
+<br>
+Here's an example of a <em>dynamic array literal:</em></p>
+<pre>{3 &#43; 4. self class. [:collection | collection reduce: [:a :b | a max: b]]. 'Foo'}
+</pre>
+<p>&nbsp;</p>
+<p>The <a href="https://essencesharp.codeplex.com/wikipage?title=Array&referringTitle=Standard%20Library">
+array</a>&nbsp;that will be constructed at run time by the&nbsp;<em>dynamic array literal
+</em>shown in the example will have the same elements as the one&nbsp;constructed by the following code:</p>
+<pre>| array |<br>array := Array new: 4.<br>array <br>        at: 1 put: 3 &#43; 4;<br>        at: 2 put: self class;<br>        at: 3 put: [:collection | collection reduce: [:a :b | a max: b]];<br>        at: 4 put: 'Foo'.<br><br><br><br></pre>
+</div><div class="ClearBoth"></div>

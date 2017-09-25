@@ -1,0 +1,52 @@
+<div class="wikidoc">
+<h1><strong>About Essence#</strong></h1>
+<p><strong>Essence#</strong> is a fully dynamic and highly polymorphic programming language which features pervasive message passing, pervasive dynamic and strong typing, pervasive and deep reflection and pervasive object orientation.
+<strong><em>Essence#</em></strong> implements and reveals the &quot;essence&quot; of object-oriented programming:<br>
+<br>
+<strong>Message passing:</strong> Almost all computation in Essence# happens via the sending of messages. The only way to invoke a method is to send a message&mdash;which necessarily involves dynamic binding (by name) of message to method at runtime (and never
+ at compile time.) The internals of an object are not externally accessible, ever&mdash;the only way to access or modify an object's internal state is to send it a message. So function and data encapsulation and abstraction are both complete and universal.<br>
+<br>
+<strong>Dynamic and strong typing:</strong> Although any object can be assigned to any variable, the only way to access or modify the internal state of an object is to send it a message&mdash;and the sending of any invalid message is detected and prevented
+ at run time. So, even though Essence#'s pervasive use of dynamic typing enables the programmer to define highly polymorphic abstractions with an extremely high degree of applicability and reusability, it is impossible to apply a function to a value for which
+ there is no valid, defined behavior.<br>
+<br>
+<strong>Reflection:</strong> In most programming languages, the specifications of types, classes, functions and subroutines exist only in the source code, and so are not accessible at runtime. But in Essence#, all specifications of all program constructs (classes,
+ methods, etc.) are live objects that exist both at compile time and at runtime&mdash;and those objects are fully accessible to a running program, and can be queried or modified by sending them messages. So an Essence# program can not only fully introspect
+ on itself, it has full power to change itself.<br>
+<br>
+<strong>Object-orientation:</strong> In Essence#, all values are objects&mdash;even booleans, integers and other numbers, characters, strings, classes, blocks of code...and even&quot;null.&quot; That's right, in Essence# you can not only send messages to &quot;null,&quot; you
+ can even add methods to the class of &quot;null,&quot; and then send &quot;null&quot; the corresponding messages! That's because
+<strong>all</strong> Essence# values are instances of a class, and so can all be sent messages. And Essence# classes can be created and modified while the program is running. In Essence#,
+<strong>almost all computation is done by sending messages.</strong> <br>
+<br>
+<strong>Inter-language interoperability:</strong> Thanks to the DLR's Meta Object Protocol,
+<strong>Essence# provides deep and comprehensive integration and interoperability with other programming languages that are hosted on the CLR,</strong> whether those are statically-typed languages such as C# or are dynamically-typed languages that use the DLR's
+ Meta Object Protocol. <br>
+<br>
+<strong>In fact, Essence# serves as an excellent language for scripting the creation and manipulation of C# objects</strong> (for example.) The original motivation for the creation of Essence# was to use it as a
+<a href="http://en.wikipedia.org/wiki/Domain-specific_language">domain specific language</a> for creating and configuring C# objects that specify trading plans generated in response to trading signals. It has been and is being used for that purpose by the original
+ implementer.<br>
+<br>
+<strong>Necessity is the <em>essence</em> of invention. :-)</strong></p>
+<p>You might also like to follow the <a title="Essence# Blog" href="http://essencesharp.wordpress.com/">
+Essence# blog</a>.&nbsp;All new releases, and introductory explanations of new features, are published on the&nbsp;<a href="http://essencesharp.wordpress.com/">blog</a>. Release announcements, and links to new articles published on the&nbsp;<a href="http://essencesharp.wordpress.com/">blog</a>,
+ are also posted on the&nbsp;<a href="https://plus.google.com/u/0/b/105690251530428140190/105690251530428140190/posts">Essence# page on Google&#43;</a></p>
+<h2>Downloads</h2>
+<p>You can download the latest version by clicking on the big purple button labeled
+<strong>DOWNLOAD</strong> on the upper right-hand side of this page. Or,&nbsp;if you'd like to read the release notes (recommended,) you can navigate to the tab labeled&nbsp;<strong>DOWNLOADS</strong>&nbsp;on the tabs bar (near the top of the page; the leftmost&nbsp;tab
+ is labeled HOME.)&nbsp;Both options will get you a program that installs all of Essence#, including the
+<a href="https://essencesharp.codeplex.com/wikipage?title=Standard%20Library&referringTitle=Documentation">
+Essence# Standard Library</a>&nbsp;and the Microsoft Visual Studio project folder used to develop the C# code that implements Essence# (the compiler and the run time system.)&nbsp;</p>
+<p>The <strong>SOURCE CODE</strong> tab (above) will let you either download just the Visual Studio project or else make a local clone of the Git repository for it--but neither of those options will get you all that's required&nbsp;to actually use Essence#.&nbsp;</p>
+<p><strong>For complete <a href="https://essencesharp.codeplex.com/wikipage?title=Installation%20Instructions&referringTitle=Documentation">
+download and installation instructions</a></strong>, for instructions on&nbsp;<strong><a href="https://essencesharp.codeplex.com/wikipage?title=Running%20A%20Script&referringTitle=Documentation">executing scripts written in Essence#</a></strong>, and for information
+ on the language's syntax, semantics and class library,&nbsp;please see the <strong>
+<a href="/documentation?referringTitle=Home">Documentation</a></strong> section.</p>
+<p>Other programming languages in which you might be interested:</p>
+<p><a href="http://amber-lang.net/">Amber</a>&nbsp;is hosted on the JavaScript VM, and is syntactically similar to Essence#.</p>
+<p><em><br>
+The essence of OOP: It's all messages, all the time.</em><br>
+<br>
+<img title="BcCWq-7CEAA-B_U.jpg" src="http://download-codeplex.sec.s-msft.com/Download?ProjectName=essencesharp&DownloadId=850378" alt="BcCWq-7CEAA-B_U.jpg"></p>
+<p>&nbsp;</p>
+</div><div class="ClearBoth"></div>

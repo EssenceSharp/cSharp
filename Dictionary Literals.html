@@ -1,0 +1,24 @@
+<div class="wikidoc">
+<p>A <em>dictionary literal</em> permits the specification of the keys and values of a dictionary as a literal value. Its syntax is very similar to the syntax of
+<a href="/wikipage?title=dynamic%20array%20literals&referringTitle=Dictionary%20Literals">
+dynamic array literals</a>.</p>
+<p>Here's the EBNF for&nbsp;<em>dictionary literals:</em>&nbsp;<br>
+<br>
+<em>DictionaryLiteral = &quot;#{&quot; &nbsp;[{Statement, OptionalWhitespace, &quot;.&quot;}, FinalStatement, [&quot;.&quot;] &quot;}&quot;;</em><br>
+<br>
+A&nbsp;<em>dictionary&nbsp;</em><em>literal</em>&nbsp;must begin with the two characters &quot;#{&quot;, which may optionally be followed by a sequence of Essence# statements separated from each other by a &quot;.&quot; character. The final statement in the sequence may optionally
+ be followed by a &quot;.&quot; character. The final character of a&nbsp;<em>dictionary&nbsp;</em><em>literal</em>&nbsp;must be a single &quot;}&quot; character.<strong><br>
+</strong></p>
+<p>Each statement in a&nbsp;<em>dictionary literal</em>&nbsp;must evaluate at run time to an&nbsp;<a href="https://essencesharp.codeplex.com/wikipage?title=Association&referringTitle=Standard%20Library">association</a>. The
+<a href="https://essencesharp.codeplex.com/wikipage?title=Dictionary&referringTitle=Standard%20Library">
+dictionary</a>&nbsp;that will be constructed by a&nbsp;<em>dictionary&nbsp;</em><em>literal</em>&nbsp;will contain all the
+<a href="https://essencesharp.codeplex.com/wikipage?title=Association&referringTitle=Standard%20Library">
+associations</a>&nbsp;specified by the statements in the&nbsp;<em>dictionary&nbsp;</em><em>literal.</em>&nbsp;<br>
+<br>
+Here's an example of a&nbsp;<em>dictionary&nbsp;</em><em>literal:</em></p>
+<pre>#{#red -&gt; [vehicle stop]. #yellow -&gt; [vehicle prepareToStop; stop]. #green -&gt; [vehicle continue]}<br><br></pre>
+<p>&nbsp;</p>
+<p>The <a href="https://essencesharp.codeplex.com/wikipage?title=Dictionary&referringTitle=Standard%20Library">
+dictionary</a>&nbsp;that will be constructed at run time by the&nbsp;<em>dictionary&nbsp;</em><em>literal&nbsp;</em>shown in the example will have the same keys and values&nbsp;as the one&nbsp;constructed by the following code:</p>
+<pre>| dictionary |<br>dictionary := Dictionary new.<br>dictionary <br>&nbsp; &nbsp; &nbsp; &nbsp; at: #red put: [vehicle stop]; <br>&nbsp; &nbsp; &nbsp; &nbsp; at: #yellow put: [vehicle prepareToStop; stop]; <br>&nbsp; &nbsp; &nbsp; &nbsp; at: #green put: [vehicle continue]</pre>
+</div><div class="ClearBoth"></div>

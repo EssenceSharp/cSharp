@@ -1,0 +1,80 @@
+<div class="wikidoc">
+<p>A&nbsp;<em>method declaration</em> is the syntactical construct used to define a method, including its name and its logic. In Essence#, the name of a method is typically referred to as its
+<em>method selector</em>; or even just its <em>selector</em>.<br>
+<br>
+The EBNF for a&nbsp;<em>method declaration:</em></p>
+<pre>MethodDeclaration &nbsp; = [MethodHeaderToken, [ClassSpecification]], <br>                      MethodHeader, ExecutableCode;<br>MethodHeaderToken &nbsp; = OptionalWhitespace, &quot;##&quot;, OptionalWhitespace;<br>MethodHeader&nbsp;&nbsp;      = UnaryMethodHeader |&nbsp;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;BinaryMethodHeader |&nbsp;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;KeywordMethodHeader;<br>UnaryMethodHeader &nbsp; = UnaryMessageSelector;<br>BinaryMethodHeader &nbsp;= BinaryMessageSelector, OptionalWhiteSpace, BindableIdentifier;<br>KeywordMethodHeader = KeywordMethodHeaderSegment, <br>                      {Whitespace, KeywordMethodHeaderSegment};<br>ClassSpecification &nbsp;= QualifiedIdentifier,OptionalWhitespace,&quot;&gt;&gt;&quot;, OptionalWhitespace;<br><br></pre>
+<p>&nbsp;</p>
+<p>At the beginning of&nbsp;a <em>method declaration</em>,&nbsp;the parser&nbsp;will&nbsp;recognize&nbsp;&quot;##&quot; (two immediately-adjacent hash characters) as a lexical token called a
+<em>method header token</em>, and will interpret the token to mean &quot;what follows is a
+<em>method header</em>.&quot;</p>
+<p>Whitespace is permitted, but not required, both preceding and following the <em>
+method header&nbsp;token</em>.&nbsp;</p>
+<p>A<em>&nbsp;method header token</em> may optionally appear as the first token of any
+<em>method declaration</em>; but it&nbsp;is not required if the <em>method declaration</em> is the root of the parse tree.</p>
+<p>However, if a&nbsp;method header token occurs as the first (non-whitespace) token following a&nbsp;&quot;[&quot; token, then the parser will have no choice but to interpret what follows as the remaining tokens of a
+<em>method literal&nbsp;</em>(which must be terminated by a &quot;]&quot; token eventually.) And in that case, the &quot;##&quot; (<em>method header</em>)
+<em>token</em> <strong>may</strong> be required:</p>
+<p>If the initial token following a &quot;[&quot;&nbsp;(BlockBegin) token is either a <em>binary message selector</em> or a
+<em>keyword</em>, then the source code enclosed within the &quot;[&quot;&nbsp;and &quot;]&quot;&nbsp;tokens will be parsed as a method declaration even though there is no leading
+<em>method header token</em>, and the entire construct (including the &quot;[&quot;&nbsp;and &quot;]&quot;&nbsp;tokens) will be interpreted as a method literal, and not&nbsp;as a block literal. So in either of those cases, no
+<em>method header token</em> is required.</p>
+<p>However, if the first token following a &quot;[&quot; token is a <em>unary message selector</em> (which might instead just be a variable name,) and if there is no leading
+<em>method header token</em>&nbsp;in between&nbsp;the &quot;[&quot; token and the <em>unary message selector</em>, then the parser will not interpret the construct as a
+<em>method literal</em>, but will instead interpret it as a <em>block</em>. So, when a&nbsp;<em>method declaration</em>&nbsp;occurs as part of a
+<em>method literal</em>, and<em>&nbsp;</em>said&nbsp;<em>method declaration</em>&nbsp;has a
+<em>unary method header</em>, &nbsp;the only way to get the parser to interpret the construct as&nbsp;a
+<em>method literal</em>, and not as a <em>block</em>, is to use a <em>method header token</em> as a prefix to the
+<em>unary method header</em>.</p>
+<p><strong>Note</strong>: The <em>method header token</em> will also be required as a prefix to a
+<em>binary method header,</em> if the binary selector is the &quot;|&quot; (vertical bar) token. That constraint is required in order to avoid syntactical ambiguity, due to the fact that a
+<em>vertical bar token</em> may also be the initial token of a <em>variable declaration list</em>.</p>
+<p>If and only if a method header is preceded by the &quot;##&quot; (<em>method header</em>)
+<em>token</em>, the name of the class which is to be used as the environment for binding variable references when compiling the method may be specified preceding the method header. But in that case, the token &quot;&gt;&gt;&quot; must then be used as a separator between
+ the class name and the method header.</p>
+<p>Whitespace is permitted but not required in between the class name and the &quot;&gt;&gt;&quot; token, and in between the &quot;&gt;&gt;&quot; token and the method header.</p>
+<p>Following the&nbsp;<em>method header</em> there must be&nbsp;an <em>executable code</em> construct. An&nbsp;<em>executable code</em> construct defines the method's logic. &nbsp;Colloquially, an
+<em>executable code</em> construct is referred to as a method body. A <em>method body</em> has the same exact syntactical structure as a
+<em>block body</em>.</p>
+<p>There are three different types of <em>method header</em>: A <em>unary</em> method header, a
+<em>binary</em> method header and a <em>keyword</em> method header.&nbsp;</p>
+<p>A method declaration with a <em>unary method header</em> must be invoked using a
+<em>unary message</em>.</p>
+<p>A method declaration with a <em>binary method header</em> must be invoked using a
+<em>binary message</em>.</p>
+<p>A method declaration with a <em>keyword method header</em> must be invoked using a
+<em>keyword message</em>.</p>
+<p>Examples of method declarations using all three types of method header&nbsp;are shown below (none of which have a method header token as a prefix):</p>
+<p><em>Method declaration using a unary method header:</em></p>
+<pre><strong>printString</strong><br>        | stream |<br>        stream := String new writeStream.<br>        self printOn: stream.<br>        ^stream contents</pre>
+<p>&nbsp;</p>
+<p><em>Method declaration using a binary method header:</em></p>
+<pre><strong>@</strong> <strong>y</strong><br>        ^Point x: self y: y</pre>
+<p>&nbsp;</p>
+<p><em>Method declaration&nbsp;using a keyword method header:</em></p>
+<pre><strong>displayOn: aGraphicsContext at: aPoint</strong><br>        aGraphicsContext displayString: self at: aPoint</pre>
+<p>&nbsp;</p>
+<p>If a&nbsp;<em>method header token</em> (&quot;##&quot;) precedes it, then a&nbsp;<em>class specification</em> construct may optionally precede any of the three types of
+<em>method header</em>. If present, the class specified by the&nbsp;<em>class specification</em>&nbsp;will be used by the compiler as the
+<em>behavioral context</em> in which the method will be compiled. In other words, the instance variables defined by the specified class, the class variables defined by the specified class and the global variables imported&nbsp;by the specified class will be
+ used to bind&nbsp;any variables referenced by the method that aren't either method parameters or local variables.</p>
+<p>Here are the same three <em>method declarations</em>&nbsp;constructed to have an&nbsp;optional
+<em>method header token</em> and&nbsp;<em>class specification construct</em> as a prefix to the<em> method header</em>:</p>
+<p><em>Method declaration using a unary method header and an optional class specification:</em></p>
+<pre><strong>## Object&gt;&gt;printString</strong><br>        | stream |<br>        stream := String new writeStream.<br>        self printOn: stream.<br>        ^stream contents<br> <br> </pre>
+<p>&nbsp;</p>
+<p><em>Method declaration using a binary method header&nbsp;and an optional class specification:</em></p>
+<pre><strong>## Number&gt;&gt; @</strong> <strong>y</strong><br>        ^Point x: self y: y</pre>
+<p>&nbsp;</p>
+<p><em>Method declaration&nbsp;using a keyword method header&nbsp;and an optional class specification:</em></p>
+<pre><strong>## String&gt;&gt;displayOn: aGraphicsContext at: aPoint</strong><br>        aGraphicsContext displayString: self at: aPoint</pre>
+<p>&nbsp;</p>
+<p>Any <em>method declaration</em> (whether it uses a <em>unary method header</em>, a
+<em>binary method header</em> or a <em>keyword method header</em>, and whether or not it uses an optional
+<em>class specification</em>) may optionally begin with a <em>method header token</em>. The reason the method header token is optional is because its purpose is either to separate one
+<em>method declaration</em> from another in a sequence of <em>method declarations</em>, or else to distinguish a
+<em>method literal</em> from a <em>block</em>. Outside of those two cases, it has no purpose, function or meaning. Its presence or absence has no effect on the semantics of the method.</p>
+<p>Here's an example showing two <em>method declarations</em> separated by an intervening
+<em>method header token</em>:</p>
+<pre>Duration&gt;&gt;asDays<br>        ^self ticks / TicksPerDay<br><br>## <br><br>Duration&gt;&gt;asHours <br>        ^self ticks / TicksPerHour</pre>
+</div><div class="ClearBoth"></div>

@@ -1,0 +1,80 @@
+<div class="wikidoc">
+<h1>CLR Generic Types</h1>
+<p>The CLR has&nbsp;<em>three&nbsp;</em>types of &ldquo;generic type&rdquo;:&nbsp;<em>Open</em>&nbsp;generic types,&nbsp;<em>partially-open</em>&nbsp;generic types and&nbsp;<em>closed</em>&nbsp;generic types. An open generic type is also called a generic type
+ definition. An&nbsp;<em>open generic type</em>&nbsp;is one where all of its generic type parameters remain &ldquo;open&rdquo; because none of them have been bound to a specific type argument. A&nbsp;<em>partially-open generic type</em>&nbsp;is one where some,
+ but not all, of the type&rsquo;s generic type parameters have been bound to specific type arguments. A closed generic type is one where all of the type&rsquo;s generic type parameters have been bound to specific type arguments. For the most part, a&nbsp;<em>partially-open</em>&nbsp;generic
+ type is essentially the same as an&nbsp;<em>open</em>&nbsp;generic type. The distinction that really matters is between&nbsp;<em>closed generic types</em>&nbsp;and ones that have generic type parameters that aren&rsquo;t bound to a specific type.</p>
+<p>It&rsquo;s possible to create instances of closed generic types, but it is not possible to create instances of open or partially-open generic types. And that can be a problem, because .Net class libraries typically only provide&nbsp;<em>generic type definitions</em>&nbsp;that
+ define&nbsp;<em>open generic types</em>. So, although you can define an Essence# class that represents a .Net type that is an open generic type definition, you won&rsquo;t be able to use that Essence# class to create instances of the type by sending it the
+ normal instance creation messages (e.g, #new or #new:). Creating instances of such a type&nbsp;requires providing one or more types that will be used as the type arguments to construct a closed generic type from the open generic type defined by the .Net class
+ library.</p>
+<h2>Constructing Closed Generic Types</h2>
+<p>Fortunately, you can use Essence# to construct a closed generic type from an open generic type definition, as illustrated in the following example:</p>
+<pre>| openGenericDictTypeDefinition esClass closedGenericType |
+openGenericDictTypeDefinition := 
+        'System.Collections.Generic.Dictionary`2' asHostSystemType.
+esClass := openGenericDictTypeDefinition asClass.
+closedGenericType := esClass 
+                        instanceTypeWith: Type string 
+                        with: Type string.
+dict := closedGenericType new.
+dict at: #foo 
+	ifPresent: 
+                [:value | 
+                        System.Console 
+                                write: 'The value at #foo is '; 
+                                writeLine: value
+                   ] 
+	ifAbsent: 
+                [
+                        System.Console writeLine: '#foo is not present'
+                ].
+dict at: #foo put: #bar.
+dict at: #foo 
+	ifPresent: 
+                [:value | 
+                        System.Console 
+                                write: 'The value at #foo is '; 
+                                writeLine: value
+                   ] 
+	ifAbsent: 
+                [
+                        System.Console writeLine: '#foo is not present'
+                ].</pre>
+<p>&nbsp;</p>
+<p>As mentioned in the article on <a href="https://essencesharp.codeplex.com/wikipage?title=Using%20CLR%20Types&referringTitle=Documentation">
+using CLR types</a>, the Essence# class that represents a CLR type can be obtained by sending the message #asClass to the CLR type object.</p>
+<p>If an Essence# class represents a generic type (whether the type is open, partially-open or closed makes no difference,) then you can create a closed generic type by sending one of the following messages to the Essence# class: #instanceTypeWith:&nbsp;<em>aCLRType</em>,
+ #instanceTypeWith:<em>aCLRType&nbsp;</em>with:&nbsp;<em>aCLRType</em>, #instanceTypeWith:&nbsp;<em>aCLRType&nbsp;</em>with:&nbsp;<em>aCLRType&nbsp;</em>with:&nbsp;<em>aCLRType ,&nbsp;&nbsp;, #instanceTypeWith:&nbsp;<em>aCLRType&nbsp;</em>with:&nbsp;<em>aCLRType&nbsp;</em>with:&nbsp;<em>aCLRType</em></em>,
+ #instanceTypeWith:<em>aCLRType&nbsp;</em>with:&nbsp;<em>aCLRType&nbsp;</em>with:&nbsp;<em>aCLRType&nbsp;</em>with:&nbsp;<em>aCLRType&nbsp;</em>with:&nbsp;<em>aCLRType</em>&nbsp;or #instanceTypeWithAll:&nbsp;<em>anArrayOfCLRTypes</em>.</p>
+<h3>Defining Essence# Classes That Represent Closed Generic Types</h3>
+<p>One good way to handle the case where the .Net type&nbsp;you want to use is an open generic type definition&nbsp;would be to define a subclass of an Essence# class that represents that type, and then use one of the messages above to construct a closed generic
+ type that will be the instance type of the subclass.</p>
+<p>Another good way to do it is simply to use the CLR&rsquo;s syntax for closed generic types when specifying the instance type of the subclass. The following examples show both approaches:</p>
+<pre>&quot;Class creation/configuration using the Essence# #instanceTypeWith: message&quot;
+	
+	| superclass class |
+        superclass := 'System.Collections.Generic.List`1, mscorlib'
+                                asHostSystemType asClass.
+        class := Class new.
+	class 
+                superclass: superclass;
+                instanceType: (superclass instanceTypeWith: System.Type object).
+</pre>
+<p>&nbsp;</p>
+<pre>&quot;Class creation/configuration using the CLR's syntax for closed generic types&quot;<br> | class |<br> class := Class new.<br> class <br>         assemblyName: 'mscorlib';<br>         hostSystemNamespace: #System.Collections.Generic;<br>         hostSystemName: 'List`1[[System.Object]]'</pre>
+<p>&nbsp;</p>
+<h3>Open Generic Type Definitions</h3>
+<p>It's also not only possible to define an Essence# class that represents an open generic type definition, the system actually does that for you automatically. And there's a reason it does so:</p>
+<p>An&nbsp;Essence# class that represents&nbsp;any closed generic type inherits from the Essence# class that represents the corresponding open generic type definition. For example,&nbsp;the class Smalltalk.Set&ndash;which represents the .Net type System.Collections.Generic.HashSet&lt;Object&gt;)&ndash;inherits
+ from the Essence# class that represents the .Net type System.Collections.Generic.HashSet&lt;&gt;. &nbsp;</p>
+<p>And that matters because best practice would be to define most of the user-primitives used to adapt a generic type for use by Essence# in the Essence# class the represents the open generic type definition, instead of in ones that represent any of the corresponding
+ closed generic types.</p>
+<p>To define an Essence# class that represents an open generic type definition in an
+<a href="https://essencesharp.codeplex.com/wikipage?title=Class%20Libraries&referringTitle=Documentation">
+Essence# class library</a>, the default way to do that is to use the CLR's name for the open generic type definition as the name of the class--even though that class name is not a legal global variable reference. In the case of the open generic type definition&nbsp;System.Collections.Generic.HashSet&lt;&gt;,
+ the CLR name is System.Collections.Generic.HashSet`1 (which you will find already defined for your in the namespace CLR.System.Collections.Generic in the
+<a href="https://essencesharp.codeplex.com/wikipage?title=Standard%20Library&referringTitle=Documentation">
+Essence# Standard Library</a>.)</p>
+<p><em>The essence of OOP: It's all messages, all the time.</em></p>
+</div><div class="ClearBoth"></div>
